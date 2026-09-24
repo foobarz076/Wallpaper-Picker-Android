@@ -114,25 +114,28 @@ class HttpApiSource(
             directImageUrl = resolveUrl(requestUrl, extractedUrl)
         }
 
-        // Step 2: Download the image stream from directImageUrl
-        val imageRequest = Request.Builder()
-            .url(directImageUrl)
-            .header("User-Agent", USER_AGENT)
-            .build()
+        // Step 2: Retrieve from cache if already downloaded, otherwise download from directImageUrl
+        val savedFile = cacheManager.findCachedFile(directImageUrl) ?: run {
+            val imageRequest = Request.Builder()
+                .url(directImageUrl)
+                .header("User-Agent", USER_AGENT)
+                .build()
 
-        val imageResponse: Response = client.newCall(imageRequest).execute()
-        if (!imageResponse.isSuccessful) {
-            throw IOException("图片下载失败: HTTP ${imageResponse.code}")
+            val imageResponse: Response = client.newCall(imageRequest).execute()
+            if (!imageResponse.isSuccessful) {
+                throw IOException("图片下载失败: HTTP ${imageResponse.code}")
+            }
+
+            val responseBody = imageResponse.body
+                ?: throw IOException("图片响应体为空")
+
+            // Step 3: Stream directly into the cache file (avoids storing the entire byte array in RAM)
+            cacheManager.saveStream(
+                inputStream = responseBody.byteStream(),
+                preferredTitle = title,
+                cacheKey = directImageUrl
+            )
         }
-
-        val responseBody = imageResponse.body
-            ?: throw IOException("图片响应体为空")
-
-        // Step 3: Stream directly into the cache file (avoids storing the entire byte array in RAM)
-        val savedFile = cacheManager.saveStream(
-            inputStream = responseBody.byteStream(),
-            preferredTitle = title
-        )
 
         return WallpaperData(
             openStream = { FileInputStream(savedFile) },

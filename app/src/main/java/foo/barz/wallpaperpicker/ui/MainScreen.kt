@@ -268,6 +268,21 @@ fun MainScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (state.isScheduled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                     )
+                    if (state.lastErrorMessage != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "最近执行异常: ${state.lastErrorMessage}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else if (state.lastExecutionStatus != null && state.lastExecutionStatus != "成功") {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "最近执行状态: ${state.lastExecutionStatus}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
                 }
             }
 

@@ -79,19 +79,21 @@ class ImmichSource(
             queryAlbumRandomAsset(baseUrl, apiKey, config.albumId, client)
         }
 
-        // Step 2: Download asset stream with fallback support (preview -> original)
-        val downloadResponse = downloadAssetStream(client, baseUrl, apiKey, assetId, config.downloadQuality)
-
-        val responseBody = downloadResponse.body
-            ?: throw IOException("下载 Immich 照片响应体为空")
-
         val displayTitle = originalName.ifEmpty { "Immich 照片 ($assetId)" }
+        val cacheKey = "immich_${assetId}_${config.downloadQuality.name}"
 
-        // Step 3: Stream directly into the local LRU cache
-        val savedFile = cacheManager.saveStream(
-            inputStream = responseBody.byteStream(),
-            preferredTitle = displayTitle
-        )
+        // Step 2 & 3: Retrieve from cache if already downloaded, otherwise download from server
+        val savedFile = cacheManager.findCachedFile(cacheKey) ?: run {
+            val downloadResponse = downloadAssetStream(client, baseUrl, apiKey, assetId, config.downloadQuality)
+            val responseBody = downloadResponse.body
+                ?: throw IOException("下载 Immich 照片响应体为空")
+
+            cacheManager.saveStream(
+                inputStream = responseBody.byteStream(),
+                preferredTitle = displayTitle,
+                cacheKey = cacheKey
+            )
+        }
 
         return WallpaperData(
             openStream = { FileInputStream(savedFile) },

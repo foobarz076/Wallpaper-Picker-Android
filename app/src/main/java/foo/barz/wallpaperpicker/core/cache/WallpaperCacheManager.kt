@@ -7,6 +7,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.security.MessageDigest
 import java.util.UUID
 
 /**
@@ -23,17 +24,47 @@ class WallpaperCacheManager(private val context: Context) {
         }
 
     /**
+     * Produces a deterministic MD5 hash string for a cache key.
+     */
+    private fun hashKey(key: String): String {
+        val md = MessageDigest.getInstance("MD5")
+        val digest = md.digest(key.toByteArray(Charsets.UTF_8))
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+
+    /**
+     * Looks up an existing cached wallpaper file by its deterministic cache key.
+     * Touches lastModified so it refreshes its position in the LRU ranking.
+     */
+    fun findCachedFile(cacheKey: String, extension: String = "jpg"): File? {
+        val targetFile = File(cacheDirectory, "wp_${hashKey(cacheKey)}.$extension")
+        return if (targetFile.exists() && targetFile.length() > 0) {
+            targetFile.setLastModified(System.currentTimeMillis())
+            targetFile
+        } else {
+            null
+        }
+    }
+
+    /**
      * Saves an input stream into the cache directory and triggers LRU pruning.
      * Direct streaming prevents excessive memory usage on low-RAM devices.
+     * When cacheKey is provided, uses a deterministic filename to allow deduplication.
      */
     fun saveStream(
         inputStream: InputStream,
         preferredTitle: String? = null,
+        cacheKey: String? = null,
         extension: String = "jpg"
     ): File {
         val dir = cacheDirectory
         val tempFile = File(dir, "temp_${UUID.randomUUID()}.$extension")
-        val targetFile = File(dir, "wp_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}.$extension")
+        val fileName = if (!cacheKey.isNullOrBlank()) {
+            "wp_${hashKey(cacheKey)}.$extension"
+        } else {
+            "wp_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}.$extension"
+        }
+        val targetFile = File(dir, fileName)
 
         FileOutputStream(tempFile).use { out ->
             inputStream.copyTo(out)

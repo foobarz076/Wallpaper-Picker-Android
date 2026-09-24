@@ -75,6 +75,8 @@ data class MainUiState(
     val lastWallpaperTitle: String? = null,
     val lastWallpaperUri: Uri? = null,
     val lastChangedText: String = "尚未更换过",
+    val lastExecutionStatus: String? = null,
+    val lastErrorMessage: String? = null,
     val statusMessage: String? = null
 )
 
@@ -114,7 +116,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             isScheduled = prefs.isScheduled,
             lastWallpaperTitle = prefs.lastWallpaperTitle,
             lastWallpaperUri = prefs.lastWallpaperUri,
-            lastChangedText = formatTimestamp(prefs.lastChangedTimestamp, prefs.lastWallpaperTitle)
+            lastChangedText = formatTimestamp(prefs.lastChangedTimestamp, prefs.lastWallpaperTitle),
+            lastExecutionStatus = prefs.lastExecutionStatus,
+            lastErrorMessage = prefs.lastErrorMessage
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -519,7 +523,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (sourceResult.isFailure) {
                 val error = sourceResult.exceptionOrNull()?.message ?: "初始化图源失败"
-                _uiState.update { it.copy(isChanging = false, statusMessage = error) }
+                prefs.lastErrorMessage = error
+                prefs.lastExecutionStatus = "失败: $error"
+                prefs.lastExecutionTimestamp = System.currentTimeMillis()
+                _uiState.update { it.copy(isChanging = false, statusMessage = error, lastErrorMessage = error, lastExecutionStatus = "失败: $error") }
                 return@launch
             }
 
@@ -528,7 +535,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (nextResult.isFailure) {
                 val error = nextResult.exceptionOrNull()?.message ?: "获取图片失败"
-                _uiState.update { it.copy(isChanging = false, statusMessage = error) }
+                prefs.lastErrorMessage = error
+                prefs.lastExecutionStatus = "失败: $error"
+                prefs.lastExecutionTimestamp = System.currentTimeMillis()
+                _uiState.update { it.copy(isChanging = false, statusMessage = error, lastErrorMessage = error, lastExecutionStatus = "失败: $error") }
                 return@launch
             }
 
@@ -537,7 +547,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (processResult.isFailure) {
                 val error = processResult.exceptionOrNull()?.message ?: "图片处理失败"
-                _uiState.update { it.copy(isChanging = false, statusMessage = error) }
+                prefs.lastErrorMessage = error
+                prefs.lastExecutionStatus = "失败: $error"
+                prefs.lastExecutionTimestamp = System.currentTimeMillis()
+                _uiState.update { it.copy(isChanging = false, statusMessage = error, lastErrorMessage = error, lastExecutionStatus = "失败: $error") }
                 return@launch
             }
 
@@ -546,14 +559,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (applyResult.isFailure) {
                 val error = applyResult.exceptionOrNull()?.message ?: "设置壁纸失败"
-                _uiState.update { it.copy(isChanging = false, statusMessage = error) }
+                prefs.lastErrorMessage = error
+                prefs.lastExecutionStatus = "失败: $error"
+                prefs.lastExecutionTimestamp = System.currentTimeMillis()
+                _uiState.update { it.copy(isChanging = false, statusMessage = error, lastErrorMessage = error, lastExecutionStatus = "失败: $error") }
                 return@launch
             }
 
             val now = System.currentTimeMillis()
             prefs.lastChangedTimestamp = now
+            prefs.lastExecutionTimestamp = now
             prefs.lastWallpaperTitle = data.title
             prefs.lastWallpaperUri = data.sourceUri
+            prefs.lastErrorMessage = null
+            prefs.lastExecutionStatus = "成功"
 
             _uiState.update {
                 it.copy(
@@ -561,6 +580,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastWallpaperTitle = data.title,
                     lastWallpaperUri = data.sourceUri,
                     lastChangedText = formatTimestamp(now, data.title),
+                    lastErrorMessage = null,
+                    lastExecutionStatus = "成功",
                     cacheSizeBytes = cacheManager.getCacheSizeBytes(),
                     statusMessage = "更换成功: ${data.title ?: "未知图片"}"
                 )
@@ -570,6 +591,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearStatusMessage() {
         _uiState.update { it.copy(statusMessage = null) }
+    }
+
+    fun clearErrorMessage() {
+        prefs.lastErrorMessage = null
+        prefs.lastExecutionStatus = null
+        _uiState.update { it.copy(lastErrorMessage = null, lastExecutionStatus = null) }
     }
 
     private fun resolveFolderName(uri: Uri?): String? {

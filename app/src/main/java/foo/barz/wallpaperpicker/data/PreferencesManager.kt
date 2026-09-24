@@ -132,6 +132,18 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean(KEY_IMMICH_WIFI_ONLY, true)
         set(value) = prefs.edit().putBoolean(KEY_IMMICH_WIFI_ONLY, value).apply()
 
+    var lastExecutionStatus: String?
+        get() = prefs.getString(KEY_LAST_EXECUTION_STATUS, null)
+        set(value) = prefs.edit().putString(KEY_LAST_EXECUTION_STATUS, value).apply()
+
+    var lastErrorMessage: String?
+        get() = prefs.getString(KEY_LAST_ERROR_MESSAGE, null)
+        set(value) = prefs.edit().putString(KEY_LAST_ERROR_MESSAGE, value).apply()
+
+    var lastExecutionTimestamp: Long
+        get() = prefs.getLong(KEY_LAST_EXECUTION_TIMESTAMP, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_EXECUTION_TIMESTAMP, value).apply()
+
     companion object {
         private const val PREF_NAME = "wallpaper_picker_prefs"
         private const val KEY_FOLDER_URI = "folder_uri"
@@ -144,6 +156,9 @@ class PreferencesManager(context: Context) {
         private const val KEY_LAST_TIMESTAMP = "last_timestamp"
         private const val KEY_LAST_TITLE = "last_title"
         private const val KEY_LAST_URI = "last_uri"
+        private const val KEY_LAST_EXECUTION_STATUS = "last_execution_status"
+        private const val KEY_LAST_ERROR_MESSAGE = "last_error_message"
+        private const val KEY_LAST_EXECUTION_TIMESTAMP = "last_execution_timestamp"
         private const val KEY_MEDIA_STORE_ALBUM_ID = "media_store_album_id"
         private const val KEY_MEDIA_STORE_ALBUM_NAME = "media_store_album_name"
         private const val KEY_SOURCE_TYPE = "source_type"
