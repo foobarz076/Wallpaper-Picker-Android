@@ -90,6 +90,8 @@ fun MainScreen(
     onOpenCustomUriInGallery: (Uri) -> Unit = {},
     onShareCustomWallpaper: (Uri, String?) -> Unit = { _, _ -> },
     onSaveCustomWallpaper: (Uri, String?) -> Unit = { _, _ -> },
+    onExportFavorites: () -> Unit = {},
+    onOpenManageSpace: () -> Unit = {},
     onChangeNow: () -> Unit,
     onClearStatus: () -> Unit
 ) {
@@ -224,7 +226,10 @@ fun MainScreen(
                         onToggleSchedule = onToggleSchedule,
                         onIntervalSelected = onIntervalSelected,
                         onToggleDeferDuringInteraction = onToggleDeferDuringInteraction,
-                        onToggleFairShuffle = onToggleFairShuffle
+                        onToggleFairShuffle = onToggleFairShuffle,
+                        onClearCache = onClearCache,
+                        onExportFavorites = onExportFavorites,
+                        onOpenManageSpace = onOpenManageSpace
                     )
                 }
             }

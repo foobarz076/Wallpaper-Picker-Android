@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,10 +46,11 @@ import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
 import foo.barz.wallpaperpicker.ui.MainUiState
+import java.util.Locale
 
 /**
  * Settings tab configuring global automation scheduling, screen targets, image cropping,
- * parallax scrolling, and battery optimization guarantees.
+ * parallax scrolling, storage and cache management, and battery optimization guarantees.
  */
 @Composable
 fun SettingsTab(
@@ -62,6 +64,9 @@ fun SettingsTab(
     onIntervalSelected: (Long) -> Unit,
     onToggleDeferDuringInteraction: (Boolean) -> Unit,
     onToggleFairShuffle: (Boolean) -> Unit,
+    onClearCache: () -> Unit = {},
+    onExportFavorites: () -> Unit = {},
+    onOpenManageSpace: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -351,7 +356,105 @@ fun SettingsTab(
             }
         }
 
-        // 5. Battery Optimization Hint Card
+        // 5. Storage and Cache Management Card
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Storage,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("存储与缓存管理", style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Favorites Storage Info
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("已收藏壁纸 (私有持久化)", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = "存放在内部专属目录，断网永久可用，绝不受系统或缓存清理影响",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${state.favoritesList.size} 张 · ${formatFileSize(state.favoritesSizeBytes)}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Transient Cache Info
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("临时网络缓存 (LRU 缓存池)", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = "网络图源下载的临时图片，用于离线降级复用，可安全随时清理",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = formatFileSize(state.cacheSizeBytes),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Action Buttons: Export Favorites & Clear Cache
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onExportFavorites,
+                        enabled = state.favoritesList.isNotEmpty() && !state.isExportingFavorites,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (state.isExportingFavorites) "正在导出…" else "导出全部收藏")
+                    }
+
+                    OutlinedButton(
+                        onClick = onClearCache,
+                        enabled = state.cacheSizeBytes > 0L,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("清理临时缓存")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Manage Space Activity launcher
+                OutlinedButton(
+                    onClick = onOpenManageSpace,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("深入管理应用存储空间…")
+                }
+            }
+        }
+
+        // 6. Battery Optimization Hint Card
         if (!isIgnoringBatteryOptimizations) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -382,6 +485,17 @@ fun SettingsTab(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+private fun formatFileSize(bytes: Long): String {
+    if (bytes <= 0L) return "0 B"
+    val kb = bytes / 1024.0
+    val mb = kb / 1024.0
+    return if (mb >= 1.0) {
+        String.format(Locale.getDefault(), "%.1f MB", mb)
+    } else {
+        String.format(Locale.getDefault(), "%.1f KB", kb)
     }
 }
 

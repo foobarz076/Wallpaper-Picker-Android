@@ -87,6 +87,8 @@ data class MainUiState(
     val historyList: List<WallpaperHistoryItem> = emptyList(),
     val favoritesList: List<WallpaperHistoryItem> = emptyList(),
     val isCurrentFavorite: Boolean = false,
+    val favoritesSizeBytes: Long = 0L,
+    val isExportingFavorites: Boolean = false,
     val statusMessage: String? = null
 )
 
@@ -374,12 +376,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onClearCache() {
+        val oldCacheSize = cacheManager.getCacheSizeBytes()
         val success = cacheManager.clearCache()
         val newSize = cacheManager.getCacheSizeBytes()
+        val freedBytes = maxOf(0L, oldCacheSize - newSize)
+        val freedFormatted = formatBytes(freedBytes)
+        val favCount = _uiState.value.favoritesList.size
         _uiState.update {
             it.copy(
                 cacheSizeBytes = newSize,
-                statusMessage = if (success) "已清空缓存" else "清理缓存失败"
+                statusMessage = if (success) {
+                    "临时缓存已清理 (释放了 $freedFormatted)，$favCount 张已收藏壁纸受离线持久保护不受影响"
+                } else {
+                    "清理缓存失败"
+                }
             )
         }
     }
@@ -690,17 +700,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             false
         }
+        val favDir = File(getApplication<Application>().filesDir, "favorites")
+        val favSizeBytes = if (favDir.exists()) favDir.listFiles()?.sumOf { it.length() } ?: 0L else 0L
         _uiState.update {
             it.copy(
                 historyList = history,
                 favoritesList = favorites,
-                isCurrentFavorite = isFav
+                isCurrentFavorite = isFav,
+                favoritesSizeBytes = favSizeBytes
             )
         }
     }
 
     fun toggleFavorite(item: WallpaperHistoryItem) {
         viewModelScope.launch(Dispatchers.IO) {
+            val feedbackMsg: String
             if (item.isFavorite) {
                 if (!item.favoriteFilePath.isNullOrBlank()) {
                     val file = File(item.favoriteFilePath)
@@ -712,8 +726,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     favoriteTimestamp = null,
                     favoriteFilePath = null
                 )
+                feedbackMsg = "已从收藏中移除"
             } else {
-                val promotedPath = if (item.sourceType == WallpaperSourceType.IMMICH || item.sourceType == WallpaperSourceType.HTTP_API) {
+                val isNetworkSource = item.sourceType == WallpaperSourceType.IMMICH || item.sourceType == WallpaperSourceType.HTTP_API
+                val promotedPath = if (isNetworkSource) {
                     promoteToPermanentFavorite(Uri.parse(item.sourceUri))
                 } else {
                     null
@@ -724,9 +740,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     favoriteTimestamp = System.currentTimeMillis(),
                     favoriteFilePath = promotedPath
                 )
+                feedbackMsg = if (isNetworkSource) {
+                    "已加入收藏并离线固化（免受缓存清理影响）"
+                } else {
+                    "已加入收藏（已轻量持久化原图索引）"
+                }
             }
             withContext(Dispatchers.Main) {
                 refreshHistoryAndFavorites()
+                _uiState.update { it.copy(statusMessage = feedbackMsg) }
             }
         }
     }
@@ -859,6 +881,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val df = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         val timeStr = df.format(Date(timestamp))
         return if (title.isNullOrEmpty()) timeStr else "$timeStr ($title)"
+    }
+
+    /**
+     * Exports all user favorites to the public Pictures/Wallpapers gallery directory.
+     */
+    fun exportAllFavoritesToGallery() {
+        val favorites = _uiState.value.favoritesList
+        if (favorites.isEmpty()) {
+            _uiState.update { it.copy(statusMessage = "暂无收藏壁纸可导出") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isExportingFavorites = true,
+                    statusMessage = "正在导出 ${favorites.size} 张收藏壁纸到系统相册…"
+                )
+            }
+            var successCount = 0
+            withContext(Dispatchers.IO) {
+                for (item in favorites) {
+                    val uri = item.displayUri
+                    val title = item.title ?: "favorite_${item.id}"
+                    val result = WallpaperActionManager.saveToGallery(getApplication(), uri, title)
+                    if (result.isSuccess) {
+                        successCount++
+                    }
+                }
+            }
+            _uiState.update {
+                it.copy(
+                    isExportingFavorites = false,
+                    statusMessage = if (successCount == favorites.size) {
+                        "已成功将全部 ${favorites.size} 张收藏壁纸导出到相册 Pictures/Wallpapers"
+                    } else {
+                        "导出完成: 成功 $successCount 张，失败 ${favorites.size - successCount} 张"
+                    }
+                )
+            }
+        }
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        if (bytes <= 0L) return "0 B"
+        val kb = bytes / 1024.0
+        val mb = kb / 1024.0
+        return if (mb >= 1.0) {
+            String.format(Locale.getDefault(), "%.1f MB", mb)
+        } else {
+            String.format(Locale.getDefault(), "%.1f KB", kb)
+        }
     }
 
     private fun hasMediaPermission(): Boolean {

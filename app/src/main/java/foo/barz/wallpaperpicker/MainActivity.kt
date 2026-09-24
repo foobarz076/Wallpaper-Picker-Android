@@ -1,5 +1,6 @@
 package foo.barz.wallpaperpicker
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import foo.barz.wallpaperpicker.ui.MainScreen
 import foo.barz.wallpaperpicker.ui.MainViewModel
+import foo.barz.wallpaperpicker.ui.ManageSpaceActivity
 import foo.barz.wallpaperpicker.ui.theme.WallpaperPickerTheme
 
 class MainActivity : ComponentActivity() {
@@ -60,6 +62,10 @@ class MainActivity : ComponentActivity() {
                     onOpenCustomUriInGallery = viewModel::openUriInGallery,
                     onShareCustomWallpaper = viewModel::shareUri,
                     onSaveCustomWallpaper = viewModel::saveUriToGallery,
+                    onExportFavorites = viewModel::exportAllFavoritesToGallery,
+                    onOpenManageSpace = {
+                        startActivity(Intent(this, ManageSpaceActivity::class.java))
+                    },
                     onChangeNow = viewModel::changeNow,
                     onClearStatus = viewModel::clearStatusMessage
                 )

@@ -1,5 +1,6 @@
 package foo.barz.wallpaperpicker.ui.tabs
 
+import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -57,12 +59,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -344,6 +348,9 @@ private fun WallpaperDetailSheet(
     onShare: () -> Unit,
     onSave: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isAccessible = remember(item.displayUri) { isUriAccessible(context, item.displayUri) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -388,10 +395,47 @@ private fun WallpaperDetailSheet(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        if (!isAccessible) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "原图已被外部删除或无法访问",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "该原图在本地或相册中已失效，无法再次设为壁纸。您可以删除此记录以清理列表。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
+                        )
+                    }
+                }
+            }
+        }
+
         // Main Action: Apply as Wallpaper
         Button(
             onClick = onApply,
-            enabled = !isApplying,
+            enabled = !isApplying && isAccessible,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
@@ -404,6 +448,10 @@ private fun WallpaperDetailSheet(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("正在应用壁纸…")
+            } else if (!isAccessible) {
+                Icon(Icons.Default.Warning, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("原图已失效无法应用")
             } else {
                 Icon(Icons.Default.Wallpaper, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -424,6 +472,7 @@ private fun WallpaperDetailSheet(
             ) {
                 OutlinedButton(
                     onClick = onToggleFavorite,
+                    enabled = isAccessible || item.isFavorite,
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                 ) {
@@ -439,6 +488,7 @@ private fun WallpaperDetailSheet(
 
                 OutlinedButton(
                     onClick = onOpen,
+                    enabled = isAccessible,
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                 ) {
@@ -454,6 +504,7 @@ private fun WallpaperDetailSheet(
             ) {
                 OutlinedButton(
                     onClick = onSave,
+                    enabled = isAccessible,
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                 ) {
@@ -464,6 +515,7 @@ private fun WallpaperDetailSheet(
 
                 OutlinedButton(
                     onClick = onShare,
+                    enabled = isAccessible,
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                 ) {
@@ -512,3 +564,20 @@ private fun formatTimeAgo(timestamp: Long): String {
         }
     }
 }
+
+/**
+ * Checks if the target URI is currently accessible and readable.
+ * Handles file paths and content resolver queries safely.
+ */
+private fun isUriAccessible(context: Context, uri: Uri): Boolean {
+    return runCatching {
+        if (uri.scheme == "file") {
+            val path = uri.path ?: return false
+            val file = File(path)
+            file.exists() && file.canRead() && file.length() > 0
+        } else {
+            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { true } ?: false
+        }
+    }.getOrDefault(false)
+}
+
