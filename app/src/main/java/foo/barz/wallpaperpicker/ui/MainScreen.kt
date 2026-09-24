@@ -12,13 +12,16 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -202,6 +205,7 @@ fun MainScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .padding(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
@@ -309,40 +313,74 @@ fun MainScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = onOpenInGallery,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("图库打开")
-                            }
+                        // Adaptive button grid: 2-column grid on narrow containers, 1-row layout on wide screens
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val isNarrow = maxWidth < 360.dp
 
-                            OutlinedButton(
-                                onClick = handleSaveClick,
-                                enabled = !state.isSavingWallpaper,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                if (state.isSavingWallpaper) {
-                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                } else {
-                                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                            val openButton: @Composable (Modifier) -> Unit = { buttonModifier ->
+                                OutlinedButton(
+                                    onClick = onOpenInGallery,
+                                    modifier = buttonModifier,
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("图库打开", maxLines = 1)
                                 }
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("保存相册")
                             }
 
-                            OutlinedButton(
-                                onClick = onShareWallpaper,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("分享")
+                            val saveButton: @Composable (Modifier) -> Unit = { buttonModifier ->
+                                OutlinedButton(
+                                    onClick = handleSaveClick,
+                                    enabled = !state.isSavingWallpaper,
+                                    modifier = buttonModifier,
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                                ) {
+                                    if (state.isSavingWallpaper) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    } else {
+                                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("保存相册", maxLines = 1)
+                                }
+                            }
+
+                            val shareButton: @Composable (Modifier) -> Unit = { buttonModifier ->
+                                OutlinedButton(
+                                    onClick = onShareWallpaper,
+                                    modifier = buttonModifier,
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("分享", maxLines = 1)
+                                }
+                            }
+
+                            if (isNarrow) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        openButton(Modifier.weight(1f))
+                                        saveButton(Modifier.weight(1f))
+                                    }
+                                    shareButton(Modifier.fillMaxWidth())
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    openButton(Modifier.weight(1f))
+                                    saveButton(Modifier.weight(1f))
+                                    shareButton(Modifier.weight(1f))
+                                }
                             }
                         }
                     }
