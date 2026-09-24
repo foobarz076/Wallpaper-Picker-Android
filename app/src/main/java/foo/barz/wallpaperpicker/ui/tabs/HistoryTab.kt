@@ -371,7 +371,7 @@ private fun WallpaperDetailSheet(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "来源: ${item.sourceType.name} · 更换于 ${formatDateTime(item.appliedTimestamp)}",
+                    text = "来源: ${item.sourceType.displayName} · 更换于 ${formatDateTime(item.appliedTimestamp)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -411,56 +411,70 @@ private fun WallpaperDetailSheet(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Action Buttons Row
-        Row(
+        // 2x2 Action Buttons Grid (avoids label truncation on narrow screens)
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(
-                onClick = onToggleFavorite,
-                modifier = Modifier.weight(1f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = null,
-                    tint = if (item.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(if (item.isFavorite) "已收藏" else "收藏", maxLines = 1)
+                OutlinedButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (item.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(if (item.isFavorite) "已收藏" else "设为收藏", maxLines = 1)
+                }
+
+                OutlinedButton(
+                    onClick = onOpen,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("图库打开", maxLines = 1)
+                }
             }
 
-            OutlinedButton(
-                onClick = onOpen,
-                modifier = Modifier.weight(1f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("打开", maxLines = 1)
-            }
+                OutlinedButton(
+                    onClick = onSave,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("保存相册", maxLines = 1)
+                }
 
-            OutlinedButton(
-                onClick = onSave,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("保存", maxLines = 1)
-            }
-
-            OutlinedButton(
-                onClick = onShare,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("分享", maxLines = 1)
+                OutlinedButton(
+                    onClick = onShare,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("系统分享", maxLines = 1)
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Spacer(modifier = Modifier.height(8.dp))
 
