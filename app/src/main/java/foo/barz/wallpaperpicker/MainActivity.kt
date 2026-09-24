@@ -52,6 +52,14 @@ class MainActivity : ComponentActivity() {
                     onToggleSchedule = viewModel::toggleSchedule,
                     onToggleDeferDuringInteraction = viewModel::onToggleDeferDuringInteraction,
                     onToggleFairShuffle = viewModel::onToggleFairShuffle,
+                    onToggleFavoriteCurrent = viewModel::toggleFavoriteCurrent,
+                    onApplyWallpaperFromHistory = viewModel::applyWallpaperFromHistory,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    onDeleteHistoryItem = viewModel::deleteHistoryItem,
+                    onClearHistory = viewModel::clearUnfavoritedHistory,
+                    onOpenCustomUriInGallery = viewModel::openUriInGallery,
+                    onShareCustomWallpaper = viewModel::shareUri,
+                    onSaveCustomWallpaper = viewModel::saveUriToGallery,
                     onChangeNow = viewModel::changeNow,
                     onClearStatus = viewModel::clearStatusMessage
                 )

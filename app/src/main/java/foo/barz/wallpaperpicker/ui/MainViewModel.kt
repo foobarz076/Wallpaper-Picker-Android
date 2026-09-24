@@ -15,11 +15,13 @@ import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
 import foo.barz.wallpaperpicker.core.cache.WallpaperCacheManager
 import foo.barz.wallpaperpicker.core.database.LocalFolderFastScanner
 import foo.barz.wallpaperpicker.core.database.LocalFolderIndexDatabase
+import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
+import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
@@ -36,9 +38,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 data class MainUiState(
     val sourceType: WallpaperSourceType = WallpaperSourceType.LOCAL_FOLDER,
@@ -79,6 +84,9 @@ data class MainUiState(
     val lastErrorMessage: String? = null,
     val deferDuringInteraction: Boolean = true,
     val fairShuffle: Boolean = true,
+    val historyList: List<WallpaperHistoryItem> = emptyList(),
+    val favoritesList: List<WallpaperHistoryItem> = emptyList(),
+    val isCurrentFavorite: Boolean = false,
     val statusMessage: String? = null
 )
 
@@ -89,6 +97,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val applier = WallpaperApplier(application)
     private val cacheManager = WallpaperCacheManager(application)
     private val folderIndexDb = LocalFolderIndexDatabase(application)
+    private val historyDb = WallpaperHistoryDatabase(application)
 
     private val _uiState = MutableStateFlow(
         MainUiState(
@@ -126,6 +135,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    init {
+        // Retroactively populate history database with last active wallpaper if empty
+        val lastUri = prefs.lastWallpaperUri
+        if (lastUri != null && historyDb.getHistoryCount() == 0) {
+            historyDb.recordAppliedWallpaper(
+                sourceUri = lastUri,
+                title = prefs.lastWallpaperTitle,
+                sourceType = prefs.sourceType,
+                appliedTimestamp = prefs.lastChangedTimestamp
+            )
+        }
+        refreshHistoryAndFavorites()
+    }
 
     fun onSourceTypeSelected(type: WallpaperSourceType) {
         prefs.sourceType = type
@@ -596,6 +619,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 prefs.recordRecentWallpaperKey(wallpaperKey)
             }
 
+            data.sourceUri?.let { uri ->
+                historyDb.recordAppliedWallpaper(
+                    sourceUri = uri,
+                    title = data.title,
+                    sourceType = prefs.sourceType,
+                    appliedTimestamp = now
+                )
+            }
+
+            val history = historyDb.getHistoryList()
+            val favorites = historyDb.getFavoritesList()
+            val isFav = data.sourceUri?.let { uri -> favorites.any { it.sourceUri == uri.toString() } } ?: false
+
             _uiState.update {
                 it.copy(
                     isChanging = false,
@@ -605,8 +641,199 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastErrorMessage = null,
                     lastExecutionStatus = "成功",
                     cacheSizeBytes = cacheManager.getCacheSizeBytes(),
+                    historyList = history,
+                    favoritesList = favorites,
+                    isCurrentFavorite = isFav,
                     statusMessage = "更换成功: ${data.title ?: "未知图片"}"
                 )
+            }
+        }
+    }
+
+    fun openUriInGallery(uri: Uri) {
+        viewModelScope.launch {
+            val result = WallpaperActionManager.openInGallery(getApplication(), uri)
+            if (result.isFailure) {
+                _uiState.update { it.copy(statusMessage = "无法打开图库: ${result.exceptionOrNull()?.message}") }
+            }
+        }
+    }
+
+    fun shareUri(uri: Uri, title: String?) {
+        viewModelScope.launch {
+            val result = WallpaperActionManager.shareWallpaper(getApplication(), uri, title)
+            if (result.isFailure) {
+                _uiState.update { it.copy(statusMessage = "分享失败: ${result.exceptionOrNull()?.message}") }
+            }
+        }
+    }
+
+    fun saveUriToGallery(uri: Uri, preferredName: String?) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingWallpaper = true) }
+            val result = WallpaperActionManager.saveToGallery(getApplication(), uri, preferredName)
+            _uiState.update {
+                it.copy(
+                    isSavingWallpaper = false,
+                    statusMessage = if (result.isSuccess) "已保存到相册 Pictures/Wallpapers" else "保存失败: ${result.exceptionOrNull()?.message}"
+                )
+            }
+        }
+    }
+
+    fun refreshHistoryAndFavorites() {
+        val history = historyDb.getHistoryList()
+        val favorites = historyDb.getFavoritesList()
+        val currentUri = prefs.lastWallpaperUri?.toString()
+        val isFav = if (currentUri != null) {
+            favorites.any { it.sourceUri == currentUri }
+        } else {
+            false
+        }
+        _uiState.update {
+            it.copy(
+                historyList = history,
+                favoritesList = favorites,
+                isCurrentFavorite = isFav
+            )
+        }
+    }
+
+    fun toggleFavorite(item: WallpaperHistoryItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (item.isFavorite) {
+                if (!item.favoriteFilePath.isNullOrBlank()) {
+                    val file = File(item.favoriteFilePath)
+                    if (file.exists()) file.delete()
+                }
+                historyDb.updateFavorite(
+                    id = item.id,
+                    isFavorite = false,
+                    favoriteTimestamp = null,
+                    favoriteFilePath = null
+                )
+            } else {
+                val promotedPath = if (item.sourceType == WallpaperSourceType.IMMICH || item.sourceType == WallpaperSourceType.HTTP_API) {
+                    promoteToPermanentFavorite(Uri.parse(item.sourceUri))
+                } else {
+                    null
+                }
+                historyDb.updateFavorite(
+                    id = item.id,
+                    isFavorite = true,
+                    favoriteTimestamp = System.currentTimeMillis(),
+                    favoriteFilePath = promotedPath
+                )
+            }
+            withContext(Dispatchers.Main) {
+                refreshHistoryAndFavorites()
+            }
+        }
+    }
+
+    fun toggleFavoriteCurrent() {
+        val currentUri = prefs.lastWallpaperUri ?: return
+        val currentUriStr = currentUri.toString()
+        val existing = historyDb.getItemByUri(currentUriStr)
+        if (existing != null) {
+            toggleFavorite(existing)
+        } else {
+            val id = historyDb.recordAppliedWallpaper(
+                sourceUri = currentUri,
+                title = prefs.lastWallpaperTitle,
+                sourceType = prefs.sourceType,
+                appliedTimestamp = prefs.lastChangedTimestamp
+            )
+            historyDb.getItemById(id)?.let { toggleFavorite(it) }
+        }
+    }
+
+    private fun promoteToPermanentFavorite(sourceUri: Uri): String? {
+        val context = getApplication<Application>()
+        val favDir = File(context.filesDir, "favorites").apply { if (!exists()) mkdirs() }
+        val targetFile = File(favDir, "fav_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}.jpg")
+        return try {
+            val inputStream = context.contentResolver.openInputStream(sourceUri) ?: return null
+            inputStream.use { input ->
+                FileOutputStream(targetFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            targetFile.absolutePath
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun deleteHistoryItem(item: WallpaperHistoryItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (!item.favoriteFilePath.isNullOrBlank()) {
+                val file = File(item.favoriteFilePath)
+                if (file.exists()) file.delete()
+            }
+            historyDb.deleteRecord(item.id)
+            withContext(Dispatchers.Main) {
+                refreshHistoryAndFavorites()
+                _uiState.update { it.copy(statusMessage = "已删除历史记录") }
+            }
+        }
+    }
+
+    fun clearUnfavoritedHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            historyDb.clearUnfavoritedHistory()
+            withContext(Dispatchers.Main) {
+                refreshHistoryAndFavorites()
+                _uiState.update { it.copy(statusMessage = "已清除非收藏历史记录") }
+            }
+        }
+    }
+
+    fun applyWallpaperFromHistory(item: WallpaperHistoryItem) {
+        if (_uiState.value.isChanging) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isChanging = true, statusMessage = "正在应用所选壁纸…") }
+            val context = getApplication<Application>()
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val uri = item.displayUri
+                    val streamProvider = {
+                        context.contentResolver.openInputStream(uri)
+                            ?: throw IllegalStateException("无法打开图片流")
+                    }
+                    val bitmap = processor.process(streamProvider, prefs.scrollMode, prefs.cropMode).getOrThrow()
+                    applier.apply(bitmap, prefs.target).getOrThrow()
+                }
+            }
+            if (result.isSuccess) {
+                val now = System.currentTimeMillis()
+                prefs.lastChangedTimestamp = now
+                prefs.lastWallpaperTitle = item.title
+                prefs.lastWallpaperUri = Uri.parse(item.sourceUri)
+                prefs.lastErrorMessage = null
+                prefs.lastExecutionStatus = "成功"
+                historyDb.recordAppliedWallpaper(Uri.parse(item.sourceUri), item.title, item.sourceType, now)
+                refreshHistoryAndFavorites()
+                _uiState.update {
+                    it.copy(
+                        isChanging = false,
+                        lastWallpaperTitle = item.title,
+                        lastWallpaperUri = Uri.parse(item.sourceUri),
+                        lastChangedText = formatTimestamp(now, item.title),
+                        lastErrorMessage = null,
+                        lastExecutionStatus = "成功",
+                        statusMessage = "壁纸已更换: ${item.title ?: "历史壁纸"}"
+                    )
+                }
+            } else {
+                val error = result.exceptionOrNull()?.message ?: "应用壁纸失败"
+                _uiState.update {
+                    it.copy(
+                        isChanging = false,
+                        lastErrorMessage = error,
+                        statusMessage = error
+                    )
+                }
             }
         }
     }

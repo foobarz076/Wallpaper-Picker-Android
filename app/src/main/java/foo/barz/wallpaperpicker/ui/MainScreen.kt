@@ -36,10 +36,12 @@ import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
+import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
 import foo.barz.wallpaperpicker.ui.tabs.DashboardTab
+import foo.barz.wallpaperpicker.ui.tabs.HistoryTab
 import foo.barz.wallpaperpicker.ui.tabs.MainTab
 import foo.barz.wallpaperpicker.ui.tabs.SettingsTab
 import foo.barz.wallpaperpicker.ui.tabs.SourcesTab
@@ -80,6 +82,14 @@ fun MainScreen(
     onToggleSchedule: (Boolean) -> Unit,
     onToggleDeferDuringInteraction: (Boolean) -> Unit,
     onToggleFairShuffle: (Boolean) -> Unit,
+    onToggleFavoriteCurrent: () -> Unit = {},
+    onApplyWallpaperFromHistory: (WallpaperHistoryItem) -> Unit = {},
+    onToggleFavorite: (WallpaperHistoryItem) -> Unit = {},
+    onDeleteHistoryItem: (WallpaperHistoryItem) -> Unit = {},
+    onClearHistory: () -> Unit = {},
+    onOpenCustomUriInGallery: (Uri) -> Unit = {},
+    onShareCustomWallpaper: (Uri, String?) -> Unit = { _, _ -> },
+    onSaveCustomWallpaper: (Uri, String?) -> Unit = { _, _ -> },
     onChangeNow: () -> Unit,
     onClearStatus: () -> Unit
 ) {
@@ -168,7 +178,19 @@ fun MainScreen(
                         onOpenInGallery = onOpenInGallery,
                         onShareWallpaper = onShareWallpaper,
                         onSaveToGallery = onSaveToGallery,
+                        onToggleFavoriteCurrent = onToggleFavoriteCurrent,
                         onChangeNow = onChangeNow
+                    )
+
+                    MainTab.HISTORY -> HistoryTab(
+                        state = state,
+                        onApplyWallpaper = onApplyWallpaperFromHistory,
+                        onToggleFavorite = onToggleFavorite,
+                        onDeleteHistoryItem = onDeleteHistoryItem,
+                        onClearHistory = onClearHistory,
+                        onOpenInGallery = onOpenCustomUriInGallery,
+                        onShareWallpaper = onShareCustomWallpaper,
+                        onSaveToGallery = onSaveCustomWallpaper
                     )
 
                     MainTab.SOURCES -> SourcesTab(

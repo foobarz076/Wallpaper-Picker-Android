@@ -112,6 +112,18 @@ class WallpaperWorker(
             prefs.recordRecentWallpaperKey(wallpaperKey)
         }
 
+        // Record into persistent history database
+        wallpaperData.sourceUri?.let { uri ->
+            runCatching {
+                foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase(applicationContext).recordAppliedWallpaper(
+                    sourceUri = uri,
+                    title = wallpaperData.title,
+                    sourceType = prefs.sourceType,
+                    appliedTimestamp = System.currentTimeMillis()
+                )
+            }
+        }
+
         return Result.success()
     }
 

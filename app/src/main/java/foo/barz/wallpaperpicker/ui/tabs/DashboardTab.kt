@@ -23,6 +23,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -37,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -56,6 +59,7 @@ fun DashboardTab(
     onOpenInGallery: () -> Unit,
     onShareWallpaper: () -> Unit,
     onSaveToGallery: () -> Unit,
+    onToggleFavoriteCurrent: () -> Unit,
     onChangeNow: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -155,14 +159,18 @@ fun DashboardTab(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Adaptive button grid: 2-column grid on narrow containers, 1-row layout on wide screens
-                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        val isNarrow = maxWidth < 360.dp
-
-                        val openButton: @Composable (Modifier) -> Unit = { buttonModifier ->
+                    // 2x2 Action Button Grid
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             OutlinedButton(
                                 onClick = onOpenInGallery,
-                                modifier = buttonModifier,
+                                modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                             ) {
                                 Icon(
@@ -173,13 +181,11 @@ fun DashboardTab(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("图库打开", maxLines = 1)
                             }
-                        }
 
-                        val saveButton: @Composable (Modifier) -> Unit = { buttonModifier ->
                             OutlinedButton(
                                 onClick = handleSaveClick,
                                 enabled = !state.isSavingWallpaper,
-                                modifier = buttonModifier,
+                                modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                             ) {
                                 if (state.isSavingWallpaper) {
@@ -199,10 +205,13 @@ fun DashboardTab(
                             }
                         }
 
-                        val shareButton: @Composable (Modifier) -> Unit = { buttonModifier ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             OutlinedButton(
                                 onClick = onShareWallpaper,
-                                modifier = buttonModifier,
+                                modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                             ) {
                                 Icon(
@@ -213,30 +222,20 @@ fun DashboardTab(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("分享", maxLines = 1)
                             }
-                        }
 
-                        if (isNarrow) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            OutlinedButton(
+                                onClick = onToggleFavoriteCurrent,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    openButton(Modifier.weight(1f))
-                                    saveButton(Modifier.weight(1f))
-                                }
-                                shareButton(Modifier.fillMaxWidth())
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                openButton(Modifier.weight(1f))
-                                saveButton(Modifier.weight(1f))
-                                shareButton(Modifier.weight(1f))
+                                Icon(
+                                    imageVector = if (state.isCurrentFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = null,
+                                    tint = if (state.isCurrentFavorite) Color.Red else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (state.isCurrentFavorite) "已收藏" else "设为收藏", maxLines = 1)
                             }
                         }
                     }
