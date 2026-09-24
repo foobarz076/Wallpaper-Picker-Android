@@ -1,12 +1,15 @@
 package foo.barz.wallpaperpicker.core.source
 
+import android.Manifest
 import android.content.ContentUris
 import android.content.Context
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import androidx.core.content.ContextCompat
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
 import foo.barz.wallpaperpicker.core.model.WallpaperData
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +32,15 @@ class MediaStoreSource(
 
     override suspend fun getNextWallpaper(): Result<WallpaperData> = withContext(Dispatchers.IO) {
         runCatching {
+            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Manifest.permission.READ_MEDIA_IMAGES
+            } else {
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                throw SecurityException("缺少读取相册权限，请先授权")
+            }
+
             val resolver = context.contentResolver
             val collectionUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
@@ -106,6 +118,16 @@ class MediaStoreSource(
          * Queries all image buckets/albums from the system MediaStore.
          */
         suspend fun fetchAlbums(context: Context): List<MediaStoreAlbum> = withContext(Dispatchers.IO) {
+            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Manifest.permission.READ_MEDIA_IMAGES
+            } else {
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+
+            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                return@withContext emptyList()
+            }
+
             val resolver = context.contentResolver
             val collectionUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
@@ -119,21 +141,25 @@ class MediaStoreSource(
             val albumMap = mutableMapOf<String, Pair<String, Int>>()
             var totalCount = 0
 
-            resolver.query(collectionUri, projection, selection, selectionArgs, null)?.use { cursor ->
-                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
-                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+            try {
+                resolver.query(collectionUri, projection, selection, selectionArgs, null)?.use { cursor ->
+                    val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
+                    val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
 
-                while (cursor.moveToNext()) {
-                    totalCount++
-                    val bucketId = cursor.getString(idCol) ?: continue
-                    val bucketName = cursor.getString(nameCol) ?: "未命名相册"
-                    val current = albumMap[bucketId]
-                    albumMap[bucketId] = if (current != null) {
-                        current.first to (current.second + 1)
-                    } else {
-                        bucketName to 1
+                    while (cursor.moveToNext()) {
+                        totalCount++
+                        val bucketId = cursor.getString(idCol) ?: continue
+                        val bucketName = cursor.getString(nameCol) ?: "未命名相册"
+                        val current = albumMap[bucketId]
+                        albumMap[bucketId] = if (current != null) {
+                            current.first to (current.second + 1)
+                        } else {
+                            bucketName to 1
+                        }
                     }
                 }
+            } catch (_: SecurityException) {
+                return@withContext emptyList()
             }
 
             val list = mutableListOf<MediaStoreAlbum>()

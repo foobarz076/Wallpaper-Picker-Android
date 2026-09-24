@@ -1,8 +1,12 @@
 package foo.barz.wallpaperpicker.ui
 
+import android.Manifest
 import android.app.Application
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -118,7 +122,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun onSourceTypeSelected(type: WallpaperSourceType) {
         prefs.sourceType = type
         _uiState.update { it.copy(sourceType = type) }
-        if (type == WallpaperSourceType.MEDIA_STORE && _uiState.value.mediaStoreAlbums.isEmpty()) {
+        if (type == WallpaperSourceType.MEDIA_STORE && _uiState.value.mediaStoreAlbums.isEmpty() && hasMediaPermission()) {
             fetchMediaStoreAlbums()
         }
         if (prefs.isScheduled) {
@@ -164,9 +168,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun fetchMediaStoreAlbums() {
+        if (!hasMediaPermission()) {
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMediaStoreAlbums = true) }
-            val albums = MediaStoreSource.fetchAlbums(getApplication())
+            val albums = runCatching {
+                MediaStoreSource.fetchAlbums(getApplication())
+            }.getOrDefault(emptyList())
             _uiState.update {
                 it.copy(
                     isLoadingMediaStoreAlbums = false,
@@ -436,7 +445,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 WallpaperSourceType.MEDIA_STORE -> {
-                    // System MediaStore is ready without extra paths
+                    if (!hasMediaPermission()) {
+                        _uiState.update { it.copy(statusMessage = "请先授予相册访问权限") }
+                        return
+                    }
                 }
                 WallpaperSourceType.HTTP_API -> {
                     if (prefs.httpPresetType == HttpPresetType.CUSTOM && prefs.httpCustomUrl.isBlank()) {
@@ -474,7 +486,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             WallpaperSourceType.MEDIA_STORE -> {
-                // System MediaStore is ready
+                if (!hasMediaPermission()) {
+                    _uiState.update { it.copy(statusMessage = "请先授予相册访问权限") }
+                    return
+                }
             }
             WallpaperSourceType.HTTP_API -> {
                 if (prefs.httpPresetType == HttpPresetType.CUSTOM && prefs.httpCustomUrl.isBlank()) {
@@ -568,5 +583,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val df = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         val timeStr = df.format(Date(timestamp))
         return if (title.isNullOrEmpty()) timeStr else "$timeStr ($title)"
+    }
+
+    private fun hasMediaPermission(): Boolean {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        return ContextCompat.checkSelfPermission(getApplication(), permission) == PackageManager.PERMISSION_GRANTED
     }
 }
