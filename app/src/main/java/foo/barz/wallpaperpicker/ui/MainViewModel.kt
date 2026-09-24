@@ -6,24 +6,31 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import foo.barz.wallpaperpicker.core.action.WallpaperActionManager
 import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
 import foo.barz.wallpaperpicker.core.cache.WallpaperCacheManager
+import foo.barz.wallpaperpicker.core.database.LocalFolderFastScanner
+import foo.barz.wallpaperpicker.core.database.LocalFolderIndexDatabase
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
+import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
 import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
 import foo.barz.wallpaperpicker.core.source.ImmichSource
+import foo.barz.wallpaperpicker.core.source.MediaStoreSource
 import foo.barz.wallpaperpicker.core.source.WallpaperSourceFactory
 import foo.barz.wallpaperpicker.core.worker.WallpaperWorker
 import foo.barz.wallpaperpicker.data.PreferencesManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -32,6 +39,12 @@ data class MainUiState(
     val sourceType: WallpaperSourceType = WallpaperSourceType.LOCAL_FOLDER,
     val folderUri: Uri? = null,
     val folderName: String? = null,
+    val indexedImageCount: Int = 0,
+    val isIndexingFolder: Boolean = false,
+    val mediaStoreAlbumId: String? = null,
+    val mediaStoreAlbumName: String? = null,
+    val mediaStoreAlbums: List<MediaStoreAlbum> = emptyList(),
+    val isLoadingMediaStoreAlbums: Boolean = false,
     val httpPresetType: HttpPresetType = HttpPresetType.BING,
     val httpCustomUrl: String = "",
     val httpCustomJsonPath: String = "",
@@ -49,8 +62,12 @@ data class MainUiState(
     val intervalMinutes: Long = 60L,
     val target: WallpaperTarget = WallpaperTarget.BOTH,
     val scrollMode: WallpaperScrollMode = WallpaperScrollMode.AUTO,
+    val reapplyOnScrollChange: Boolean = true,
     val isScheduled: Boolean = false,
     val isChanging: Boolean = false,
+    val isSavingWallpaper: Boolean = false,
+    val lastWallpaperTitle: String? = null,
+    val lastWallpaperUri: Uri? = null,
     val lastChangedText: String = "尚未更换过",
     val statusMessage: String? = null
 )
@@ -61,12 +78,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val processor = WallpaperProcessor(application)
     private val applier = WallpaperApplier(application)
     private val cacheManager = WallpaperCacheManager(application)
+    private val folderIndexDb = LocalFolderIndexDatabase(application)
 
     private val _uiState = MutableStateFlow(
         MainUiState(
             sourceType = prefs.sourceType,
             folderUri = prefs.folderUri,
             folderName = resolveFolderName(prefs.folderUri),
+            indexedImageCount = prefs.folderUri?.let { folderIndexDb.getIndexCount(it) } ?: 0,
+            mediaStoreAlbumId = prefs.mediaStoreAlbumId,
+            mediaStoreAlbumName = prefs.mediaStoreAlbumName,
             httpPresetType = prefs.httpPresetType,
             httpCustomUrl = prefs.httpCustomUrl,
             httpCustomJsonPath = prefs.httpCustomJsonPath,
@@ -82,7 +103,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             intervalMinutes = prefs.intervalMinutes,
             target = prefs.target,
             scrollMode = prefs.scrollMode,
+            reapplyOnScrollChange = prefs.reapplyOnScrollChange,
             isScheduled = prefs.isScheduled,
+            lastWallpaperTitle = prefs.lastWallpaperTitle,
+            lastWallpaperUri = prefs.lastWallpaperUri,
             lastChangedText = formatTimestamp(prefs.lastChangedTimestamp, prefs.lastWallpaperTitle)
         )
     )
@@ -91,6 +115,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun onSourceTypeSelected(type: WallpaperSourceType) {
         prefs.sourceType = type
         _uiState.update { it.copy(sourceType = type) }
+        if (type == WallpaperSourceType.MEDIA_STORE && _uiState.value.mediaStoreAlbums.isEmpty()) {
+            fetchMediaStoreAlbums()
+        }
         if (prefs.isScheduled) {
             WallpaperWorker.schedule(getApplication(), prefs.intervalMinutes)
         }
@@ -111,8 +138,102 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 folderUri = uri,
                 folderName = name,
-                statusMessage = "已选择文件夹: $name"
+                statusMessage = "已选择文件夹: $name，正在建立极速索引…"
             )
+        }
+        rescanFolder(uri)
+    }
+
+    fun rescanFolder(targetUri: Uri? = prefs.folderUri) {
+        val uri = targetUri ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isIndexingFolder = true) }
+            val records = LocalFolderFastScanner.scanFolder(getApplication(), uri)
+            folderIndexDb.replaceFolderIndex(uri, records)
+            _uiState.update {
+                it.copy(
+                    isIndexingFolder = false,
+                    indexedImageCount = records.size,
+                    statusMessage = "本地文件夹索引完成，共找到 ${records.size} 张图片"
+                )
+            }
+        }
+    }
+
+    fun fetchMediaStoreAlbums() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingMediaStoreAlbums = true) }
+            val albums = MediaStoreSource.fetchAlbums(getApplication())
+            _uiState.update {
+                it.copy(
+                    isLoadingMediaStoreAlbums = false,
+                    mediaStoreAlbums = albums
+                )
+            }
+        }
+    }
+
+    fun onMediaStoreAlbumSelected(album: MediaStoreAlbum?) {
+        prefs.mediaStoreAlbumId = album?.id
+        prefs.mediaStoreAlbumName = album?.name
+        _uiState.update {
+            it.copy(
+                mediaStoreAlbumId = album?.id,
+                mediaStoreAlbumName = album?.name,
+                statusMessage = if (album != null) "已选择相册: ${album.name}" else "已选择: 全部照片"
+            )
+        }
+    }
+
+    fun openCurrentWallpaperInGallery() {
+        val uri = _uiState.value.lastWallpaperUri ?: return
+        viewModelScope.launch {
+            val result = WallpaperActionManager.openInGallery(getApplication(), uri)
+            if (result.isFailure) {
+                _uiState.update { it.copy(statusMessage = "打开图库失败: ${result.exceptionOrNull()?.message}") }
+            }
+        }
+    }
+
+    fun shareCurrentWallpaper() {
+        val uri = _uiState.value.lastWallpaperUri ?: return
+        viewModelScope.launch {
+            val result = WallpaperActionManager.shareWallpaper(
+                getApplication(),
+                uri,
+                _uiState.value.lastWallpaperTitle
+            )
+            if (result.isFailure) {
+                _uiState.update { it.copy(statusMessage = "调起分享失败: ${result.exceptionOrNull()?.message}") }
+            }
+        }
+    }
+
+    fun saveCurrentWallpaperToGallery() {
+        val uri = _uiState.value.lastWallpaperUri ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingWallpaper = true, statusMessage = "正在保存到相册…") }
+            val result = WallpaperActionManager.saveToGallery(
+                getApplication(),
+                uri,
+                _uiState.value.lastWallpaperTitle
+            )
+            if (result.isSuccess) {
+                _uiState.update {
+                    it.copy(
+                        isSavingWallpaper = false,
+                        statusMessage = "成功保存至相册 (Pictures/Wallpapers)"
+                    )
+                }
+            } else {
+                val error = result.exceptionOrNull()?.message ?: "保存失败"
+                _uiState.update {
+                    it.copy(
+                        isSavingWallpaper = false,
+                        statusMessage = "保存失败: $error"
+                    )
+                }
+            }
         }
     }
 
@@ -237,6 +358,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun onScrollModeSelected(mode: WallpaperScrollMode) {
         prefs.scrollMode = mode
         _uiState.update { it.copy(scrollMode = mode) }
+        if (prefs.reapplyOnScrollChange && _uiState.value.lastWallpaperUri != null) {
+            reapplyCurrentWallpaper()
+        }
+    }
+
+    fun onToggleReapplyOnScrollChange(enabled: Boolean) {
+        prefs.reapplyOnScrollChange = enabled
+        _uiState.update { it.copy(reapplyOnScrollChange = enabled) }
+    }
+
+    fun reapplyCurrentWallpaper() {
+        val uri = _uiState.value.lastWallpaperUri ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isChanging = true, statusMessage = "正在按「${prefs.scrollMode.label}」重新应用壁纸…") }
+            val processResult = processor.process(
+                openStream = {
+                    if (uri.scheme == "file") {
+                        java.io.FileInputStream(java.io.File(uri.path!!))
+                    } else {
+                        getApplication<Application>().contentResolver.openInputStream(uri)
+                            ?: throw java.io.FileNotFoundException("无法打开图片流: $uri")
+                    }
+                },
+                scrollMode = prefs.scrollMode
+            )
+
+            if (processResult.isFailure) {
+                val error = processResult.exceptionOrNull()?.message ?: "图片处理失败"
+                _uiState.update { it.copy(isChanging = false, statusMessage = error) }
+                return@launch
+            }
+
+            val bitmap = processResult.getOrThrow()
+            val applyResult = applier.apply(bitmap, prefs.target)
+
+            if (applyResult.isFailure) {
+                val error = applyResult.exceptionOrNull()?.message ?: "设置壁纸失败"
+                _uiState.update { it.copy(isChanging = false, statusMessage = error) }
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    isChanging = false,
+                    statusMessage = "已按「${prefs.scrollMode.label}」重新应用当前壁纸"
+                )
+            }
+        }
     }
 
     fun toggleSchedule(enabled: Boolean) {
@@ -248,6 +417,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update { it.copy(statusMessage = "请先选择壁纸文件夹") }
                         return
                     }
+                }
+                WallpaperSourceType.MEDIA_STORE -> {
+                    // System MediaStore is ready without extra paths
                 }
                 WallpaperSourceType.HTTP_API -> {
                     if (prefs.httpPresetType == HttpPresetType.CUSTOM && prefs.httpCustomUrl.isBlank()) {
@@ -283,6 +455,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(statusMessage = "请先选择壁纸文件夹") }
                     return
                 }
+            }
+            WallpaperSourceType.MEDIA_STORE -> {
+                // System MediaStore is ready
             }
             WallpaperSourceType.HTTP_API -> {
                 if (prefs.httpPresetType == HttpPresetType.CUSTOM && prefs.httpCustomUrl.isBlank()) {
@@ -346,10 +521,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val now = System.currentTimeMillis()
             prefs.lastChangedTimestamp = now
             prefs.lastWallpaperTitle = data.title
+            prefs.lastWallpaperUri = data.sourceUri
 
             _uiState.update {
                 it.copy(
                     isChanging = false,
+                    lastWallpaperTitle = data.title,
+                    lastWallpaperUri = data.sourceUri,
                     lastChangedText = formatTimestamp(now, data.title),
                     cacheSizeBytes = cacheManager.getCacheSizeBytes(),
                     statusMessage = "更换成功: ${data.title ?: "未知图片"}"

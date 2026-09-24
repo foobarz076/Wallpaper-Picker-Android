@@ -22,6 +22,13 @@ object WallpaperSourceFactory {
                     ?: throw IllegalStateException("未选择壁纸文件夹，请先授权选择文件夹")
                 LocalFolderSource(context, folderUri)
             }
+            WallpaperSourceType.MEDIA_STORE -> {
+                MediaStoreSource(
+                    context = context,
+                    bucketId = prefs.mediaStoreAlbumId,
+                    albumName = prefs.mediaStoreAlbumName
+                )
+            }
             WallpaperSourceType.HTTP_API -> {
                 val config = HttpApiConfig(
                     presetType = prefs.httpPresetType,

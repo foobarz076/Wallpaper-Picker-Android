@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Cached wallpapers directory for network sources -->
+    <cache-path name="cached_wallpapers" path="wallpapers/" />
+    <!-- App private cache root -->
+    <cache-path name="cache" path="." />
+    <!-- App private files root -->
+    <files-path name="files" path="." />
+    <!-- App external cache if used -->
+    <external-cache-path name="external_cache" path="." />
+</paths>

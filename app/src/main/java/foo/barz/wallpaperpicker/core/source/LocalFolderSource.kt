@@ -2,18 +2,21 @@ package foo.barz.wallpaperpicker.core.source
 
 import android.content.Context
 import android.net.Uri
-import androidx.documentfile.provider.DocumentFile
+import foo.barz.wallpaperpicker.core.database.LocalFolderFastScanner
+import foo.barz.wallpaperpicker.core.database.LocalFolderIndexDatabase
 import foo.barz.wallpaperpicker.core.model.WallpaperData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
 
 /**
- * Wallpaper source that picks a random image from a user-selected SAF folder.
+ * High-performance wallpaper source that picks a random image from a user-selected SAF folder.
+ * Uses native DocumentsContract cursor indexing and SQLite order-by-random for 0ms selection.
  */
 class LocalFolderSource(
     private val context: Context,
-    private val folderUri: Uri
+    private val folderUri: Uri,
+    private val database: LocalFolderIndexDatabase = LocalFolderIndexDatabase(context)
 ) : WallpaperSource {
 
     override val id: String = "local_folder"
@@ -21,37 +24,33 @@ class LocalFolderSource(
 
     override suspend fun getNextWallpaper(): Result<WallpaperData> = withContext(Dispatchers.IO) {
         runCatching {
-            val rootDoc = DocumentFile.fromTreeUri(context, folderUri)
-                ?: throw IllegalStateException("无法访问所选文件夹，请重新选择并授权")
-
-            val imageFiles = rootDoc.listFiles().filter { doc ->
-                doc.isFile && isImageFile(doc)
+            // Check if index exists; if not, perform fast scan and indexing
+            var record = database.getRandomImage(folderUri)
+            if (record == null) {
+                val scanned = LocalFolderFastScanner.scanFolder(context, folderUri)
+                if (scanned.isEmpty()) {
+                    throw NoSuchElementException("所选文件夹中未找到任何图片文件 (.jpg, .jpeg, .png, .webp)")
+                }
+                database.replaceFolderIndex(folderUri, scanned)
+                record = database.getRandomImage(folderUri)
+                    ?: throw NoSuchElementException("无法从本地索引中获取图片")
             }
 
-            if (imageFiles.isEmpty()) {
-                throw NoSuchElementException("所选文件夹中未找到任何图片文件 (.jpg, .jpeg, .png, .webp)")
-            }
-
-            val targetDoc = imageFiles.random()
-
+            val targetUri = Uri.parse(record.documentUri)
             WallpaperData(
                 openStream = {
-                    context.contentResolver.openInputStream(targetDoc.uri)
-                        ?: throw FileNotFoundException("无法打开图片文件流: ${targetDoc.uri}")
+                    try {
+                        context.contentResolver.openInputStream(targetUri)
+                            ?: throw FileNotFoundException("无法打开图片文件流: $targetUri")
+                    } catch (e: Exception) {
+                        // Invalidate deleted file record and re-throw
+                        database.removeByDocumentUri(targetUri)
+                        throw e
+                    }
                 },
-                title = targetDoc.name,
-                sourceUri = targetDoc.uri
+                title = record.fileName,
+                sourceUri = targetUri
             )
         }
-    }
-
-    private fun isImageFile(doc: DocumentFile): Boolean {
-        val mime = doc.type
-        if (mime != null && mime.startsWith("image/")) {
-            return true
-        }
-        val name = doc.name?.lowercase() ?: return false
-        return name.endsWith(".jpg") || name.endsWith(".jpeg") ||
-                name.endsWith(".png") || name.endsWith(".webp")
     }
 }

@@ -65,5 +65,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.conscrypt.android)
 
+    testImplementation(kotlin("test"))
+
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

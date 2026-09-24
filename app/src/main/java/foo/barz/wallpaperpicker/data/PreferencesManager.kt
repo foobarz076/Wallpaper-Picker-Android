@@ -36,6 +36,10 @@ class PreferencesManager(context: Context) {
         }
         set(value) = prefs.edit().putString(KEY_SCROLL_MODE, value.name).apply()
 
+    var reapplyOnScrollChange: Boolean
+        get() = prefs.getBoolean(KEY_REAPPLY_ON_SCROLL_CHANGE, true)
+        set(value) = prefs.edit().putBoolean(KEY_REAPPLY_ON_SCROLL_CHANGE, value).apply()
+
     var isScheduled: Boolean
         get() = prefs.getBoolean(KEY_IS_SCHEDULED, false)
         set(value) = prefs.edit().putBoolean(KEY_IS_SCHEDULED, value).apply()
@@ -47,6 +51,18 @@ class PreferencesManager(context: Context) {
     var lastWallpaperTitle: String?
         get() = prefs.getString(KEY_LAST_TITLE, null)
         set(value) = prefs.edit().putString(KEY_LAST_TITLE, value).apply()
+
+    var lastWallpaperUri: Uri?
+        get() = prefs.getString(KEY_LAST_URI, null)?.let { Uri.parse(it) }
+        set(value) = prefs.edit().putString(KEY_LAST_URI, value?.toString()).apply()
+
+    var mediaStoreAlbumId: String?
+        get() = prefs.getString(KEY_MEDIA_STORE_ALBUM_ID, null)
+        set(value) = prefs.edit().putString(KEY_MEDIA_STORE_ALBUM_ID, value).apply()
+
+    var mediaStoreAlbumName: String?
+        get() = prefs.getString(KEY_MEDIA_STORE_ALBUM_NAME, null)
+        set(value) = prefs.edit().putString(KEY_MEDIA_STORE_ALBUM_NAME, value).apply()
 
     var sourceType: foo.barz.wallpaperpicker.core.model.WallpaperSourceType
         get() {
@@ -114,9 +130,13 @@ class PreferencesManager(context: Context) {
         private const val KEY_INTERVAL_MINUTES = "interval_minutes"
         private const val KEY_TARGET = "target"
         private const val KEY_SCROLL_MODE = "scroll_mode"
+        private const val KEY_REAPPLY_ON_SCROLL_CHANGE = "reapply_on_scroll_change"
         private const val KEY_IS_SCHEDULED = "is_scheduled"
         private const val KEY_LAST_TIMESTAMP = "last_timestamp"
         private const val KEY_LAST_TITLE = "last_title"
+        private const val KEY_LAST_URI = "last_uri"
+        private const val KEY_MEDIA_STORE_ALBUM_ID = "media_store_album_id"
+        private const val KEY_MEDIA_STORE_ALBUM_NAME = "media_store_album_name"
         private const val KEY_SOURCE_TYPE = "source_type"
         private const val KEY_HTTP_PRESET_TYPE = "http_preset_type"
         private const val KEY_HTTP_CUSTOM_URL = "http_custom_url"

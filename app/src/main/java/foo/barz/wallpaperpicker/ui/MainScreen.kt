@@ -1,17 +1,21 @@
 package foo.barz.wallpaperpicker.ui
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,12 +23,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Collections
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,6 +45,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -47,17 +59,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material3.OutlinedTextField
+import androidx.core.content.ContextCompat
+import coil.compose.AsyncImage
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
+import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
@@ -69,6 +82,12 @@ fun MainScreen(
     state: MainUiState,
     onSourceTypeSelected: (WallpaperSourceType) -> Unit,
     onFolderSelected: (Uri) -> Unit,
+    onRescanFolder: () -> Unit,
+    onFetchMediaStoreAlbums: () -> Unit,
+    onMediaStoreAlbumSelected: (MediaStoreAlbum?) -> Unit,
+    onOpenInGallery: () -> Unit,
+    onShareWallpaper: () -> Unit,
+    onSaveToGallery: () -> Unit,
     onHttpPresetSelected: (HttpPresetType) -> Unit,
     onHttpCustomUrlChanged: (String) -> Unit,
     onHttpCustomJsonPathChanged: (String) -> Unit,
@@ -84,6 +103,8 @@ fun MainScreen(
     onIntervalSelected: (Long) -> Unit,
     onTargetSelected: (WallpaperTarget) -> Unit,
     onScrollModeSelected: (WallpaperScrollMode) -> Unit,
+    onToggleReapplyOnScrollChange: (Boolean) -> Unit,
+    onReapplyCurrentWallpaper: () -> Unit,
     onToggleSchedule: (Boolean) -> Unit,
     onChangeNow: () -> Unit,
     onClearStatus: () -> Unit
@@ -103,6 +124,51 @@ fun MainScreen(
         }
     }
 
+    val mediaPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+
+    var hasMediaPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, mediaPermission) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val mediaPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasMediaPermission = isGranted
+        if (isGranted) {
+            onFetchMediaStoreAlbums()
+        }
+    }
+
+    val writeStorageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            onSaveToGallery()
+        }
+    }
+
+    val handleSaveClick = {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            val granted = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                onSaveToGallery()
+            } else {
+                writeStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        } else {
+            onSaveToGallery()
+        }
+    }
+
     LaunchedEffect(state.statusMessage) {
         state.statusMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -112,6 +178,7 @@ fun MainScreen(
 
     val canChange = !state.isChanging && when (state.sourceType) {
         WallpaperSourceType.LOCAL_FOLDER -> state.folderUri != null
+        WallpaperSourceType.MEDIA_STORE -> hasMediaPermission
         WallpaperSourceType.IMMICH -> state.immichServerUrl.isNotBlank() && state.immichApiKey.isNotBlank()
         WallpaperSourceType.HTTP_API -> state.httpPresetType != HttpPresetType.CUSTOM || state.httpCustomUrl.isNotBlank()
     }
@@ -176,6 +243,7 @@ fun MainScreen(
 
                     val activeSourceLabel = when (state.sourceType) {
                         WallpaperSourceType.LOCAL_FOLDER -> "本地文件夹 (${state.folderName ?: "未选择"})"
+                        WallpaperSourceType.MEDIA_STORE -> "系统相册 (${state.mediaStoreAlbumName ?: "全部照片"})"
                         WallpaperSourceType.IMMICH -> "Immich (${state.immichAlbumName ?: "全部相册"})"
                         WallpaperSourceType.HTTP_API -> state.httpPresetType.label
                     }
@@ -195,13 +263,96 @@ fun MainScreen(
                 }
             }
 
-            // 2. Wallpaper Source Configuration Card
+            // 2. Current Wallpaper Actions Card (Phase 3.4: Open, Save, Share)
+            if (state.lastWallpaperUri != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("当前壁纸操作", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = state.lastWallpaperUri,
+                                contentDescription = state.lastWallpaperTitle ?: "当前壁纸预览",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = state.lastWallpaperTitle ?: "当前正在使用的壁纸",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 2
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "支持原图全屏缩放、外部编辑、系统分享及保存到公共相册",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onOpenInGallery,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("图库打开")
+                            }
+
+                            OutlinedButton(
+                                onClick = handleSaveClick,
+                                enabled = !state.isSavingWallpaper,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (state.isSavingWallpaper) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("保存相册")
+                            }
+
+                            OutlinedButton(
+                                onClick = onShareWallpaper,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("分享")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Wallpaper Source Configuration Card
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             when (state.sourceType) {
                                 WallpaperSourceType.LOCAL_FOLDER -> Icons.Default.Folder
+                                WallpaperSourceType.MEDIA_STORE -> Icons.Default.Collections
                                 WallpaperSourceType.IMMICH -> Icons.Default.PhotoLibrary
                                 WallpaperSourceType.HTTP_API -> Icons.Default.Cloud
                             },
@@ -213,15 +364,22 @@ fun MainScreen(
                     }
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Source Switcher (Local vs Immich vs HTTP)
+                    // Source Switcher (Local vs MediaStore vs Immich vs HTTP)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
                             selected = state.sourceType == WallpaperSourceType.LOCAL_FOLDER,
                             onClick = { onSourceTypeSelected(WallpaperSourceType.LOCAL_FOLDER) },
                             label = { Text("本地文件夹") }
+                        )
+                        FilterChip(
+                            selected = state.sourceType == WallpaperSourceType.MEDIA_STORE,
+                            onClick = { onSourceTypeSelected(WallpaperSourceType.MEDIA_STORE) },
+                            label = { Text("系统相册") }
                         )
                         FilterChip(
                             selected = state.sourceType == WallpaperSourceType.IMMICH,
@@ -244,12 +402,100 @@ fun MainScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = if (state.folderUri != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
                             )
+                            if (state.folderUri != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (state.isIndexingFolder) "正在扫描并建立极速索引…" else "已建立轻量索引: ${state.indexedImageCount} 张图片 (0ms 零耗切换)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                             Spacer(modifier = Modifier.height(12.dp))
-                            OutlinedButton(
-                                onClick = { folderPickerLauncher.launch(null) },
-                                modifier = Modifier.fillMaxWidth()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(if (state.folderUri != null) "更换文件夹授权" else "选择文件夹授权")
+                                OutlinedButton(
+                                    onClick = { folderPickerLauncher.launch(null) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(if (state.folderUri != null) "更换文件夹" else "选择文件夹")
+                                }
+                                if (state.folderUri != null) {
+                                    OutlinedButton(
+                                        onClick = onRescanFolder,
+                                        enabled = !state.isIndexingFolder,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        if (state.isIndexingFolder) {
+                                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                        }
+                                        Text("重新扫描")
+                                    }
+                                }
+                            }
+                        }
+
+                        WallpaperSourceType.MEDIA_STORE -> {
+                            Text("系统相册直连 (MediaStore 原生索引)", style = MaterialTheme.typography.bodyMedium)
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            if (!hasMediaPermission) {
+                                Text(
+                                    text = "需要读取相册权限以直接检索系统生活照与相机相册",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(
+                                    onClick = { mediaPermissionLauncher.launch(mediaPermission) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("授予相册访问权限")
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = state.mediaStoreAlbumName?.let { "已绑定相册: $it" } ?: "全部照片 (全库随机)",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    OutlinedButton(
+                                        onClick = onFetchMediaStoreAlbums,
+                                        enabled = !state.isLoadingMediaStoreAlbums
+                                    ) {
+                                        if (state.isLoadingMediaStoreAlbums) {
+                                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                        }
+                                        Text(if (state.mediaStoreAlbums.isEmpty()) "获取相册" else "刷新相册")
+                                    }
+                                }
+
+                                if (state.mediaStoreAlbums.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        state.mediaStoreAlbums.forEach { album ->
+                                            FilterChip(
+                                                selected = state.mediaStoreAlbumId == album.id,
+                                                onClick = { onMediaStoreAlbumSelected(if (album.id == null) null else album) },
+                                                label = { Text("${album.name} (${album.count})") }
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -486,7 +732,7 @@ fun MainScreen(
                 }
             }
 
-            // 3. Target Screen Card
+            // 4. Target Screen Card
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("更换应用目标", style = MaterialTheme.typography.titleMedium)
@@ -527,7 +773,7 @@ fun MainScreen(
                 }
             }
 
-            // 4. Wallpaper Scroll Mode Card
+            // 5. Wallpaper Scroll Mode Card
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("壁纸随桌面滚动", style = MaterialTheme.typography.titleMedium)
@@ -556,10 +802,41 @@ fun MainScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("修改设置时重设当前壁纸", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "更改滚动模式时，立即按新模式重新裁切并应用当前壁纸",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Switch(
+                            checked = state.reapplyOnScrollChange,
+                            onCheckedChange = onToggleReapplyOnScrollChange
+                        )
+                    }
+
+                    if (state.lastWallpaperUri != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = onReapplyCurrentWallpaper,
+                            enabled = !state.isChanging,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("按当前模式重设正在使用的壁纸")
+                        }
+                    }
                 }
             }
 
-            // 5. Schedule Card
+            // 6. Schedule Card
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -617,7 +894,7 @@ fun MainScreen(
                 }
             }
 
-            // 5. Battery Optimization Hint
+            // 7. Battery Optimization Hint
             if (!isIgnoringBatteryOptimizations) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),

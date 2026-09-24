@@ -51,6 +51,7 @@ class WallpaperWorker(
 
         prefs.lastChangedTimestamp = System.currentTimeMillis()
         prefs.lastWallpaperTitle = wallpaperData.title
+        prefs.lastWallpaperUri = wallpaperData.sourceUri
 
         return Result.success()
     }
@@ -78,8 +79,9 @@ class WallpaperWorker(
                         constraintsBuilder.setRequiredNetworkType(NetworkType.CONNECTED)
                     }
                 }
-                WallpaperSourceType.LOCAL_FOLDER -> {
-                    // No network requirements for local storage
+                WallpaperSourceType.LOCAL_FOLDER,
+                WallpaperSourceType.MEDIA_STORE -> {
+                    // No network requirements for local storage / MediaStore
                 }
             }
 
