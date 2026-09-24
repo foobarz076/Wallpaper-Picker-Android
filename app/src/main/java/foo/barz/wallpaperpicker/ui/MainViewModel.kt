@@ -9,10 +9,13 @@ import androidx.lifecycle.viewModelScope
 import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
 import foo.barz.wallpaperpicker.core.cache.WallpaperCacheManager
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
+import foo.barz.wallpaperpicker.core.model.ImmichAlbum
+import foo.barz.wallpaperpicker.core.model.ImmichQuality
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
 import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
+import foo.barz.wallpaperpicker.core.source.ImmichSource
 import foo.barz.wallpaperpicker.core.source.WallpaperSourceFactory
 import foo.barz.wallpaperpicker.core.worker.WallpaperWorker
 import foo.barz.wallpaperpicker.data.PreferencesManager
@@ -33,6 +36,15 @@ data class MainUiState(
     val httpCustomUrl: String = "",
     val httpCustomJsonPath: String = "",
     val wifiOnly: Boolean = true,
+    val immichServerUrl: String = "",
+    val immichApiKey: String = "",
+    val immichAlbumId: String? = null,
+    val immichAlbumName: String? = null,
+    val immichQuality: ImmichQuality = ImmichQuality.PREVIEW,
+    val immichIgnoreSsl: Boolean = false,
+    val immichWifiOnly: Boolean = true,
+    val immichAlbums: List<ImmichAlbum> = emptyList(),
+    val isLoadingAlbums: Boolean = false,
     val cacheSizeBytes: Long = 0L,
     val intervalMinutes: Long = 60L,
     val target: WallpaperTarget = WallpaperTarget.BOTH,
@@ -59,6 +71,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             httpCustomUrl = prefs.httpCustomUrl,
             httpCustomJsonPath = prefs.httpCustomJsonPath,
             wifiOnly = prefs.wifiOnly,
+            immichServerUrl = prefs.immichServerUrl,
+            immichApiKey = prefs.immichApiKey,
+            immichAlbumId = prefs.immichAlbumId,
+            immichAlbumName = prefs.immichAlbumName,
+            immichQuality = prefs.immichQuality,
+            immichIgnoreSsl = prefs.immichIgnoreSsl,
+            immichWifiOnly = prefs.immichWifiOnly,
             cacheSizeBytes = cacheManager.getCacheSizeBytes(),
             intervalMinutes = prefs.intervalMinutes,
             target = prefs.target,
@@ -80,7 +99,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun onFolderSelected(uri: Uri) {
         val context = getApplication<Application>()
         try {
-            // Persist SAF permission across reboots and process deaths
             val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
             context.contentResolver.takePersistableUriPermission(uri, flags)
         } catch (_: SecurityException) {
@@ -121,6 +139,76 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onImmichServerUrlChanged(url: String) {
+        prefs.immichServerUrl = url
+        _uiState.update { it.copy(immichServerUrl = url) }
+    }
+
+    fun onImmichApiKeyChanged(key: String) {
+        prefs.immichApiKey = key
+        _uiState.update { it.copy(immichApiKey = key) }
+    }
+
+    fun onImmichAlbumSelected(album: ImmichAlbum?) {
+        prefs.immichAlbumId = album?.id
+        prefs.immichAlbumName = album?.name
+        _uiState.update {
+            it.copy(
+                immichAlbumId = album?.id,
+                immichAlbumName = album?.name,
+                statusMessage = if (album != null) "已选择相册: ${album.name}" else "已选择: 全部相册"
+            )
+        }
+    }
+
+    fun onImmichQualitySelected(quality: ImmichQuality) {
+        prefs.immichQuality = quality
+        _uiState.update { it.copy(immichQuality = quality) }
+    }
+
+    fun onToggleImmichIgnoreSsl(enabled: Boolean) {
+        prefs.immichIgnoreSsl = enabled
+        _uiState.update { it.copy(immichIgnoreSsl = enabled) }
+    }
+
+    fun onToggleImmichWifiOnly(enabled: Boolean) {
+        prefs.immichWifiOnly = enabled
+        _uiState.update { it.copy(immichWifiOnly = enabled) }
+        if (prefs.isScheduled && prefs.sourceType == WallpaperSourceType.IMMICH) {
+            WallpaperWorker.schedule(getApplication(), prefs.intervalMinutes)
+        }
+    }
+
+    fun fetchImmichAlbums() {
+        val serverUrl = prefs.immichServerUrl
+        val apiKey = prefs.immichApiKey
+        if (serverUrl.isBlank() || apiKey.isBlank()) {
+            _uiState.update { it.copy(statusMessage = "请先填写 Immich 服务器地址与 API Key") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingAlbums = true, statusMessage = "正在获取 Immich 相册列表…") }
+            val result = ImmichSource.fetchAlbums(serverUrl, apiKey, prefs.immichIgnoreSsl)
+            result.onSuccess { albums ->
+                _uiState.update {
+                    it.copy(
+                        isLoadingAlbums = false,
+                        immichAlbums = albums,
+                        statusMessage = "成功获取到 ${albums.size} 个相册"
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isLoadingAlbums = false,
+                        statusMessage = "获取相册失败: ${error.message}"
+                    )
+                }
+            }
+        }
+    }
+
     fun onClearCache() {
         val success = cacheManager.clearCache()
         val newSize = cacheManager.getCacheSizeBytes()
@@ -154,15 +242,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleSchedule(enabled: Boolean) {
         val context = getApplication<Application>()
         if (enabled) {
-            if (prefs.sourceType == WallpaperSourceType.LOCAL_FOLDER && prefs.folderUri == null) {
-                _uiState.update { it.copy(statusMessage = "请先选择壁纸文件夹") }
-                return
-            }
-            if (prefs.sourceType == WallpaperSourceType.HTTP_API &&
-                prefs.httpPresetType == HttpPresetType.CUSTOM &&
-                prefs.httpCustomUrl.isBlank()) {
-                _uiState.update { it.copy(statusMessage = "请先输入自定义 API 网址") }
-                return
+            when (prefs.sourceType) {
+                WallpaperSourceType.LOCAL_FOLDER -> {
+                    if (prefs.folderUri == null) {
+                        _uiState.update { it.copy(statusMessage = "请先选择壁纸文件夹") }
+                        return
+                    }
+                }
+                WallpaperSourceType.HTTP_API -> {
+                    if (prefs.httpPresetType == HttpPresetType.CUSTOM && prefs.httpCustomUrl.isBlank()) {
+                        _uiState.update { it.copy(statusMessage = "请先输入自定义 API 网址") }
+                        return
+                    }
+                }
+                WallpaperSourceType.IMMICH -> {
+                    if (prefs.immichServerUrl.isBlank() || prefs.immichApiKey.isBlank()) {
+                        _uiState.update { it.copy(statusMessage = "请先配置 Immich 服务器地址与 API Key") }
+                        return
+                    }
+                }
             }
         }
 
@@ -179,15 +277,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun changeNow() {
-        if (prefs.sourceType == WallpaperSourceType.LOCAL_FOLDER && prefs.folderUri == null) {
-            _uiState.update { it.copy(statusMessage = "请先选择壁纸文件夹") }
-            return
-        }
-        if (prefs.sourceType == WallpaperSourceType.HTTP_API &&
-            prefs.httpPresetType == HttpPresetType.CUSTOM &&
-            prefs.httpCustomUrl.isBlank()) {
-            _uiState.update { it.copy(statusMessage = "请先输入自定义 API 网址") }
-            return
+        when (prefs.sourceType) {
+            WallpaperSourceType.LOCAL_FOLDER -> {
+                if (prefs.folderUri == null) {
+                    _uiState.update { it.copy(statusMessage = "请先选择壁纸文件夹") }
+                    return
+                }
+            }
+            WallpaperSourceType.HTTP_API -> {
+                if (prefs.httpPresetType == HttpPresetType.CUSTOM && prefs.httpCustomUrl.isBlank()) {
+                    _uiState.update { it.copy(statusMessage = "请先输入自定义 API 网址") }
+                    return
+                }
+            }
+            WallpaperSourceType.IMMICH -> {
+                if (prefs.immichServerUrl.isBlank() || prefs.immichApiKey.isBlank()) {
+                    _uiState.update { it.copy(statusMessage = "请先配置 Immich 服务器地址与 API Key") }
+                    return
+                }
+            }
         }
 
         viewModelScope.launch {

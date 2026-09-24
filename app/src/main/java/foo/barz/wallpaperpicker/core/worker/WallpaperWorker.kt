@@ -63,11 +63,23 @@ class WallpaperWorker(
             val constraintsBuilder = Constraints.Builder()
                 .setRequiresBatteryNotLow(true)
 
-            if (prefs.sourceType == WallpaperSourceType.HTTP_API) {
-                if (prefs.wifiOnly) {
-                    constraintsBuilder.setRequiredNetworkType(NetworkType.UNMETERED)
-                } else {
-                    constraintsBuilder.setRequiredNetworkType(NetworkType.CONNECTED)
+            when (prefs.sourceType) {
+                WallpaperSourceType.HTTP_API -> {
+                    if (prefs.wifiOnly) {
+                        constraintsBuilder.setRequiredNetworkType(NetworkType.UNMETERED)
+                    } else {
+                        constraintsBuilder.setRequiredNetworkType(NetworkType.CONNECTED)
+                    }
+                }
+                WallpaperSourceType.IMMICH -> {
+                    if (prefs.immichWifiOnly) {
+                        constraintsBuilder.setRequiredNetworkType(NetworkType.UNMETERED)
+                    } else {
+                        constraintsBuilder.setRequiredNetworkType(NetworkType.CONNECTED)
+                    }
+                }
+                WallpaperSourceType.LOCAL_FOLDER -> {
+                    // No network requirements for local storage
                 }
             }
 

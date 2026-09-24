@@ -5,5 +5,6 @@ package foo.barz.wallpaperpicker.core.model
  */
 enum class WallpaperSourceType(val displayName: String) {
     LOCAL_FOLDER("本地文件夹"),
-    HTTP_API("网络图源 (HTTP)")
+    IMMICH("自建相册 (Immich)"),
+    HTTP_API("通用网络图源 (HTTP)")
 }

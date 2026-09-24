@@ -37,6 +37,24 @@ object WallpaperSourceFactory {
                     bypassNetworkConstraints = bypassNetworkConstraints
                 )
             }
+            WallpaperSourceType.IMMICH -> {
+                val config = foo.barz.wallpaperpicker.core.model.ImmichConfig(
+                    serverUrl = prefs.immichServerUrl,
+                    apiKey = prefs.immichApiKey,
+                    albumId = prefs.immichAlbumId,
+                    albumName = prefs.immichAlbumName,
+                    downloadQuality = prefs.immichQuality,
+                    ignoreSslErrors = prefs.immichIgnoreSsl,
+                    wifiOnly = prefs.immichWifiOnly
+                )
+                val cacheManager = WallpaperCacheManager(context)
+                ImmichSource(
+                    context = context,
+                    config = config,
+                    cacheManager = cacheManager,
+                    bypassNetworkConstraints = bypassNetworkConstraints
+                )
+            }
         }
     }
 }

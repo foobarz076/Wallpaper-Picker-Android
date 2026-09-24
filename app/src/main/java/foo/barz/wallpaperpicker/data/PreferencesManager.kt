@@ -76,6 +76,38 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean(KEY_WIFI_ONLY, true)
         set(value) = prefs.edit().putBoolean(KEY_WIFI_ONLY, value).apply()
 
+    var immichServerUrl: String
+        get() = prefs.getString(KEY_IMMICH_SERVER_URL, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_IMMICH_SERVER_URL, value).apply()
+
+    var immichApiKey: String
+        get() = prefs.getString(KEY_IMMICH_API_KEY, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_IMMICH_API_KEY, value).apply()
+
+    var immichAlbumId: String?
+        get() = prefs.getString(KEY_IMMICH_ALBUM_ID, null)
+        set(value) = prefs.edit().putString(KEY_IMMICH_ALBUM_ID, value).apply()
+
+    var immichAlbumName: String?
+        get() = prefs.getString(KEY_IMMICH_ALBUM_NAME, null)
+        set(value) = prefs.edit().putString(KEY_IMMICH_ALBUM_NAME, value).apply()
+
+    var immichQuality: foo.barz.wallpaperpicker.core.model.ImmichQuality
+        get() {
+            val name = prefs.getString(KEY_IMMICH_QUALITY, foo.barz.wallpaperpicker.core.model.ImmichQuality.PREVIEW.name)
+            return runCatching { foo.barz.wallpaperpicker.core.model.ImmichQuality.valueOf(name!!) }
+                .getOrDefault(foo.barz.wallpaperpicker.core.model.ImmichQuality.PREVIEW)
+        }
+        set(value) = prefs.edit().putString(KEY_IMMICH_QUALITY, value.name).apply()
+
+    var immichIgnoreSsl: Boolean
+        get() = prefs.getBoolean(KEY_IMMICH_IGNORE_SSL, false)
+        set(value) = prefs.edit().putBoolean(KEY_IMMICH_IGNORE_SSL, value).apply()
+
+    var immichWifiOnly: Boolean
+        get() = prefs.getBoolean(KEY_IMMICH_WIFI_ONLY, true)
+        set(value) = prefs.edit().putBoolean(KEY_IMMICH_WIFI_ONLY, value).apply()
+
     companion object {
         private const val PREF_NAME = "wallpaper_picker_prefs"
         private const val KEY_FOLDER_URI = "folder_uri"
@@ -90,5 +122,12 @@ class PreferencesManager(context: Context) {
         private const val KEY_HTTP_CUSTOM_URL = "http_custom_url"
         private const val KEY_HTTP_CUSTOM_JSON_PATH = "http_custom_json_path"
         private const val KEY_WIFI_ONLY = "wifi_only"
+        private const val KEY_IMMICH_SERVER_URL = "immich_server_url"
+        private const val KEY_IMMICH_API_KEY = "immich_api_key"
+        private const val KEY_IMMICH_ALBUM_ID = "immich_album_id"
+        private const val KEY_IMMICH_ALBUM_NAME = "immich_album_name"
+        private const val KEY_IMMICH_QUALITY = "immich_quality"
+        private const val KEY_IMMICH_IGNORE_SSL = "immich_ignore_ssl"
+        private const val KEY_IMMICH_WIFI_ONLY = "immich_wifi_only"
     }
 }
