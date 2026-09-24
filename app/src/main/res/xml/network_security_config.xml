@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Base configuration: Enforce HTTPS for standard Internet communication, but trust user-installed CAs -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Allow cleartext HTTP for local loopback, LAN, and typical private domains for self-hosted services -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Localhost & Loopback -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+
+        <!-- Common home / local network TLDs & hostnames for self-hosted NAS, Immich, and APIs -->
+        <domain includeSubdomains="true">local</domain>
+        <domain includeSubdomains="true">lan</domain>
+        <domain includeSubdomains="true">internal</domain>
+        <domain includeSubdomains="true">home.arpa</domain>
+        <domain includeSubdomains="true">home</domain>
+        <domain includeSubdomains="true">corp</domain>
+    </domain-config>
+</network-security-config>

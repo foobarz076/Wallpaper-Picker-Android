@@ -1,6 +1,8 @@
 package foo.barz.wallpaperpicker.core.network
 
 import okhttp3.OkHttpClient
+import java.io.IOException
+import java.net.UnknownServiceException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
@@ -43,6 +45,22 @@ object HttpClientProvider {
 
     private fun createBaseBuilder(): OkHttpClient.Builder {
         return OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                try {
+                    chain.proceed(chain.request())
+                } catch (e: Exception) {
+                    if (e is UnknownServiceException ||
+                        e.message?.contains("CLEARTEXT", ignoreCase = true) == true ||
+                        e.cause?.message?.contains("CLEARTEXT", ignoreCase = true) == true
+                    ) {
+                        throw IOException(
+                            "系统网络安全策略已拦截未加密的 HTTP 明文请求。请优先使用 HTTPS 协议，或使用以 .local / .lan 结尾的局域网主机名。",
+                            e
+                        )
+                    }
+                    throw e
+                }
+            }
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
