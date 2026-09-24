@@ -51,14 +51,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material3.OutlinedTextField
+import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
+import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     state: MainUiState,
+    onSourceTypeSelected: (WallpaperSourceType) -> Unit,
     onFolderSelected: (Uri) -> Unit,
+    onHttpPresetSelected: (HttpPresetType) -> Unit,
+    onHttpCustomUrlChanged: (String) -> Unit,
+    onHttpCustomJsonPathChanged: (String) -> Unit,
+    onToggleWifiOnly: (Boolean) -> Unit,
+    onClearCache: () -> Unit,
     onIntervalSelected: (Long) -> Unit,
     onTargetSelected: (WallpaperTarget) -> Unit,
     onScrollModeSelected: (WallpaperScrollMode) -> Unit,
@@ -88,6 +99,11 @@ fun MainScreen(
         }
     }
 
+    val canChange = !state.isChanging && when (state.sourceType) {
+        WallpaperSourceType.LOCAL_FOLDER -> state.folderUri != null
+        WallpaperSourceType.HTTP_API -> state.httpPresetType != HttpPresetType.CUSTOM || state.httpCustomUrl.isNotBlank()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -108,7 +124,7 @@ fun MainScreen(
             ) {
                 Button(
                     onClick = onChangeNow,
-                    enabled = !state.isChanging && state.folderUri != null,
+                    enabled = canChange,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
@@ -145,8 +161,13 @@ fun MainScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("当前状态", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    val activeSourceLabel = when (state.sourceType) {
+                        WallpaperSourceType.LOCAL_FOLDER -> "本地文件夹 (${state.folderName ?: "未选择"})"
+                        WallpaperSourceType.HTTP_API -> state.httpPresetType.label
+                    }
                     Text(
-                        text = "激活来源: 本地文件夹",
+                        text = "激活来源: $activeSourceLabel",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
@@ -161,26 +182,127 @@ fun MainScreen(
                 }
             }
 
-            // 2. Folder Source Card
+            // 2. Wallpaper Source Configuration Card
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            if (state.sourceType == WallpaperSourceType.LOCAL_FOLDER) Icons.Default.Folder else Icons.Default.Cloud,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("壁纸文件夹来源", style = MaterialTheme.typography.titleMedium)
+                        Text("壁纸来源配置", style = MaterialTheme.typography.titleMedium)
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = state.folderName?.let { "已选目录: $it" } ?: "尚未选择任何文件夹",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (state.folderUri != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
-                    )
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = { folderPickerLauncher.launch(null) },
-                        modifier = Modifier.fillMaxWidth()
+
+                    // Source Switcher (Local vs HTTP)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(if (state.folderUri != null) "更换文件夹授权" else "选择文件夹授权")
+                        FilterChip(
+                            selected = state.sourceType == WallpaperSourceType.LOCAL_FOLDER,
+                            onClick = { onSourceTypeSelected(WallpaperSourceType.LOCAL_FOLDER) },
+                            label = { Text("本地文件夹") }
+                        )
+                        FilterChip(
+                            selected = state.sourceType == WallpaperSourceType.HTTP_API,
+                            onClick = { onSourceTypeSelected(WallpaperSourceType.HTTP_API) },
+                            label = { Text("网络图源 (HTTP)") }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (state.sourceType == WallpaperSourceType.LOCAL_FOLDER) {
+                        Text(
+                            text = state.folderName?.let { "已选目录: $it" } ?: "尚未选择任何文件夹",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (state.folderUri != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = { folderPickerLauncher.launch(null) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (state.folderUri != null) "更换文件夹授权" else "选择文件夹授权")
+                        }
+                    } else {
+                        // HTTP API Configuration
+                        Text("预设或自定义", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            HttpPresetType.values().forEach { preset ->
+                                FilterChip(
+                                    selected = state.httpPresetType == preset,
+                                    onClick = { onHttpPresetSelected(preset) },
+                                    label = { Text(preset.label) }
+                                )
+                            }
+                        }
+
+                        if (state.httpPresetType == HttpPresetType.CUSTOM) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = state.httpCustomUrl,
+                                onValueChange = onHttpCustomUrlChanged,
+                                label = { Text("API 网址 (URL)") },
+                                placeholder = { Text("https://api.example.com/wallpaper") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = state.httpCustomJsonPath,
+                                onValueChange = onHttpCustomJsonPathChanged,
+                                label = { Text("图片字段路径 (可选 JSONPath)") },
+                                placeholder = { Text("例如 images[0].url 或留空表示直接图片") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("仅在 Wi-Fi 下下载", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    text = "移动网络时自动复用本地缓存池，避免消耗蜂窝流量",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                            Switch(
+                                checked = state.wifiOnly,
+                                onCheckedChange = onToggleWifiOnly
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "缓存占用: ${formatFileSize(state.cacheSizeBytes)}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            OutlinedButton(
+                                onClick = onClearCache,
+                                enabled = state.cacheSizeBytes > 0L
+                            ) {
+                                Text("清理缓存")
+                            }
+                        }
                     }
                 }
             }
@@ -372,5 +494,16 @@ private fun requestIgnoreBatteryOptimization(context: Context) {
         } catch (_: Exception) {
             // Ignore if device doesn't support
         }
+    }
+}
+
+private fun formatFileSize(bytes: Long): String {
+    if (bytes <= 0L) return "0 B"
+    val kb = bytes / 1024.0
+    val mb = kb / 1024.0
+    return if (mb >= 1.0) {
+        String.format(Locale.getDefault(), "%.1f MB", mb)
+    } else {
+        String.format(Locale.getDefault(), "%.1f KB", kb)
     }
 }

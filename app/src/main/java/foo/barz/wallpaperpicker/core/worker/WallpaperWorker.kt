@@ -1,14 +1,17 @@
 package foo.barz.wallpaperpicker.core.worker
 
 import android.content.Context
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
+import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
-import foo.barz.wallpaperpicker.core.source.LocalFolderSource
+import foo.barz.wallpaperpicker.core.source.WallpaperSourceFactory
 import foo.barz.wallpaperpicker.data.PreferencesManager
 import java.util.concurrent.TimeUnit
 
@@ -19,9 +22,13 @@ class WallpaperWorker(
 
     override suspend fun doWork(): Result {
         val prefs = PreferencesManager(applicationContext)
-        val folderUri = prefs.folderUri ?: return Result.failure()
 
-        val source = LocalFolderSource(applicationContext, folderUri)
+        val source = runCatching {
+            WallpaperSourceFactory.createActiveSource(applicationContext, prefs)
+        }.getOrElse {
+            return Result.failure()
+        }
+
         val processor = WallpaperProcessor(applicationContext)
         val applier = WallpaperApplier(applicationContext)
 
@@ -52,9 +59,23 @@ class WallpaperWorker(
         const val WORK_NAME = "periodic_wallpaper_changer"
 
         fun schedule(context: Context, intervalMinutes: Long) {
+            val prefs = PreferencesManager(context)
+            val constraintsBuilder = Constraints.Builder()
+                .setRequiresBatteryNotLow(true)
+
+            if (prefs.sourceType == WallpaperSourceType.HTTP_API) {
+                if (prefs.wifiOnly) {
+                    constraintsBuilder.setRequiredNetworkType(NetworkType.UNMETERED)
+                } else {
+                    constraintsBuilder.setRequiredNetworkType(NetworkType.CONNECTED)
+                }
+            }
+
             val workRequest = PeriodicWorkRequestBuilder<WallpaperWorker>(
                 intervalMinutes, TimeUnit.MINUTES
-            ).build()
+            )
+                .setConstraints(constraintsBuilder.build())
+                .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,

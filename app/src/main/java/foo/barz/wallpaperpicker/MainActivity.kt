@@ -23,7 +23,13 @@ class MainActivity : ComponentActivity() {
 
                 MainScreen(
                     state = uiState,
+                    onSourceTypeSelected = viewModel::onSourceTypeSelected,
                     onFolderSelected = viewModel::onFolderSelected,
+                    onHttpPresetSelected = viewModel::onHttpPresetSelected,
+                    onHttpCustomUrlChanged = viewModel::onHttpCustomUrlChanged,
+                    onHttpCustomJsonPathChanged = viewModel::onHttpCustomJsonPathChanged,
+                    onToggleWifiOnly = viewModel::onToggleWifiOnly,
+                    onClearCache = viewModel::onClearCache,
                     onIntervalSelected = viewModel::onIntervalSelected,
                     onTargetSelected = viewModel::onTargetSelected,
                     onScrollModeSelected = viewModel::onScrollModeSelected,
