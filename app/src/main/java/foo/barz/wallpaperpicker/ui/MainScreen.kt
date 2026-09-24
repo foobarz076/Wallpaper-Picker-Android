@@ -92,6 +92,7 @@ fun MainScreen(
     onSaveCustomWallpaper: (Uri, String?) -> Unit = { _, _ -> },
     onExportFavorites: () -> Unit = {},
     onOpenManageSpace: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
     onChangeNow: () -> Unit,
     onClearStatus: () -> Unit
 ) {
@@ -229,7 +230,8 @@ fun MainScreen(
                         onToggleFairShuffle = onToggleFairShuffle,
                         onClearCache = onClearCache,
                         onExportFavorites = onExportFavorites,
-                        onOpenManageSpace = onOpenManageSpace
+                        onOpenManageSpace = onOpenManageSpace,
+                        onOpenAbout = onOpenAbout
                     )
                 }
             }

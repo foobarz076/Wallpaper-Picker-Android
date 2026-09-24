@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import foo.barz.wallpaperpicker.ui.AboutActivity
 import foo.barz.wallpaperpicker.ui.MainScreen
 import foo.barz.wallpaperpicker.ui.MainViewModel
 import foo.barz.wallpaperpicker.ui.ManageSpaceActivity
@@ -65,6 +66,9 @@ class MainActivity : ComponentActivity() {
                     onExportFavorites = viewModel::exportAllFavoritesToGallery,
                     onOpenManageSpace = {
                         startActivity(Intent(this, ManageSpaceActivity::class.java))
+                    },
+                    onOpenAbout = {
+                        startActivity(Intent(this, AboutActivity::class.java))
                     },
                     onChangeNow = viewModel::changeNow,
                     onClearStatus = viewModel::clearStatusMessage

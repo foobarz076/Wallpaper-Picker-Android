@@ -9,18 +9,26 @@ import android.provider.Settings
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.ViewCarousel
@@ -31,9 +39,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +52,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
@@ -67,12 +80,26 @@ fun SettingsTab(
     onClearCache: () -> Unit = {},
     onExportFavorites: () -> Unit = {},
     onOpenManageSpace: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
 
     var isIgnoringBatteryOptimizations by remember {
         mutableStateOf(checkBatteryOptimization(context))
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isIgnoringBatteryOptimizations = checkBatteryOptimization(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Column(
@@ -83,6 +110,85 @@ fun SettingsTab(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Spacer(modifier = Modifier.height(4.dp))
+
+        // Top Banner: Battery Optimization Guidance Card (Dismisses automatically once exempted)
+        if (!isIgnoringBatteryOptimizations) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.BatteryAlert, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("开启电池无限制以保障准时更换", style = MaterialTheme.typography.titleSmall)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "低电耗 (Doze) 模式与系统省电策略可能会延迟休眠期间的定时换壁纸。建议在系统设置中将本应用设为「无限制」或移入白名单。",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                openAppBatteryDetailsSettings(context)
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "应用详情设置",
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                openBatteryOptimizationList(context)
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "系统白名单",
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            openDontKillMyApp(context)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "OEM 定制系统保活指南 (DontKillMyApp)",
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
 
         // 1. Target Screen Card
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -454,32 +560,48 @@ fun SettingsTab(
             }
         }
 
-        // 6. Battery Optimization Hint Card
-        if (!isIgnoringBatteryOptimizations) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+        // 6. About and Open Source Licensing Card
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.BatteryAlert, contentDescription = null)
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("开启电池白名单以保障准时更换", style = MaterialTheme.typography.titleSmall)
+                        Text("关于与开源许可", style = MaterialTheme.typography.titleMedium)
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "低电耗 (Doze) 模式可能会延迟休眠期间的定时任务，建议为本应用加入电池优化白名单。",
-                        style = MaterialTheme.typography.bodySmall
+                    SuggestionChip(
+                        onClick = onOpenAbout,
+                        label = { Text("GPL-3.0-or-later") }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = {
-                            requestIgnoreBatteryOptimization(context)
-                            isIgnoringBatteryOptimizations = checkBatteryOptimization(context)
-                        }
-                    ) {
-                        Text("前往设置白名单")
-                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Wallpaper Picker (壁纸随心换) v1.0.0\n轻量、极低功耗、跨代兼容 Android 6.0 ~ 16 的多源壁纸轮换工具。遵循 GPL-3.0 协议开源。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onOpenAbout,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.Default.Policy,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("查看应用关于、诊断与第三方许可…")
                 }
             }
         }
@@ -504,21 +626,89 @@ private fun checkBatteryOptimization(context: Context): Boolean {
     return pm.isIgnoringBatteryOptimizations(context.packageName)
 }
 
-private fun requestIgnoreBatteryOptimization(context: Context) {
+/**
+ * Opens the application details settings screen where the user can configure
+ * app battery usage to "Unrestricted" / "No restrictions".
+ */
+private fun openAppBatteryDetailsSettings(context: Context) {
     try {
-        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+        val appDetailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(appDetailsIntent)
+    } catch (_: Exception) {
+        openBatteryOptimizationList(context)
+    }
+}
+
+/**
+ * Opens the system battery optimization whitelist settings page.
+ * Falls back to general system settings if unsupported on the current device.
+ */
+private fun openBatteryOptimizationList(context: Context) {
+    try {
+        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)
     } catch (_: Exception) {
         try {
-            val fallback = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+            val generalSettingsIntent = Intent(Settings.ACTION_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(fallback)
+            context.startActivity(generalSettingsIntent)
         } catch (_: Exception) {
-            // Ignore if device does not support
+            // Ignore if device does not support settings activity
         }
+    }
+}
+
+/**
+ * Resolves the device manufacturer-specific guide on DontKillMyApp.
+ * Falls back to the root website if the manufacturer is not specifically categorized.
+ */
+private fun getDontKillMyAppUrl(): String {
+    val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
+    return when {
+        manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") ->
+            "https://dontkillmyapp.com/xiaomi"
+        manufacturer.contains("huawei") || manufacturer.contains("honor") ->
+            "https://dontkillmyapp.com/huawei"
+        manufacturer.contains("samsung") ->
+            "https://dontkillmyapp.com/samsung"
+        manufacturer.contains("oneplus") ->
+            "https://dontkillmyapp.com/oneplus"
+        manufacturer.contains("oppo") || manufacturer.contains("realme") ->
+            "https://dontkillmyapp.com/oppo"
+        manufacturer.contains("vivo") || manufacturer.contains("iqoo") ->
+            "https://dontkillmyapp.com/vivo"
+        manufacturer.contains("meizu") ->
+            "https://dontkillmyapp.com/meizu"
+        manufacturer.contains("sony") ->
+            "https://dontkillmyapp.com/sony"
+        manufacturer.contains("asus") ->
+            "https://dontkillmyapp.com/asus"
+        manufacturer.contains("nokia") ->
+            "https://dontkillmyapp.com/nokia"
+        manufacturer.contains("lenovo") || manufacturer.contains("motorola") ->
+            "https://dontkillmyapp.com/motorola"
+        else ->
+            "https://dontkillmyapp.com/"
+    }
+}
+
+/**
+ * Opens DontKillMyApp website targeting the current device manufacturer in the user's browser.
+ */
+private fun openDontKillMyApp(context: Context) {
+    try {
+        val url = getDontKillMyAppUrl()
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        // Ignore if no suitable browser application is available
     }
 }

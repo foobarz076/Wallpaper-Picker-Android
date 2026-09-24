@@ -3,7 +3,6 @@
 
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
@@ -33,6 +32,12 @@
             android:name=".ui.ManageSpaceActivity"
             android:exported="true"
             android:label="@string/manage_space_title"
+            android:theme="@style/Theme.WallpaperPicker" />
+
+        <activity
+            android:name=".ui.AboutActivity"
+            android:exported="false"
+            android:label="@string/about_title"
             android:theme="@style/Theme.WallpaperPicker" />
 
         <provider
