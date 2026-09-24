@@ -194,3 +194,111 @@
      - **直链仅 60 分钟有效**：`baseUrl` 极其短命，无法直接持久化。
   3. **合规审计与包体成本过高**：需要集成庞大的 GMS/OAuth 依赖（老旧 Android 6.0/精简 ROM 易不兼容），且个人开发者极难通过 Google 的受限敏感权限第三方安全审计（CASA Tier 2）。
   4. **公开分享相册网页爬取不可靠**：解析 `photos.app.goo.gl` 共享网页极易受 Google 前端混淆变更、反爬限流（429）、动态 RPC 截断影响，稳定性极差。
+
+---
+
+## 6. 远期生态与多渠道分发规划 (Phase 5: Future Ecosystem, Distribution & Store Readiness)
+
+> **核心哲学 (Self-use & Lightweight First)**：
+> 当前核心重心为个人高频自用与代码底座健壮性。上架应用商店（Google Play / F-Droid）属于远期储备特性。
+> 架构设计遵循**分阶段解耦**：自用阶段依靠「GitHub Release + Obtainium」实现零代码侵入的极客自动更新；当未来有跨国开源或商店上架需求时，再按变体（Flavors）平滑过渡。
+
+---
+
+### 6.1 阶段 5.1：自用极客流——GitHub Release 与 Obtainium 生态集成
+
+自用场景下，在 App 内编写复杂的 APK 文件下载器、安装器并申请高危敏感安装权限（`REQUEST_INSTALL_PACKAGES`）会增加包体并消耗后台电量。首选利用 Android 极客开源更新管理器 **Obtainium** 实现低成本托管更新。
+
+1. **标准化 GitHub Release 规范**：
+   - **Tag 规范**：严格遵循 `vX.Y.Z`（如 `v1.1.0`），且与 `build.gradle.kts` 的 `versionName` 严格对齐。
+   - **Asset 命名标准化**：固定输出 `WallpaperPicker-vX.Y.Z.apk`（或带架构的 `WallpaperPicker-vX.Y.Z-arm64-v8a.apk` / `universal.apk`），便于自动化工具识别。
+   - **Changelog 与校验码**：Release Body 保持清晰 Markdown 格式，文末附带 APK 的 SHA-256 Checksum。
+2. **应用内对 Obtainium 的友好支持**：
+   - **一键托管 Deep Link**：在「关于」或「设置」页提供「在 Obtainium 中跟踪更新」快捷按钮，点击调用 Intent：
+     `obtainium://app/https://github.com/foobarz076/Wallpaper-Picker-Android`
+     已安装 Obtainium 的设备可直接一键添加该项目，获得丝滑静默更新体验。
+3. **应用内轻量只读提示（只提示、不强制下载）**：
+   - 自用阶段不在 App 内集成复杂的 APK 文件下载器与安装器。
+   - 仅通过 GitHub API（带 ETag / `If-None-Match` 缓存避免消耗 60 次/小时限制）检测新 Tag。发现新版后，在界面轻量弹出卡片，提供两个纯跳转按钮：
+     - `前往 GitHub Release 网页`
+     - `复制仓库链接至更新器 (如 Obtainium)`
+
+---
+
+### 6.2 阶段 5.2：国际化与本地化支持 (i18n & l10n)
+
+面向开源社区与多语言用户的体验优化。
+
+1. **资源解耦与兜底策略 (Fallback Architecture)**：
+   - **默认 Base 语言强制为英文**：将 `app/src/main/res/values/strings.xml` 全部重构为英文。当未适配语言（如法语、德语、日语）用户使用时，安全降级到英文，绝不回退至乱码或中文。
+   - **中文本地化目录**：建立 `res/values-zh-rCN/strings.xml`（简体中文）与 `res/values-zh-rTW/strings.xml`（繁体中文）。
+   - **Compose 界面彻底脱敏**：消除所有 Tab 和 Activity 中的中文字符串硬编码，全部替换为 `stringResource()` 与 `pluralStringResource()`。
+   - **法律与固定文本隔离**：开源协议（GPL-3.0）全文与 GitHub 仓库 URL 声明 `translatable="false"`。
+2. **Android 13+ 单应用语言偏好 (Per-App Language)**：
+   - 增加 `res/xml/locales_config.xml`，并在 `AndroidManifest.xml` 中配置 `android:localeConfig="@xml/locales_config"`。
+   - 用户无需修改整机语言，即可在 Android 13+ 系统设置中单独将 App 切换为中文或英文。
+   - 老设备（Android 6.0~12）在设置页提供切换项，基于 AndroidX `AppCompatDelegate.setApplicationLocales` 向下兼容。
+3. **开源协同翻译工作流**：
+   - 接入免费的 **Hosted Weblate** 平台，由社区志愿者协同翻译小语种并自动向 GitHub 提交 PR。
+   - 建立 Fastlane 标准元数据目录（`fastlane/metadata/android/{en-US,zh-CN}/`），用于商店标题与介绍的本地化展示。
+
+---
+
+### 6.3 阶段 5.3：多渠道变体与功能差异矩阵 (Product Flavors Matrix)
+
+当项目正式准备对外多渠道分发时，通过 Gradle `productFlavors` 物理隔离不同平台的代码与配置：
+
+| 功能维度 | `standalone` (GitHub / Obtainium 自用版) | `fdroid` (F-Droid 官方社区版) | `play` (Google Play 官方版) |
+| :--- | :--- | :--- | :--- |
+| **更新机制** | GitHub API 检查 + Obtainium 链接 + 可选内置下载安装 | **完全禁用应用内更新**（由 F-Droid 客户端统一部署） | **禁止自下载 APK**，可选接入官方 Play In-App Updates |
+| **安装权限 (`REQUEST_INSTALL_PACKAGES`)** | 按需保留（若启用应用内直装） | **严禁声明**（触发反特性阻碍收录） | **严禁声明**（非应用商店类应用必被拒审） |
+| **电池优化权限 (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`)** | 允许声明，直接拉起系统豁免弹窗 | 允许声明（开源无妨） | **严禁声明**（Play 商店高危红线，仅允许跳系统通用设置页） |
+| **网络安全策略 (Cleartext Traffic)** | 宽容：允许明文 HTTP（方便自用私有部署的内网 Immich / NAS） | 标准：推荐默认 HTTPS，仅对局域网私网放行明文 | 严格：强制网络安全配置，禁止全域明文，禁止非加密公共 HTTP |
+| **HTTP API 预设图源** | 预置丰富源（Bing、Wallhaven、二次元 API 等） | **仅提供通用自定义模板**，避免被标记 `NonFreeNet` 反特性 | 审查图源版权与合规性 |
+| **开源纯洁度与代码签名** | 开发者个人 Release Keystore 签名 | F-Droid 构建机源码编译 + F-Droid 独立密钥签名 | Google Play App Signing (AAB 格式分发) |
+
+#### 网络安全策略分渠道配置设计：
+- `standalone`: `android:usesCleartextTraffic="true"`（保障自用阶段老旧路由器、内网 HTTP NAS 顺畅连通）。
+- `play` / `fdroid`: 引入 `res/xml/network_security_config.xml`：
+  ```xml
+  <network-security-config>
+      <base-config cleartextTrafficPermitted="false" />
+      <domain-config cleartextTrafficPermitted="true">
+          <!-- Allow plain HTTP only for private LAN subnets -->
+          <domain includeSubdomains="true">192.168.*.*</domain>
+          <domain includeSubdomains="true">10.*.*.*</domain>
+          <domain includeSubdomains="true">172.16.*.*</domain>
+          <domain includeSubdomains="true">localhost</domain>
+      </domain-config>
+  </network-security-config>
+  ```
+
+---
+
+### 6.4 阶段 5.4：应用商店上架前审计清册 (Store Pre-flight Checklist)
+
+正式提交发布前必须逐项核对的“避坑检查清单”：
+
+#### 1. Google Play 商店合规清册
+- [ ] **高危权限彻底剥离**：
+  - 清单中彻底移除 `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`。
+  - 清单中彻底移除 `REQUEST_INSTALL_PACKAGES`。
+  - 检查存储权限：完全收拢至 SAF（`ACTION_OPEN_DOCUMENT_TREE`），移除全量多媒体广播扫描权限。
+- [ ] **网络安全规范**：移除 `usesCleartextTraffic="true"`，引入细粒度白名单。
+- [ ] **Android 15+ 16KB 页对齐**：验证依赖中的 C/C++ 动态链接库（如 `conscrypt-android` 的 `.so` 文件）是否符合 16KB 内存页对齐标准。
+- [ ] **法律与隐私合规**：
+  - 在 GitHub Pages 部署独立的静态 `PRIVACY_POLICY.html`。
+  - 在 Play Console 完成 Data Safety（数据安全表单）声明：标明“不收集任何用户隐私数据”。
+- [ ] **账号与分发准备**：个人开发者账号完成 20 人 / 14 天封闭测试门槛；导出 AAB 产物。
+
+#### 2. F-Droid 社区源收录清册
+- [ ] **全流程源码构建验证**：
+  - 确认全项目零闭源 SDK、零追踪统计、零私有二进制 blob。
+  - 根目录确认存在标准 `LICENSE` (GPL-3.0) 与英文版 `README.md`。
+- [ ] **构建脚本与元数据匹配**：
+  - `gradle-wrapper.jar` SHA-256 签名干净未篡改。
+  - Git Tag（如 `v1.0.0`）与 `app/build.gradle.kts` 的 `versionName`、`versionCode` 严格一致。
+  - 构建脚本兼容 F-Droid 编译机环境（明确声明 JDK 17）。
+- [ ] **Anti-Features（反特性）审查**：
+  - 审查预设 HTTP API：避免硬编码闭源商业图源，避免被打上 `NonFreeNet` 标签。
+  - 确认禁用或剥离一切应用内外部 APK 自下载代码，避免被标记 `UpstreamNonFree`。
