@@ -36,6 +36,14 @@ class PreferencesManager(context: Context) {
         }
         set(value) = prefs.edit().putString(KEY_SCROLL_MODE, value.name).apply()
 
+    var cropMode: foo.barz.wallpaperpicker.core.model.WallpaperCropMode
+        get() {
+            val name = prefs.getString(KEY_CROP_MODE, foo.barz.wallpaperpicker.core.model.WallpaperCropMode.FIT_HEIGHT.name)
+            return runCatching { foo.barz.wallpaperpicker.core.model.WallpaperCropMode.valueOf(name!!) }
+                .getOrDefault(foo.barz.wallpaperpicker.core.model.WallpaperCropMode.FIT_HEIGHT)
+        }
+        set(value) = prefs.edit().putString(KEY_CROP_MODE, value.name).apply()
+
     var reapplyOnScrollChange: Boolean
         get() = prefs.getBoolean(KEY_REAPPLY_ON_SCROLL_CHANGE, true)
         set(value) = prefs.edit().putBoolean(KEY_REAPPLY_ON_SCROLL_CHANGE, value).apply()
@@ -130,6 +138,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_INTERVAL_MINUTES = "interval_minutes"
         private const val KEY_TARGET = "target"
         private const val KEY_SCROLL_MODE = "scroll_mode"
+        private const val KEY_CROP_MODE = "crop_mode"
         private const val KEY_REAPPLY_ON_SCROLL_CHANGE = "reapply_on_scroll_change"
         private const val KEY_IS_SCHEDULED = "is_scheduled"
         private const val KEY_LAST_TIMESTAMP = "last_timestamp"

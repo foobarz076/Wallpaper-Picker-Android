@@ -5,15 +5,18 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Build
 import android.view.WindowManager
+import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.InputStream
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Image processor that handles downsampling, aspect ratio scaling, anti-OOM decoding,
@@ -22,11 +25,13 @@ import kotlin.math.max
 class WallpaperProcessor(private val context: Context) {
 
     /**
-     * Decodes and scales an image stream according to target screen dimensions and scroll mode.
+     * Decodes and scales an image stream according to target screen dimensions,
+     * scroll mode, and visual cropping preference.
      */
     suspend fun process(
         openStream: () -> InputStream,
-        scrollMode: WallpaperScrollMode = WallpaperScrollMode.AUTO
+        scrollMode: WallpaperScrollMode = WallpaperScrollMode.AUTO,
+        cropMode: WallpaperCropMode = WallpaperCropMode.FIT_HEIGHT
     ): Result<Bitmap> = withContext(Dispatchers.IO) {
         runCatching {
             // Step 1: Decode image bounds only
@@ -44,8 +49,8 @@ class WallpaperProcessor(private val context: Context) {
                 throw IllegalArgumentException("无法识别图片尺寸或图片数据已损坏")
             }
 
-            // Step 2: Determine target dimensions based on scrollMode & image aspect ratio
-            val (targetWidth, targetHeight) = getTargetDimensions(originalWidth, originalHeight, scrollMode)
+            // Step 2: Determine target dimensions based on scrollMode, cropMode & image aspect ratio
+            val (targetWidth, targetHeight) = getTargetDimensions(originalWidth, originalHeight, scrollMode, cropMode)
 
             // Step 3: Calculate inSampleSize (power of 2)
             options.inSampleSize = calculateInSampleSize(originalWidth, originalHeight, targetWidth, targetHeight)
@@ -57,36 +62,52 @@ class WallpaperProcessor(private val context: Context) {
                 BitmapFactory.decodeStream(input, null, options)
             } ?: throw IllegalStateException("解码图片失败")
 
-            // Step 5: Center-crop to target dimensions
-            centerCrop(downsampled, targetWidth, targetHeight)
+            // Step 5: Render scaled and cropped bitmap onto canvas
+            renderScaledBitmap(downsampled, targetWidth, targetHeight, cropMode)
         }
     }
 
     private fun getTargetDimensions(
         originalWidth: Int,
         originalHeight: Int,
-        scrollMode: WallpaperScrollMode
+        scrollMode: WallpaperScrollMode,
+        cropMode: WallpaperCropMode
     ): Pair<Int, Int> {
         val (screenWidth, screenHeight) = getScreenDimensions()
         val wm = WallpaperManager.getInstance(context)
         val desiredWidth = wm.desiredMinimumWidth
-        val desiredHeight = wm.desiredMinimumHeight
+        val maxParallaxWidth = if (desiredWidth > screenWidth) desiredWidth else screenWidth * 2
 
-        // Desired width for launcher parallax scrolling (typically 1.5x - 2x screen width)
-        val scrollWidth = if (desiredWidth > screenWidth) desiredWidth else screenWidth * 2
-        val scrollHeight = if (desiredHeight > 0) desiredHeight else screenHeight
+        val screenRatio = screenWidth.toFloat() / screenHeight.toFloat()
+        val imageRatio = originalWidth.toFloat() / originalHeight.toFloat()
 
-        val shouldScroll = when (scrollMode) {
-            WallpaperScrollMode.NEVER -> false
-            WallpaperScrollMode.ALWAYS -> true
-            // In AUTO mode: scroll if landscape/wide (width >= height); keep fixed single-screen if portrait
-            WallpaperScrollMode.AUTO -> originalWidth >= originalHeight
-        }
+        return when (scrollMode) {
+            // Never scroll: strictly bounded to single screen dimensions (ideal for non-scrolling ROMs)
+            WallpaperScrollMode.NEVER -> {
+                Pair(screenWidth, screenHeight)
+            }
 
-        return if (shouldScroll) {
-            Pair(scrollWidth, scrollHeight)
-        } else {
-            Pair(screenWidth, screenHeight)
+            // Auto adaptive: wide images (imageRatio > screenRatio) scroll naturally;
+            // portrait images (imageRatio <= screenRatio) stay single-screen to avoid 2x magnification and head cropping.
+            WallpaperScrollMode.AUTO -> {
+                if (imageRatio > screenRatio) {
+                    val naturalWidth = (screenHeight * imageRatio).toInt()
+                    val targetWidth = min(maxParallaxWidth, max(screenWidth, naturalWidth))
+                    Pair(targetWidth, screenHeight)
+                } else {
+                    Pair(screenWidth, screenHeight)
+                }
+            }
+
+            // Always parallax: wide canvas for launchers supporting page panning.
+            // For FIT_HEIGHT, we avoid zooming into height by using natural width if narrower than maxParallaxWidth.
+            WallpaperScrollMode.ALWAYS -> {
+                if (cropMode == WallpaperCropMode.FIT_HEIGHT && imageRatio < screenRatio) {
+                    Pair(screenWidth, screenHeight)
+                } else {
+                    Pair(maxParallaxWidth, screenHeight)
+                }
+            }
         }
     }
 
@@ -107,15 +128,36 @@ class WallpaperProcessor(private val context: Context) {
         return max(1, inSampleSize)
     }
 
-    private fun centerCrop(src: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
+    private fun renderScaledBitmap(
+        src: Bitmap,
+        targetWidth: Int,
+        targetHeight: Int,
+        cropMode: WallpaperCropMode
+    ): Bitmap {
         if (src.width == targetWidth && src.height == targetHeight) {
             return src
         }
 
-        val scale = max(
-            targetWidth.toFloat() / src.width.toFloat(),
-            targetHeight.toFloat() / src.height.toFloat()
-        )
+        val scale = when (cropMode) {
+            // Fit height: scale matches target height exactly, preserving 100% vertical content (no cutting heads/feet)
+            WallpaperCropMode.FIT_HEIGHT -> {
+                targetHeight.toFloat() / src.height.toFloat()
+            }
+            // Center crop: fill entire target rectangle without black bars
+            WallpaperCropMode.CENTER_CROP -> {
+                max(
+                    targetWidth.toFloat() / src.width.toFloat(),
+                    targetHeight.toFloat() / src.height.toFloat()
+                )
+            }
+            // Fit center: full image uncropped, letterboxed with black background
+            WallpaperCropMode.FIT_CENTER -> {
+                min(
+                    targetWidth.toFloat() / src.width.toFloat(),
+                    targetHeight.toFloat() / src.height.toFloat()
+                )
+            }
+        }
 
         val scaledWidth = (src.width * scale).toInt()
         val scaledHeight = (src.height * scale).toInt()
@@ -125,8 +167,13 @@ class WallpaperProcessor(private val context: Context) {
 
         val output = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
-        val paint = Paint(Paint.FILTER_BITMAP_FLAG)
 
+        // Fill background with black for letterboxed margins if any
+        if (cropMode == WallpaperCropMode.FIT_CENTER || scaledWidth < targetWidth || scaledHeight < targetHeight) {
+            canvas.drawColor(Color.BLACK)
+        }
+
+        val paint = Paint(Paint.FILTER_BITMAP_FLAG)
         val destRect = Rect(left, top, left + scaledWidth, top + scaledHeight)
         val srcRect = Rect(0, 0, src.width, src.height)
 

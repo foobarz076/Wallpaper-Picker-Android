@@ -38,7 +38,7 @@ class WallpaperWorker(
         }
 
         val wallpaperData = sourceResult.getOrThrow()
-        val processResult = processor.process(wallpaperData.openStream, prefs.scrollMode)
+        val processResult = processor.process(wallpaperData.openStream, prefs.scrollMode, prefs.cropMode)
         if (processResult.isFailure) {
             return Result.retry()
         }

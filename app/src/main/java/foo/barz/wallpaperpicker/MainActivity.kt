@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
                     onClearCache = viewModel::onClearCache,
                     onIntervalSelected = viewModel::onIntervalSelected,
                     onTargetSelected = viewModel::onTargetSelected,
+                    onCropModeSelected = viewModel::onCropModeSelected,
                     onScrollModeSelected = viewModel::onScrollModeSelected,
                     onToggleReapplyOnScrollChange = viewModel::onToggleReapplyOnScrollChange,
                     onReapplyCurrentWallpaper = viewModel::reapplyCurrentWallpaper,

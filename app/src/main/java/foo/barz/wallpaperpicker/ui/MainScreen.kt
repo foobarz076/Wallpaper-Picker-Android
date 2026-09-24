@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Collections
+import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -71,6 +73,7 @@ import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
+import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
@@ -102,6 +105,7 @@ fun MainScreen(
     onClearCache: () -> Unit,
     onIntervalSelected: (Long) -> Unit,
     onTargetSelected: (WallpaperTarget) -> Unit,
+    onCropModeSelected: (WallpaperCropMode) -> Unit,
     onScrollModeSelected: (WallpaperScrollMode) -> Unit,
     onToggleReapplyOnScrollChange: (Boolean) -> Unit,
     onReapplyCurrentWallpaper: () -> Unit,
@@ -773,20 +777,64 @@ fun MainScreen(
                 }
             }
 
-            // 5. Wallpaper Scroll Mode Card
+            // 5. Wallpaper Crop Mode Card
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("壁纸随桌面滚动", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Crop, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("壁纸裁切与构图", style = MaterialTheme.typography.titleMedium)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            WallpaperCropMode.FIT_HEIGHT,
+                            WallpaperCropMode.CENTER_CROP,
+                            WallpaperCropMode.FIT_CENTER
+                        ).forEach { mode ->
+                            FilterChip(
+                                selected = state.cropMode == mode,
+                                onClick = { onCropModeSelected(mode) },
+                                label = { Text(mode.label) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = state.cropMode.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+
+            // 6. Wallpaper Scroll Mode Card
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.ViewCarousel, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("桌面视差随动", style = MaterialTheme.typography.titleMedium)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
                             WallpaperScrollMode.AUTO,
-                            WallpaperScrollMode.ALWAYS,
-                            WallpaperScrollMode.NEVER
+                            WallpaperScrollMode.NEVER,
+                            WallpaperScrollMode.ALWAYS
                         ).forEach { mode ->
                             FilterChip(
                                 selected = state.scrollMode == mode,
@@ -803,6 +851,13 @@ fun MainScreen(
                         color = MaterialTheme.colorScheme.outline
                     )
 
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "提示：部分定制系统（如 HyperOS/MIUI 或已关闭壁纸随动的桌面）不支持壁纸平移。若滑动桌面时壁纸静止，建议选择「锁定居中」以单屏最清晰画质呈现。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -812,7 +867,7 @@ fun MainScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text("修改设置时重设当前壁纸", style = MaterialTheme.typography.bodyMedium)
                             Text(
-                                text = "更改滚动模式时，立即按新模式重新裁切并应用当前壁纸",
+                                text = "更改裁切或滚动设置时，立即按新模式重新渲染并应用当前壁纸",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -830,7 +885,7 @@ fun MainScreen(
                             enabled = !state.isChanging,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("按当前模式重设正在使用的壁纸")
+                            Text("按当前设置重设正在使用的壁纸")
                         }
                     }
                 }

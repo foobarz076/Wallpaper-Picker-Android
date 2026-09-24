@@ -48,4 +48,22 @@ class Phase3Test {
         assertEquals("image/jpeg", record.mimeType)
         assertNotNull(record.lastIndexed)
     }
+
+    @Test
+    fun testWallpaperCropModes() {
+        val cropModes = foo.barz.wallpaperpicker.core.model.WallpaperCropMode.values()
+        assertEquals(3, cropModes.size)
+        assertEquals("高度优先 (防切头)", foo.barz.wallpaperpicker.core.model.WallpaperCropMode.FIT_HEIGHT.label)
+        assertEquals("居中充满", foo.barz.wallpaperpicker.core.model.WallpaperCropMode.CENTER_CROP.label)
+        assertEquals("原图完整", foo.barz.wallpaperpicker.core.model.WallpaperCropMode.FIT_CENTER.label)
+    }
+
+    @Test
+    fun testWallpaperScrollModes() {
+        val scrollModes = foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.values()
+        assertEquals(3, scrollModes.size)
+        assertEquals("智能自适应", foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.AUTO.label)
+        assertEquals("锁定居中", foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.NEVER.label)
+        assertEquals("强制视差", foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.ALWAYS.label)
+    }
 }

@@ -15,6 +15,7 @@ import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
+import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
@@ -62,6 +63,7 @@ data class MainUiState(
     val intervalMinutes: Long = 60L,
     val target: WallpaperTarget = WallpaperTarget.BOTH,
     val scrollMode: WallpaperScrollMode = WallpaperScrollMode.AUTO,
+    val cropMode: WallpaperCropMode = WallpaperCropMode.FIT_HEIGHT,
     val reapplyOnScrollChange: Boolean = true,
     val isScheduled: Boolean = false,
     val isChanging: Boolean = false,
@@ -103,6 +105,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             intervalMinutes = prefs.intervalMinutes,
             target = prefs.target,
             scrollMode = prefs.scrollMode,
+            cropMode = prefs.cropMode,
             reapplyOnScrollChange = prefs.reapplyOnScrollChange,
             isScheduled = prefs.isScheduled,
             lastWallpaperTitle = prefs.lastWallpaperTitle,
@@ -363,6 +366,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onCropModeSelected(mode: WallpaperCropMode) {
+        prefs.cropMode = mode
+        _uiState.update { it.copy(cropMode = mode) }
+        if (prefs.reapplyOnScrollChange && _uiState.value.lastWallpaperUri != null) {
+            reapplyCurrentWallpaper()
+        }
+    }
+
     fun onToggleReapplyOnScrollChange(enabled: Boolean) {
         prefs.reapplyOnScrollChange = enabled
         _uiState.update { it.copy(reapplyOnScrollChange = enabled) }
@@ -371,7 +382,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun reapplyCurrentWallpaper() {
         val uri = _uiState.value.lastWallpaperUri ?: return
         viewModelScope.launch {
-            _uiState.update { it.copy(isChanging = true, statusMessage = "正在按「${prefs.scrollMode.label}」重新应用壁纸…") }
+            _uiState.update {
+                it.copy(
+                    isChanging = true,
+                    statusMessage = "正在按「${prefs.cropMode.label} + ${prefs.scrollMode.label}」重新应用壁纸…"
+                )
+            }
             val processResult = processor.process(
                 openStream = {
                     if (uri.scheme == "file") {
@@ -381,7 +397,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             ?: throw java.io.FileNotFoundException("无法打开图片流: $uri")
                     }
                 },
-                scrollMode = prefs.scrollMode
+                scrollMode = prefs.scrollMode,
+                cropMode = prefs.cropMode
             )
 
             if (processResult.isFailure) {
@@ -402,7 +419,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update {
                 it.copy(
                     isChanging = false,
-                    statusMessage = "已按「${prefs.scrollMode.label}」重新应用当前壁纸"
+                    statusMessage = "已按「${prefs.cropMode.label} + ${prefs.scrollMode.label}」重新应用当前壁纸"
                 )
             }
         }
@@ -501,7 +518,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val data = nextResult.getOrThrow()
-            val processResult = processor.process(data.openStream, prefs.scrollMode)
+            val processResult = processor.process(data.openStream, prefs.scrollMode, prefs.cropMode)
 
             if (processResult.isFailure) {
                 val error = processResult.exceptionOrNull()?.message ?: "图片处理失败"
