@@ -88,15 +88,26 @@
 ## 4. 后续演进路线图 (Future Roadmap)
 
 ### Phase 2: 拓展网络源（Immich & 通用 HTTP API）
+- **实现 `HttpApiSource` (网络底座与通用 HTTP 验证)**：
+  - 响应自动分流：`Content-Type: image/*` 直接流式传递给处理器；JSON 响应支持点分路径（Dot Notation，如 `images[0].url`）与常用预设（Bing 每日壁纸等）。
+  - 支持相对路径自拼接与数组元素随机抽取（如 `data[*].path`）。
 - **实现 `ImmichSource`**：
   - 配置：服务器地址、API Key、相册选择（可选）。
   - 调用 Immich 接口拉取随机照片并安全流式下载。
-- **实现 `HttpApiSource`**：
-  - 支持直接返回图片的 URL（如 Unsplash 随机图、Lorem Picsum）或标准 JSON API。
 - **老设备 TLS 修复**：
-  - 引入 `Conscrypt`，修复 Android 6.0 连现代 HTTPS (Let's Encrypt ISRG Root X1) 报证书无效的问题。
-- **网络约束**：
-  - WorkManager 增加 `NetworkType.UNMETERED` 约束，支持“仅在 Wi-Fi 下换壁纸”开关。
+  - 引入 `Conscrypt`，修复 Android 6.0 连现代 HTTPS (Let's Encrypt ISRG Root X1) 报证书无效与 TLS 1.3 缺失的问题。
+- **网络与电量策略 (Network & Battery Constraints)**：
+  - **网络约束**：WorkManager 增加 `NetworkType.UNMETERED`（仅在 Wi-Fi 下下载开关，默认开启）与 `NetworkType.CONNECTED`（允许蜂窝移动数据）。
+  - **电量约束**：开启 `setRequiresBatteryNotLow(true)`（低电量保护，低于 15% 时暂停自动下载）。
+  - **前台手动豁免**：用户点击「立即更换」作为明确操作意图，豁免 Wi-Fi 限制执行单次刷新。
+- **轻量 LRU 滚动缓存与离线容灾策略**：
+  - **存储目录**：统一管理在 `context.cacheDir/wallpapers/`，免申请外部存储权限且系统低存储时可安全回收。
+  - **容量硬顶**：采用 LRU 淘汰机制，严格限制保留数量（上限 15 张）或总容量（上限 50MB），自动清理旧图。
+  - **断网/蜂窝优雅降级**：
+    - 当开启“仅在 Wi-Fi 下下载”，若处于移动网络或离线状态，Worker 自动从本地 LRU 缓存池中随机挑选旧图复用切换，实现“零流量消耗、断网不掉线”。
+    - 若彻底无网且缓存为空，静默跳过本次调度，等待下次网络恢复。
+- **UI 过渡方案**：
+  - 此阶段保持单页架构，各网络源的高级配置（URL、API Key、JSONPath、Wi-Fi 开关等）采用 `ModalBottomSheet`（底部弹窗）承载，避免主页视觉臃肿。
 
 ### Phase 3: 大型目录与系统相册索引 (Large Directory & MediaStore)
 - **阶段 3.1（极速读取优化）**：
@@ -108,9 +119,20 @@
   - 定时更换时直接执行 `SELECT uri FROM wallpapers ORDER BY RANDOM() LIMIT 1`，实现 0ms 零功耗换图。
 
 ### Phase 4: 体验与进阶特性 (UX & Advanced Features)
+- **UI 全面重构：从单页演进至多 Tab 架构 (Navigation Bar)**：
+  - **重构动因**：单页承载大量图源配置（Local/Immich/HTTP）与历史图片流时将面临严重滚动冲突与信息过载，需将高频操作与低频设置彻底解耦。
+  - **Tab 1: 桌面 / 控制台 (Dashboard)**：
+    - 当前壁纸大图卡片预览与状态信息（当前来源、上次更换、下次倒计时）。
+    - 核心高频操作：一键「立即更换」、快捷「设为收藏」。
+  - **Tab 2: 历史与画廊 (Gallery / History)**：
+    - 采用双列/三列瀑布流展示历史已用壁纸与收藏列表。
+    - 支持大图全屏预览、一键导出到系统相册 (`Pictures`)、删除单张缓存。
+  - **Tab 3: 图源与设置 (Settings & Sources)**：
+    - 多图源集中管理与切换（本地文件夹、Immich 凭据、HTTP API 自定义与预设）。
+    - 调度周期偏好、Wi-Fi / 流量约束、缓存池容量设定与一键清理。
+    - 屏幕目标（桌面/锁屏）与壁纸随桌面滚动模式。
 - **无重复轮播 (Fair Shuffle)**：记录最近 $N$ 次已用壁纸，避免短期内频繁看到重复图片。
 - **桌面微件 (AppWidget)**：在手机桌面上放置一个快捷按钮，无需打开应用一键切壁纸。
-- **历史记录与收藏**：喜欢当前壁纸时支持一键收藏、导出原图。
 - **设计升级**：支持 Material You 动态主题取色，优化弱网/失败时的静默降级与通知提示。
 
 ---
