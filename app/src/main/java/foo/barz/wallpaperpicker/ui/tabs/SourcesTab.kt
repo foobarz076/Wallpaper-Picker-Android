@@ -289,7 +289,16 @@ fun SourcesTab(
                             value = state.immichServerUrl,
                             onValueChange = onImmichServerUrlChanged,
                             label = { Text("服务器地址 (Server URL)") },
-                            placeholder = { Text("例如 http://192.168.1.100:2283") },
+                            placeholder = { Text("例如 https://192.168.1.100:2283 或 http://immich.local:2283") },
+                            supportingText = {
+                                if (isLikelyBlockedCleartext(state.immichServerUrl)) {
+                                    Text(
+                                        text = "提示：系统限制未加密 HTTP 明文。局域网 IP 建议改用 https://（并勾选下方「忽略自签名证书」），或使用 .local / .lan 主机名",
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -459,7 +468,16 @@ fun SourcesTab(
                                 value = state.httpCustomUrl,
                                 onValueChange = onHttpCustomUrlChanged,
                                 label = { Text("API 网址 (URL)") },
-                                placeholder = { Text("https://api.example.com/wallpaper") },
+                                placeholder = { Text("https://api.example.com/wallpaper 或 http://api.local:8080") },
+                                supportingText = {
+                                    if (isLikelyBlockedCleartext(state.httpCustomUrl)) {
+                                        Text(
+                                            text = "提示：系统限制非豁免域名的 HTTP 明文。建议改用 https://，或使用以 .local / .lan 结尾的主机名",
+                                            color = MaterialTheme.colorScheme.tertiary,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -529,4 +547,28 @@ private fun formatFileSize(bytes: Long): String {
     } else {
         String.format(Locale.getDefault(), "%.1f KB", kb)
     }
+}
+
+/**
+ * Evaluates whether a given URL is using unencrypted HTTP on a non-exempted domain or IP address,
+ * which will likely be rejected by the platform's Network Security Configuration.
+ */
+private fun isLikelyBlockedCleartext(url: String): Boolean {
+    val trimmed = url.trim()
+    if (!trimmed.startsWith("http://", ignoreCase = true)) return false
+
+    val host = runCatching { Uri.parse(trimmed).host?.lowercase(Locale.ROOT) }.getOrNull()
+    if (host.isNullOrEmpty()) return false
+
+    val isPermitted = host == "localhost" ||
+            host == "127.0.0.1" ||
+            host == "10.0.2.2" ||
+            host.endsWith(".local") || host == "local" ||
+            host.endsWith(".lan") || host == "lan" ||
+            host.endsWith(".internal") || host == "internal" ||
+            host.endsWith(".home.arpa") || host == "home.arpa" ||
+            host.endsWith(".home") || host == "home" ||
+            host.endsWith(".corp") || host == "corp"
+
+    return !isPermitted
 }
