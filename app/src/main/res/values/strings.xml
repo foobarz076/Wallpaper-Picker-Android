@@ -4,4 +4,5 @@
     <string name="status_running">正在更换壁纸…</string>
     <string name="status_success">壁纸更换成功！</string>
     <string name="status_failed">更换失败</string>
+    <string name="manage_space_title">存储空间管理</string>
 </resources>
