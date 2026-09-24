@@ -1,0 +1,8 @@
+R_DEF: Internal format may change without notice
+local
+string app_name
+string status_failed
+string status_ready
+string status_running
+string status_success
+style Theme.WallpaperPicker
