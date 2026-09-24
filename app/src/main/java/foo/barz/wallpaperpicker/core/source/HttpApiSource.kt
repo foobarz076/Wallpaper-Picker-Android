@@ -44,9 +44,12 @@ class HttpApiSource(
             // Check network availability and constraints (unless bypassed, e.g., manual trigger)
             val networkAllowed = bypassNetworkConstraints || isNetworkAvailableAndAllowed(context, config.wifiOnly)
 
+            val prefs = foo.barz.wallpaperpicker.data.PreferencesManager(context)
+            val excluded = if (prefs.fairShuffle) prefs.getRecentWallpaperKeys().toSet() else emptySet()
+
             if (!networkAllowed) {
                 // Attempt fallback to local LRU cache pool
-                val cached = cacheManager.getRandomCachedWallpaper()
+                val cached = cacheManager.getRandomCachedWallpaper(excluded)
                 if (cached != null) {
                     return@runCatching cached
                 }
@@ -57,7 +60,7 @@ class HttpApiSource(
                 fetchFromNetwork()
             } catch (e: Exception) {
                 // Network error fallback to cached wallpaper
-                val cached = cacheManager.getRandomCachedWallpaper()
+                val cached = cacheManager.getRandomCachedWallpaper(excluded)
                 if (cached != null) {
                     return@runCatching cached
                 }

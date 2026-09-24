@@ -24,15 +24,18 @@ class LocalFolderSource(
 
     override suspend fun getNextWallpaper(): Result<WallpaperData> = withContext(Dispatchers.IO) {
         runCatching {
+            val prefs = foo.barz.wallpaperpicker.data.PreferencesManager(context)
+            val excluded = if (prefs.fairShuffle) prefs.getRecentWallpaperKeys().toSet() else emptySet()
+
             // Check if index exists; if not, perform fast scan and indexing
-            var record = database.getRandomImage(folderUri)
+            var record = database.getRandomImage(folderUri, excluded)
             if (record == null) {
                 val scanned = LocalFolderFastScanner.scanFolder(context, folderUri)
                 if (scanned.isEmpty()) {
                     throw NoSuchElementException("所选文件夹中未找到任何图片文件 (.jpg, .jpeg, .png, .webp)")
                 }
                 database.replaceFolderIndex(folderUri, scanned)
-                record = database.getRandomImage(folderUri)
+                record = database.getRandomImage(folderUri, excluded)
                     ?: throw NoSuchElementException("无法从本地索引中获取图片")
             }
 

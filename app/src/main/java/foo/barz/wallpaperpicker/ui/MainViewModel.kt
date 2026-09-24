@@ -77,6 +77,8 @@ data class MainUiState(
     val lastChangedText: String = "尚未更换过",
     val lastExecutionStatus: String? = null,
     val lastErrorMessage: String? = null,
+    val deferDuringInteraction: Boolean = true,
+    val fairShuffle: Boolean = true,
     val statusMessage: String? = null
 )
 
@@ -118,7 +120,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             lastWallpaperUri = prefs.lastWallpaperUri,
             lastChangedText = formatTimestamp(prefs.lastChangedTimestamp, prefs.lastWallpaperTitle),
             lastExecutionStatus = prefs.lastExecutionStatus,
-            lastErrorMessage = prefs.lastErrorMessage
+            lastErrorMessage = prefs.lastErrorMessage,
+            deferDuringInteraction = prefs.deferDuringInteraction,
+            fairShuffle = prefs.fairShuffle
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -392,6 +396,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(reapplyOnScrollChange = enabled) }
     }
 
+    fun onToggleDeferDuringInteraction(enabled: Boolean) {
+        prefs.deferDuringInteraction = enabled
+        _uiState.update { it.copy(deferDuringInteraction = enabled) }
+    }
+
+    fun onToggleFairShuffle(enabled: Boolean) {
+        prefs.fairShuffle = enabled
+        _uiState.update { it.copy(fairShuffle = enabled) }
+        if (!enabled) {
+            prefs.clearRecentWallpaperKeys()
+        }
+    }
+
     fun reapplyCurrentWallpaper() {
         val uri = _uiState.value.lastWallpaperUri ?: return
         viewModelScope.launch {
@@ -573,6 +590,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             prefs.lastWallpaperUri = data.sourceUri
             prefs.lastErrorMessage = null
             prefs.lastExecutionStatus = "成功"
+
+            val wallpaperKey = data.sourceUri?.toString() ?: data.title
+            if (wallpaperKey != null) {
+                prefs.recordRecentWallpaperKey(wallpaperKey)
+            }
 
             _uiState.update {
                 it.copy(

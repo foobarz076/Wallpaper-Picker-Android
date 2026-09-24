@@ -69,9 +69,45 @@ class LocalFolderIndexDatabase(context: Context) : SQLiteOpenHelper(
 
     /**
      * Picks a random image record for the given folder using SQLite's RANDOM() order.
+     * Supports Fair Shuffle by excluding recently applied URIs until the pool is exhausted.
      */
-    fun getRandomImage(folderUri: Uri): LocalFolderImageRecord? {
+    fun getRandomImage(folderUri: Uri, excludedUris: Set<String> = emptySet()): LocalFolderImageRecord? {
         val db = readableDatabase
+        val totalCount = getIndexCount(folderUri)
+
+        // Attempt 1: If exclusions are provided and some images remain unselected, query with NOT IN
+        if (excludedUris.isNotEmpty() && excludedUris.size < totalCount) {
+            val placeholders = excludedUris.joinToString(",") { "?" }
+            val args = arrayOf(folderUri.toString()) + excludedUris.toTypedArray()
+            val cursor = db.rawQuery(
+                """
+                SELECT $COLUMN_FOLDER_URI, $COLUMN_DOCUMENT_ID, $COLUMN_DOCUMENT_URI, $COLUMN_FILE_NAME, $COLUMN_MIME_TYPE, $COLUMN_LAST_INDEXED
+                FROM $TABLE_NAME
+                WHERE $COLUMN_FOLDER_URI = ? AND $COLUMN_DOCUMENT_URI NOT IN ($placeholders)
+                ORDER BY RANDOM() LIMIT 1
+                """.trimIndent(),
+                args
+            )
+            val record = cursor.use {
+                if (it.moveToFirst()) {
+                    LocalFolderImageRecord(
+                        folderUri = it.getString(0),
+                        documentId = it.getString(1),
+                        documentUri = it.getString(2),
+                        fileName = it.getString(3),
+                        mimeType = it.getString(4),
+                        lastIndexed = it.getLong(5)
+                    )
+                } else {
+                    null
+                }
+            }
+            if (record != null) {
+                return record
+            }
+        }
+
+        // Attempt 2: Fallback query without exclusion (resets the shuffle cycle)
         val cursor = db.rawQuery(
             """
             SELECT $COLUMN_FOLDER_URI, $COLUMN_DOCUMENT_ID, $COLUMN_DOCUMENT_URI, $COLUMN_FILE_NAME, $COLUMN_MIME_TYPE, $COLUMN_LAST_INDEXED

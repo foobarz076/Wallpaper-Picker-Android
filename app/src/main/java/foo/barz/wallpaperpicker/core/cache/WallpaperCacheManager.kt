@@ -84,13 +84,20 @@ class WallpaperCacheManager(private val context: Context) {
 
     /**
      * Picks a random wallpaper from the cache pool for offline or cellular fallback.
+     * Supports Fair Shuffle by excluding recently applied filenames or URIs.
      * Updates the file's last modified timestamp to refresh its LRU standing.
      */
-    fun getRandomCachedWallpaper(): WallpaperData? {
+    fun getRandomCachedWallpaper(excludedKeys: Set<String> = emptySet()): WallpaperData? {
         val files = getCachedFiles()
         if (files.isEmpty()) return null
 
-        val targetFile = files.random()
+        val candidates = if (excludedKeys.isNotEmpty()) {
+            files.filter { !excludedKeys.contains(it.name) && !excludedKeys.contains(Uri.fromFile(it).toString()) }
+        } else {
+            emptyList()
+        }
+
+        val targetFile = if (candidates.isNotEmpty()) candidates.random() else files.random()
         targetFile.setLastModified(System.currentTimeMillis())
 
         return WallpaperData(

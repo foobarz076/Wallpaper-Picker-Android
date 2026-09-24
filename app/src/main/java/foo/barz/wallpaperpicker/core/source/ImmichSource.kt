@@ -38,8 +38,11 @@ class ImmichSource(
         val networkAllowed = bypassNetworkConstraints ||
                 HttpApiSource.isNetworkAvailableAndAllowed(context, config.wifiOnly)
 
+        val prefs = foo.barz.wallpaperpicker.data.PreferencesManager(context)
+        val excluded = if (prefs.fairShuffle) prefs.getRecentWallpaperKeys().toSet() else emptySet()
+
         if (!networkAllowed) {
-            val cached = cacheManager.getRandomCachedWallpaper()
+            val cached = cacheManager.getRandomCachedWallpaper(excluded)
             if (cached != null) {
                 return@withContext Result.success(cached)
             }
@@ -50,7 +53,7 @@ class ImmichSource(
             val wallpaper = fetchFromImmich()
             Result.success(wallpaper)
         } catch (e: Exception) {
-            val cached = cacheManager.getRandomCachedWallpaper()
+            val cached = cacheManager.getRandomCachedWallpaper(excluded)
             if (cached != null) {
                 Result.success(cached)
             } else {
@@ -252,8 +255,11 @@ class ImmichSource(
                     val assetsObj = root.optJSONObject("assets")
                     val itemsArray = assetsObj?.optJSONArray("items")
                     if (itemsArray != null && itemsArray.length() > 0) {
-                        val randomIndex = (0 until itemsArray.length()).random()
-                        val assetObj = itemsArray.getJSONObject(randomIndex)
+                        val prefs = foo.barz.wallpaperpicker.data.PreferencesManager(context)
+                        val excluded = if (prefs.fairShuffle) prefs.getRecentWallpaperKeys().toSet() else emptySet()
+                        val allItems = (0 until itemsArray.length()).map { itemsArray.getJSONObject(it) }
+                        val candidates = allItems.filter { !excluded.contains(it.getString("id")) }
+                        val assetObj = if (candidates.isNotEmpty()) candidates.random() else allItems.random()
                         val id = assetObj.getString("id")
                         val fileName = assetObj.optString("originalFileName", "Immich_$id.jpg")
                         return Pair(id, fileName)
@@ -286,10 +292,13 @@ class ImmichSource(
             throw NoSuchElementException("所选相册中没有任何图片")
         }
 
-        val randomIndex = (0 until assetsArray.length()).random()
-        val assetObj = assetsArray.getJSONObject(randomIndex)
-        val id = assetObj.getString("id")
-        val fileName = assetObj.optString("originalFileName", "Immich_$id.jpg")
+        val prefs = foo.barz.wallpaperpicker.data.PreferencesManager(context)
+        val excluded = if (prefs.fairShuffle) prefs.getRecentWallpaperKeys().toSet() else emptySet()
+        val allAssets = (0 until assetsArray.length()).map { assetsArray.getJSONObject(it) }
+        val candidates = allAssets.filter { !excluded.contains(it.getString("id")) }
+        val chosen = if (candidates.isNotEmpty()) candidates.random() else allAssets.random()
+        val id = chosen.getString("id")
+        val fileName = chosen.optString("originalFileName", "Immich_$id.jpg")
         return Pair(id, fileName)
     }
 

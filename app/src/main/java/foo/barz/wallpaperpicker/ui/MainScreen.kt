@@ -47,6 +47,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -113,6 +114,8 @@ fun MainScreen(
     onToggleReapplyOnScrollChange: (Boolean) -> Unit,
     onReapplyCurrentWallpaper: () -> Unit,
     onToggleSchedule: (Boolean) -> Unit,
+    onToggleDeferDuringInteraction: (Boolean) -> Unit,
+    onToggleFairShuffle: (Boolean) -> Unit,
     onChangeNow: () -> Unit,
     onClearStatus: () -> Unit
 ) {
@@ -998,6 +1001,50 @@ fun MainScreen(
                                 label = { Text(label) }
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("使用手机时推迟更换", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "检测到亮屏或正在使用手机时暂缓更换壁纸，防止游戏、观影或打字时发生掉帧卡顿",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Switch(
+                            checked = state.deferDuringInteraction,
+                            onCheckedChange = onToggleDeferDuringInteraction
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("智能洗牌防重复 (Fair Shuffle)", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "记忆最近 50 张已用壁纸，在一整轮展示完之前避免高频抽取相同图片",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Switch(
+                            checked = state.fairShuffle,
+                            onCheckedChange = onToggleFairShuffle
+                        )
                     }
                 }
             }

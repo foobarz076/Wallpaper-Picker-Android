@@ -144,6 +144,42 @@ class PreferencesManager(context: Context) {
         get() = prefs.getLong(KEY_LAST_EXECUTION_TIMESTAMP, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_EXECUTION_TIMESTAMP, value).apply()
 
+    var deferDuringInteraction: Boolean
+        get() = prefs.getBoolean(KEY_DEFER_DURING_INTERACTION, true)
+        set(value) = prefs.edit().putBoolean(KEY_DEFER_DURING_INTERACTION, value).apply()
+
+    var fairShuffle: Boolean
+        get() = prefs.getBoolean(KEY_FAIR_SHUFFLE, true)
+        set(value) = prefs.edit().putBoolean(KEY_FAIR_SHUFFLE, value).apply()
+
+    /**
+     * Retrieves the FIFO list of recently applied wallpaper keys.
+     */
+    fun getRecentWallpaperKeys(): List<String> {
+        val raw = prefs.getString(KEY_RECENT_WALLPAPER_KEYS, null) ?: return emptyList()
+        return raw.split("\n").filter { it.isNotBlank() }
+    }
+
+    /**
+     * Records a wallpaper key into the FIFO history, evicting the oldest when exceeding capacity.
+     */
+    fun recordRecentWallpaperKey(key: String, maxCapacity: Int = 50) {
+        if (key.isBlank()) return
+        val current = getRecentWallpaperKeys().filter { it != key }.toMutableList()
+        current.add(key)
+        while (current.size > maxCapacity) {
+            current.removeAt(0)
+        }
+        prefs.edit().putString(KEY_RECENT_WALLPAPER_KEYS, current.joinToString("\n")).apply()
+    }
+
+    /**
+     * Clears the recently used wallpaper history to reset the shuffle deck.
+     */
+    fun clearRecentWallpaperKeys() {
+        prefs.edit().remove(KEY_RECENT_WALLPAPER_KEYS).apply()
+    }
+
     companion object {
         private const val PREF_NAME = "wallpaper_picker_prefs"
         private const val KEY_FOLDER_URI = "folder_uri"
@@ -159,6 +195,9 @@ class PreferencesManager(context: Context) {
         private const val KEY_LAST_EXECUTION_STATUS = "last_execution_status"
         private const val KEY_LAST_ERROR_MESSAGE = "last_error_message"
         private const val KEY_LAST_EXECUTION_TIMESTAMP = "last_execution_timestamp"
+        private const val KEY_DEFER_DURING_INTERACTION = "defer_during_interaction"
+        private const val KEY_FAIR_SHUFFLE = "fair_shuffle"
+        private const val KEY_RECENT_WALLPAPER_KEYS = "recent_wallpaper_keys"
         private const val KEY_MEDIA_STORE_ALBUM_ID = "media_store_album_id"
         private const val KEY_MEDIA_STORE_ALBUM_NAME = "media_store_album_name"
         private const val KEY_SOURCE_TYPE = "source_type"

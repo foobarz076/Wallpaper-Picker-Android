@@ -50,6 +50,8 @@ class MainActivity : ComponentActivity() {
                     onToggleReapplyOnScrollChange = viewModel::onToggleReapplyOnScrollChange,
                     onReapplyCurrentWallpaper = viewModel::reapplyCurrentWallpaper,
                     onToggleSchedule = viewModel::toggleSchedule,
+                    onToggleDeferDuringInteraction = viewModel::onToggleDeferDuringInteraction,
+                    onToggleFairShuffle = viewModel::onToggleFairShuffle,
                     onChangeNow = viewModel::changeNow,
                     onClearStatus = viewModel::clearStatusMessage
                 )

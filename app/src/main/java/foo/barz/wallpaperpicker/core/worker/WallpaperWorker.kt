@@ -1,6 +1,7 @@
 package foo.barz.wallpaperpicker.core.worker
 
 import android.content.Context
+import android.os.PowerManager
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -22,6 +23,22 @@ class WallpaperWorker(
 
     override suspend fun doWork(): Result {
         val prefs = PreferencesManager(applicationContext)
+
+        // Check if the user opted to defer wallpaper updates while the device is in active interactive use
+        if (prefs.deferDuringInteraction) {
+            val powerManager = applicationContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
+            if (powerManager?.isInteractive == true) {
+                return if (runAttemptCount < MAX_INTERACTIVE_RETRIES) {
+                    prefs.lastExecutionStatus = "设备正在使用中，已推迟更换 (待重试)"
+                    prefs.lastExecutionTimestamp = System.currentTimeMillis()
+                    Result.retry()
+                } else {
+                    prefs.lastExecutionStatus = "设备正在使用中，已顺延至下次调度"
+                    prefs.lastExecutionTimestamp = System.currentTimeMillis()
+                    Result.success()
+                }
+            }
+        }
 
         val source = runCatching {
             WallpaperSourceFactory.createActiveSource(applicationContext, prefs)
@@ -63,6 +80,17 @@ class WallpaperWorker(
         }
 
         val bitmap = processResult.getOrThrow()
+
+        // Re-check interactivity before applying to avoid frame drops if the user just woke the screen
+        if (prefs.deferDuringInteraction) {
+            val powerManager = applicationContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
+            if (powerManager?.isInteractive == true) {
+                prefs.lastExecutionStatus = "设备正在使用中，已推迟更换 (待重试)"
+                prefs.lastExecutionTimestamp = System.currentTimeMillis()
+                return Result.retry()
+            }
+        }
+
         val applyResult = applier.apply(bitmap, prefs.target)
         if (applyResult.isFailure) {
             return handleFailure(
@@ -77,6 +105,12 @@ class WallpaperWorker(
         prefs.lastWallpaperUri = wallpaperData.sourceUri
         prefs.lastExecutionStatus = "成功"
         prefs.lastErrorMessage = null
+
+        // Record wallpaper key for Fair Shuffle history
+        val wallpaperKey = wallpaperData.sourceUri?.toString() ?: wallpaperData.title
+        if (wallpaperKey != null) {
+            prefs.recordRecentWallpaperKey(wallpaperKey)
+        }
 
         return Result.success()
     }
@@ -99,6 +133,7 @@ class WallpaperWorker(
     companion object {
         const val WORK_NAME = "periodic_wallpaper_changer"
         private const val MAX_RETRIES = 2
+        private const val MAX_INTERACTIVE_RETRIES = 3
 
         fun schedule(context: Context, intervalMinutes: Long) {
             // Keep battery constraint to protect critical battery levels (< 15%),

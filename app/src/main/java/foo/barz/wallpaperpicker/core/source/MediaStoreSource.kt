@@ -50,7 +50,13 @@ class MediaStoreSource(
                 MediaStore.Images.Media.MIME_TYPE
             )
 
-            val (selection, selectionArgs) = if (bucketId != null) {
+            val prefs = foo.barz.wallpaperpicker.data.PreferencesManager(context)
+            val excludedUris = if (prefs.fairShuffle) prefs.getRecentWallpaperKeys().toSet() else emptySet()
+            val excludedIds = excludedUris.mapNotNull {
+                runCatching { ContentUris.parseId(Uri.parse(it)) }.getOrNull()
+            }
+
+            var (selection, selectionArgs) = if (bucketId != null) {
                 "${MediaStore.Images.Media.MIME_TYPE} LIKE ? AND ${MediaStore.Images.Media.BUCKET_ID} = ?" to
                         arrayOf("image/%", bucketId)
             } else {
@@ -60,22 +66,49 @@ class MediaStoreSource(
 
             var cursor: Cursor? = null
 
-            // 1. First attempt: Query with SQL RANDOM() LIMIT 1
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val queryArgs = Bundle().apply {
-                        putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
-                        putStringArray(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
-                        putString(android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "RANDOM()")
-                        putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 1)
+            // 1. First attempt: Query with SQL RANDOM() LIMIT 1, excluding recent IDs if available
+            if (excludedIds.isNotEmpty()) {
+                val placeholders = excludedIds.joinToString(",") { "?" }
+                val shuffleSelection = "$selection AND ${MediaStore.Images.Media._ID} NOT IN ($placeholders)"
+                val shuffleArgs = selectionArgs + excludedIds.map { it.toString() }.toTypedArray()
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val queryArgs = Bundle().apply {
+                            putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, shuffleSelection)
+                            putStringArray(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, shuffleArgs)
+                            putString(android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "RANDOM()")
+                            putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 1)
+                        }
+                        cursor = resolver.query(collectionUri, projection, queryArgs, null)
+                    } else {
+                        cursor = resolver.query(collectionUri, projection, shuffleSelection, shuffleArgs, "RANDOM() LIMIT 1")
                     }
-                    cursor = resolver.query(collectionUri, projection, queryArgs, null)
-                } else {
-                    cursor = resolver.query(collectionUri, projection, selection, selectionArgs, "RANDOM() LIMIT 1")
+                } catch (_: Exception) {
+                    cursor?.close()
+                    cursor = null
                 }
-            } catch (_: Exception) {
+            }
+
+            // 2. If no cursor or shuffle query was empty (deck exhausted), query with standard selection
+            if (cursor == null || cursor.count == 0) {
                 cursor?.close()
                 cursor = null
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val queryArgs = Bundle().apply {
+                            putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+                            putStringArray(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
+                            putString(android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "RANDOM()")
+                            putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 1)
+                        }
+                        cursor = resolver.query(collectionUri, projection, queryArgs, null)
+                    } else {
+                        cursor = resolver.query(collectionUri, projection, selection, selectionArgs, "RANDOM() LIMIT 1")
+                    }
+                } catch (_: Exception) {
+                    cursor?.close()
+                    cursor = null
+                }
             }
 
             // 2. Fallback: Query all IDs and pick a random position in the cursor

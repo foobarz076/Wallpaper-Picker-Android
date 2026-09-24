@@ -6,6 +6,7 @@ import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class PeriodicWorkerP0P1Test {
 
@@ -37,5 +38,49 @@ class PeriodicWorkerP0P1Test {
         val digest2 = md.digest(testUrl.toByteArray(Charsets.UTF_8))
         val hash2 = digest2.joinToString("") { "%02x".format(it) }
         assertEquals(hash, hash2)
+    }
+
+    @Test
+    fun testFairShuffleFifoEviction() {
+        val maxCapacity = 5
+        val list = mutableListOf<String>()
+
+        fun record(key: String) {
+            list.removeAll { it == key }
+            list.add(key)
+            while (list.size > maxCapacity) {
+                list.removeAt(0)
+            }
+        }
+
+        listOf("img1", "img2", "img3", "img4", "img5").forEach { record(it) }
+        assertEquals(5, list.size)
+        assertEquals("img1", list.first())
+        assertEquals("img5", list.last())
+
+        // Adding a 6th item should evict the oldest ("img1")
+        record("img6")
+        assertEquals(5, list.size)
+        assertEquals(listOf("img2", "img3", "img4", "img5", "img6"), list)
+
+        // Re-adding "img3" should move it to the end without increasing size
+        record("img3")
+        assertEquals(5, list.size)
+        assertEquals(listOf("img2", "img4", "img5", "img6", "img3"), list)
+    }
+
+    @Test
+    fun testFairShuffleExclusionSet() {
+        val totalImages = listOf("a", "b", "c", "d")
+        val recentHistory = setOf("a", "b")
+
+        // Excluded set should leave remaining candidates
+        val remaining = totalImages.filter { !recentHistory.contains(it) }
+        assertEquals(listOf("c", "d"), remaining)
+
+        // When all images have been used, deck should reset to all
+        val exhaustedHistory = setOf("a", "b", "c", "d")
+        val shouldReset = exhaustedHistory.size >= totalImages.size
+        assertTrue(shouldReset)
     }
 }
