@@ -9,6 +9,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
 import foo.barz.wallpaperpicker.MainActivity
@@ -39,6 +40,17 @@ class CurrentWallpaperWidgetProvider : AppWidgetProvider() {
         AppLog.d(TAG) { "onUpdate called for widgetIds: ${appWidgetIds.joinToString()}" }
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         updateWidgetsAsync(context, appWidgetManager, appWidgetIds)
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        AppLog.d(TAG) { "onAppWidgetOptionsChanged: widgetId=$appWidgetId" }
+        updateWidgetsAsync(context, appWidgetManager, intArrayOf(appWidgetId))
     }
 
     companion object {
@@ -76,8 +88,9 @@ class CurrentWallpaperWidgetProvider : AppWidgetProvider() {
                     AppLog.d(TAG) { "Decoded bitmap: ${bitmap?.width}x${bitmap?.height}, byteCount: ${bitmap?.byteCount}" }
 
                     for (appWidgetId in appWidgetIds) {
+                        val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
                         val views = RemoteViews(appContext.packageName, R.layout.widget_current_wallpaper)
-                        renderWidgetViews(appContext, views, uri, title, sourceTitle, timestamp, scaleType, bitmap)
+                        renderWidgetViews(appContext, views, uri, title, sourceTitle, timestamp, scaleType, bitmap, options)
                         appWidgetManager.updateAppWidget(appWidgetId, views)
                         AppLog.d(TAG) { "Updated appWidgetId: $appWidgetId" }
                     }
@@ -96,8 +109,18 @@ class CurrentWallpaperWidgetProvider : AppWidgetProvider() {
             sourceTitle: String?,
             timestamp: Long,
             scaleType: WidgetScaleType,
-            bitmap: Bitmap?
+            bitmap: Bitmap?,
+            options: Bundle? = null
         ) {
+            val minWidth = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 0
+            val minHeight = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 0
+
+            // Ultra-compact (e.g. 1x1 tile): Clean image tile without cluttered text
+            val isUltraCompact = (minHeight in 1..65) || (minWidth in 1..80)
+
+            // Narrow or short height (e.g. 2x1 ribbon or narrow column): Show title only, hide subtitle
+            val isNarrowOrShort = (minHeight in 1..95) || (minWidth in 1..110)
+
             if (bitmap != null && uri != null) {
                 // Configure scale mode (Crop vs Fit)
                 if (scaleType == WidgetScaleType.CROP) {
@@ -111,20 +134,31 @@ class CurrentWallpaperWidgetProvider : AppWidgetProvider() {
                 }
 
                 views.setViewVisibility(R.id.widget_empty_text, View.GONE)
-                views.setViewVisibility(R.id.widget_scrim, View.VISIBLE)
-                views.setViewVisibility(R.id.widget_text_layout, View.VISIBLE)
 
-                // Set wallpaper details
-                views.setTextViewText(R.id.widget_title, title?.ifBlank { null } ?: "当前壁纸")
+                if (isUltraCompact) {
+                    views.setViewVisibility(R.id.widget_scrim, View.GONE)
+                    views.setViewVisibility(R.id.widget_text_layout, View.GONE)
+                } else {
+                    views.setViewVisibility(R.id.widget_scrim, View.VISIBLE)
+                    views.setViewVisibility(R.id.widget_text_layout, View.VISIBLE)
 
-                val formattedTime = if (timestamp > 0) formatWidgetTime(timestamp) else ""
-                val subtitle = when {
-                    !sourceTitle.isNullOrBlank() && formattedTime.isNotBlank() -> "$sourceTitle · $formattedTime"
-                    !sourceTitle.isNullOrBlank() -> sourceTitle
-                    formattedTime.isNotBlank() -> formattedTime
-                    else -> "正在使用"
+                    // Set wallpaper details
+                    views.setTextViewText(R.id.widget_title, title?.ifBlank { null } ?: "当前壁纸")
+
+                    if (isNarrowOrShort) {
+                        views.setViewVisibility(R.id.widget_subtitle, View.GONE)
+                    } else {
+                        views.setViewVisibility(R.id.widget_subtitle, View.VISIBLE)
+                        val formattedTime = if (timestamp > 0) formatWidgetTime(timestamp) else ""
+                        val subtitle = when {
+                            !sourceTitle.isNullOrBlank() && formattedTime.isNotBlank() -> "$sourceTitle · $formattedTime"
+                            !sourceTitle.isNullOrBlank() -> sourceTitle
+                            formattedTime.isNotBlank() -> formattedTime
+                            else -> "正在使用"
+                        }
+                        views.setTextViewText(R.id.widget_subtitle, subtitle)
+                    }
                 }
-                views.setTextViewText(R.id.widget_subtitle, subtitle)
 
                 // Main card click: View full original in external gallery
                 val viewIntent = Intent(context, ShortcutActionActivity::class.java).apply {
@@ -145,6 +179,11 @@ class CurrentWallpaperWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_scrim, View.GONE)
                 views.setViewVisibility(R.id.widget_text_layout, View.GONE)
                 views.setViewVisibility(R.id.widget_empty_text, View.VISIBLE)
+
+                views.setTextViewText(
+                    R.id.widget_empty_text,
+                    if (isUltraCompact) "点此应用" else "暂无当前壁纸\n点击打开应用"
+                )
 
                 // Main card click in empty state: open main app
                 val openMainIntent = Intent(context, MainActivity::class.java).apply {
