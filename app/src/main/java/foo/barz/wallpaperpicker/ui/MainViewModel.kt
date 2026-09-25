@@ -16,6 +16,8 @@ import foo.barz.wallpaperpicker.core.cache.WallpaperCacheManager
 import foo.barz.wallpaperpicker.core.database.LocalFolderFastScanner
 import foo.barz.wallpaperpicker.core.database.LocalFolderIndexDatabase
 import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
+import foo.barz.wallpaperpicker.core.database.WallpaperSourcesDatabase
+import foo.barz.wallpaperpicker.core.model.WallpaperSourceEntity
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
@@ -92,6 +94,7 @@ data class MainUiState(
     val isCurrentFavorite: Boolean = false,
     val favoritesSizeBytes: Long = 0L,
     val isExportingFavorites: Boolean = false,
+    val sourcesList: List<WallpaperSourceEntity> = emptyList(),
     val statusMessage: String? = null
 )
 
@@ -103,6 +106,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val cacheManager = WallpaperCacheManager(application)
     private val folderIndexDb = LocalFolderIndexDatabase(application)
     private val historyDb = WallpaperHistoryDatabase(application)
+    private val sourcesDb = WallpaperSourcesDatabase(application)
 
     private val _uiState = MutableStateFlow(
         MainUiState(
@@ -155,7 +159,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 appliedTimestamp = prefs.lastChangedTimestamp
             )
         }
+        sourcesDb.migrateFromPreferencesIfNeeded(prefs)
         refreshHistoryAndFavorites()
+        reloadSources()
+    }
+
+    fun reloadSources() {
+        viewModelScope.launch {
+            val list = withContext(Dispatchers.IO) {
+                sourcesDb.getAllSources()
+            }
+            _uiState.update { it.copy(sourcesList = list) }
+        }
+    }
+
+    fun onToggleSourceEnabled(sourceId: String, enabled: Boolean) {
+        viewModelScope.launch {
+            val currentSources = _uiState.value.sourcesList
+            val enabledCount = currentSources.count { it.isEnabled }
+            if (!enabled && enabledCount <= 1 && currentSources.any { it.id == sourceId && it.isEnabled }) {
+                _uiState.update { it.copy(statusMessage = "至少需要保留一个启用的壁纸图源") }
+                return@launch
+            }
+            withContext(Dispatchers.IO) {
+                sourcesDb.updateSourceEnabled(sourceId, enabled)
+            }
+            reloadSources()
+            if (prefs.isScheduled) {
+                WallpaperWorker.schedule(getApplication(), prefs.intervalMinutes)
+            }
+        }
+    }
+
+    fun onDeleteSource(sourceId: String) {
+        viewModelScope.launch {
+            val currentSources = _uiState.value.sourcesList
+            val target = currentSources.find { it.id == sourceId } ?: return@launch
+            if (currentSources.size <= 1) {
+                _uiState.update { it.copy(statusMessage = "无法删除最后一个图源") }
+                return@launch
+            }
+            withContext(Dispatchers.IO) {
+                sourcesDb.deleteSource(sourceId)
+            }
+            reloadSources()
+            _uiState.update { it.copy(statusMessage = "已删除图源: ${target.title}") }
+        }
     }
 
     fun onSourceTypeSelected(type: WallpaperSourceType) {
@@ -574,43 +623,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleSchedule(enabled: Boolean) {
         val context = getApplication<Application>()
         if (enabled) {
-            when (prefs.sourceType) {
-                WallpaperSourceType.LOCAL_FOLDER -> {
-                    if (prefs.folderUri == null) {
-                        _uiState.update { it.copy(statusMessage = "请先选择壁纸文件夹") }
-                        return
-                    }
-                }
-                WallpaperSourceType.MEDIA_STORE -> {
-                    if (!hasMediaPermission()) {
-                        _uiState.update { it.copy(statusMessage = "请先授予相册访问权限") }
-                        return
-                    }
-                }
-                WallpaperSourceType.HTTP_API -> {
-                    if (prefs.httpPresetType == HttpPresetType.CUSTOM && prefs.httpCustomUrl.isBlank()) {
-                        _uiState.update { it.copy(statusMessage = "请先输入自定义 API 网址") }
-                        return
-                    }
-                }
-                WallpaperSourceType.IMMICH -> {
-                    if (prefs.immichServerUrl.isBlank() || prefs.immichApiKey.isBlank()) {
-                        _uiState.update { it.copy(statusMessage = "请先配置 Immich 服务器地址与 API Key") }
-                        return
-                    }
-                }
-                WallpaperSourceType.FAVORITES -> {
-                    if (_uiState.value.favoritesList.isEmpty()) {
-                        _uiState.update { it.copy(statusMessage = "暂无收藏壁纸，请先收藏壁纸") }
-                        return
-                    }
-                }
-                WallpaperSourceType.COMPOSITE -> {
-                    if (prefs.compositeEnabledSources.isEmpty()) {
-                        _uiState.update { it.copy(statusMessage = "多源混合模式下未选择任何可用图源") }
-                        return
-                    }
-                }
+            val enabledSources = sourcesDb.getEnabledSources()
+            if (enabledSources.isEmpty()) {
+                _uiState.update { it.copy(statusMessage = "未启用任何图源，请先在图源管理中添加或启用图源") }
+                return
             }
         }
 
@@ -627,43 +643,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun changeNow() {
-        when (prefs.sourceType) {
-            WallpaperSourceType.LOCAL_FOLDER -> {
-                if (prefs.folderUri == null) {
-                    _uiState.update { it.copy(statusMessage = "请先选择壁纸文件夹") }
-                    return
-                }
-            }
-            WallpaperSourceType.MEDIA_STORE -> {
-                if (!hasMediaPermission()) {
-                    _uiState.update { it.copy(statusMessage = "请先授予相册访问权限") }
-                    return
-                }
-            }
-            WallpaperSourceType.HTTP_API -> {
-                if (prefs.httpPresetType == HttpPresetType.CUSTOM && prefs.httpCustomUrl.isBlank()) {
-                    _uiState.update { it.copy(statusMessage = "请先输入自定义 API 网址") }
-                    return
-                }
-            }
-            WallpaperSourceType.IMMICH -> {
-                if (prefs.immichServerUrl.isBlank() || prefs.immichApiKey.isBlank()) {
-                    _uiState.update { it.copy(statusMessage = "请先配置 Immich 服务器地址与 API Key") }
-                    return
-                }
-            }
-            WallpaperSourceType.FAVORITES -> {
-                if (_uiState.value.favoritesList.isEmpty()) {
-                    _uiState.update { it.copy(statusMessage = "暂无收藏壁纸，请先收藏壁纸") }
-                    return
-                }
-            }
-            WallpaperSourceType.COMPOSITE -> {
-                if (prefs.compositeEnabledSources.isEmpty()) {
-                    _uiState.update { it.copy(statusMessage = "多源混合模式下未选择任何可用图源") }
-                    return
-                }
-            }
+        val enabledSources = sourcesDb.getEnabledSources()
+        if (enabledSources.isEmpty()) {
+            _uiState.update { it.copy(statusMessage = "未启用任何图源，请先在图源管理中添加或启用图源") }
+            return
         }
 
         viewModelScope.launch {

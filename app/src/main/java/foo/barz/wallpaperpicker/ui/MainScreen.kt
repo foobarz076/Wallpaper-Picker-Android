@@ -59,6 +59,10 @@ fun MainScreen(
     onFetchMediaStoreAlbums: () -> Unit,
     onMediaStoreAlbumSelected: (MediaStoreAlbum?) -> Unit,
     onMediaStoreAlbumsSelected: (Set<String>, List<MediaStoreAlbum>) -> Unit = { _, _ -> },
+    onToggleSourceEnabled: (String, Boolean) -> Unit = { _, _ -> },
+    onDeleteSource: (String) -> Unit = {},
+    onOpenAddSource: () -> Unit = {},
+    onOpenEditSource: (String) -> Unit = {},
     onOpenInGallery: () -> Unit,
     onShareWallpaper: () -> Unit,
     onSaveToGallery: () -> Unit,
@@ -201,27 +205,10 @@ fun MainScreen(
 
                     MainTab.SOURCES -> SourcesTab(
                         state = state,
-                        onSourceTypeSelected = onSourceTypeSelected,
-                        onFolderSelected = onFolderSelected,
-                        onRescanFolder = onRescanFolder,
-                        onFetchMediaStoreAlbums = onFetchMediaStoreAlbums,
-                        onMediaStoreAlbumSelected = onMediaStoreAlbumSelected,
-                        onMediaStoreAlbumsSelected = onMediaStoreAlbumsSelected,
-                        onHttpPresetSelected = onHttpPresetSelected,
-                        onHttpCustomUrlChanged = onHttpCustomUrlChanged,
-                        onHttpCustomJsonPathChanged = onHttpCustomJsonPathChanged,
-                        onToggleWifiOnly = onToggleWifiOnly,
-                        onImmichServerUrlChanged = onImmichServerUrlChanged,
-                        onImmichApiKeyChanged = onImmichApiKeyChanged,
-                        onImmichAlbumSelected = onImmichAlbumSelected,
-                        onImmichAlbumsSelected = onImmichAlbumsSelected,
-                        onImmichQualitySelected = onImmichQualitySelected,
-                        onToggleImmichIgnoreSsl = onToggleImmichIgnoreSsl,
-                        onToggleImmichWifiOnly = onToggleImmichWifiOnly,
-                        onFetchImmichAlbums = onFetchImmichAlbums,
-                        onToggleCompositeSource = onToggleCompositeSource,
-                        onNavigateToHistory = { selectedTab = MainTab.HISTORY },
-                        onClearCache = onClearCache
+                        onToggleSourceEnabled = onToggleSourceEnabled,
+                        onDeleteSource = onDeleteSource,
+                        onOpenAddSource = onOpenAddSource,
+                        onOpenEditSource = onOpenEditSource
                     )
 
                     MainTab.SETTINGS -> SettingsTab(

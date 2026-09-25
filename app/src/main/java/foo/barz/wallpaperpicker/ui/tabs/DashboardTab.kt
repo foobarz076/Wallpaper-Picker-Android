@@ -101,14 +101,8 @@ fun DashboardTab(
         mediaPermission
     ) == PackageManager.PERMISSION_GRANTED
 
-    val canChange = !state.isChanging && when (state.sourceType) {
-        WallpaperSourceType.LOCAL_FOLDER -> state.folderUri != null
-        WallpaperSourceType.MEDIA_STORE -> hasMediaPermission
-        WallpaperSourceType.IMMICH -> state.immichServerUrl.isNotBlank() && state.immichApiKey.isNotBlank()
-        WallpaperSourceType.HTTP_API -> state.httpPresetType != HttpPresetType.CUSTOM || state.httpCustomUrl.isNotBlank()
-        WallpaperSourceType.FAVORITES -> state.favoritesList.isNotEmpty()
-        WallpaperSourceType.COMPOSITE -> state.compositeEnabledSources.isNotEmpty()
-    }
+    val enabledSources = state.sourcesList.filter { it.isEnabled }
+    val canChange = !state.isChanging && (enabledSources.isNotEmpty() || state.folderUri != null)
 
     Column(
         modifier = modifier
@@ -251,13 +245,10 @@ fun DashboardTab(
                 Text("当前状态", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val activeSourceLabel = when (state.sourceType) {
-                    WallpaperSourceType.LOCAL_FOLDER -> "本地文件夹 (${state.folderName ?: "未选择"})"
-                    WallpaperSourceType.MEDIA_STORE -> "系统相册 (${state.mediaStoreAlbumName ?: "全部照片"})"
-                    WallpaperSourceType.IMMICH -> "Immich (${state.immichAlbumName ?: "全部相册"})"
-                    WallpaperSourceType.HTTP_API -> state.httpPresetType.label
-                    WallpaperSourceType.FAVORITES -> "我的收藏 (${state.favoritesList.size} 张)"
-                    WallpaperSourceType.COMPOSITE -> "多源混合 (${state.compositeEnabledSources.size} 个启用)"
+                val activeSourceLabel = when {
+                    enabledSources.isEmpty() -> state.folderName?.let { "本地文件夹 ($it)" } ?: "未启用任何图源"
+                    enabledSources.size == 1 -> enabledSources.first().title
+                    else -> "多源混合 (${enabledSources.size} 个启用图源)"
                 }
                 Text(
                     text = "激活来源: $activeSourceLabel",

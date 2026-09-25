@@ -40,6 +40,12 @@
             android:label="@string/about_title"
             android:theme="@style/Theme.WallpaperPicker" />
 
+        <activity
+            android:name=".ui.SourceConfigActivity"
+            android:exported="false"
+            android:label="图源配置"
+            android:theme="@style/Theme.WallpaperPicker" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

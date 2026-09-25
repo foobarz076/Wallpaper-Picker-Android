@@ -188,4 +188,100 @@ class Phase4MultiSourceTest {
         assertTrue(result.isFailure)
         assertEquals("Source unavailable", result.exceptionOrNull()?.message)
     }
+
+    @Test
+    fun testWallpaperSourceEntityAndConfigSerialization() {
+        val folderConfig = foo.barz.wallpaperpicker.core.model.LocalFolderSourceConfig(
+            folderUri = "content://sample/folder",
+            folderName = "Anime Wallpapers",
+            imageCount = 500
+        )
+        val json = folderConfig.toJson()
+        val parsed = foo.barz.wallpaperpicker.core.model.LocalFolderSourceConfig.fromJson(json)
+        assertEquals("content://sample/folder", parsed.folderUri)
+        assertEquals("Anime Wallpapers", parsed.folderName)
+        assertEquals(500, parsed.imageCount)
+
+        val mediaStoreConfig = foo.barz.wallpaperpicker.core.model.MediaStoreSourceConfig(
+            albumIds = setOf("101", "102"),
+            albumNames = "Camera, Screenshots"
+        )
+        val msParsed = foo.barz.wallpaperpicker.core.model.MediaStoreSourceConfig.fromJson(mediaStoreConfig.toJson())
+        assertEquals(2, msParsed.albumIds.size)
+        assertTrue(msParsed.albumIds.contains("101"))
+        assertEquals("Camera, Screenshots", msParsed.albumNames)
+
+        val immichConfig = foo.barz.wallpaperpicker.core.model.ImmichSourceConfig(
+            serverUrl = "https://immich.test:2283",
+            apiKey = "key_xyz",
+            albumIds = setOf("a1"),
+            albumNames = "Travel",
+            quality = ImmichQuality.ORIGINAL,
+            ignoreSsl = true,
+            wifiOnly = false
+        )
+        val immichParsed = foo.barz.wallpaperpicker.core.model.ImmichSourceConfig.fromJson(immichConfig.toJson())
+        assertEquals("https://immich.test:2283", immichParsed.serverUrl)
+        assertEquals("key_xyz", immichParsed.apiKey)
+        assertEquals(ImmichQuality.ORIGINAL, immichParsed.quality)
+        assertTrue(immichParsed.ignoreSsl)
+        assertFalse(immichParsed.wifiOnly)
+
+        val entity = foo.barz.wallpaperpicker.core.model.WallpaperSourceEntity(
+            id = "src_1",
+            type = WallpaperSourceType.IMMICH,
+            title = "My Immich",
+            isEnabled = true,
+            configJson = immichConfig.toJson()
+        )
+        assertEquals("src_1", entity.id)
+        assertEquals(WallpaperSourceType.IMMICH, entity.type)
+        assertEquals("My Immich", entity.title)
+        assertTrue(entity.isEnabled)
+    }
+
+    @Test
+    fun testCompositeSourceListDelegation() = runBlocking {
+        val testWallpaper = WallpaperData(
+            openStream = { ByteArrayInputStream(byteArrayOf(1)) },
+            title = "Test Wallpaper"
+        )
+
+        val failingSource = object : WallpaperSource {
+            override val id: String = "fail"
+            override val displayName: String = "Fail"
+            override suspend fun getNextWallpaper(): Result<WallpaperData> =
+                Result.failure(IllegalStateException("Network offline"))
+        }
+
+        val workingSource = object : WallpaperSource {
+            override val id: String = "work"
+            override val displayName: String = "Work"
+            override suspend fun getNextWallpaper(): Result<WallpaperData> =
+                Result.success(testWallpaper)
+        }
+
+        // Composite should fallback from failingSource to workingSource
+        val composite = foo.barz.wallpaperpicker.core.source.CompositeSource(listOf(failingSource, workingSource))
+        val result = composite.getNextWallpaper()
+        assertTrue(result.isSuccess)
+        assertEquals("Test Wallpaper", result.getOrNull()?.title)
+    }
+
+    @Test
+    fun testMainUiStateSourcesListProperty() {
+        val state = MainUiState()
+        assertTrue(state.sourcesList.isEmpty())
+
+        val entity = foo.barz.wallpaperpicker.core.model.WallpaperSourceEntity(
+            id = "src_test",
+            type = WallpaperSourceType.LOCAL_FOLDER,
+            title = "Folder A",
+            isEnabled = true,
+            configJson = "{}"
+        )
+        val updated = state.copy(sourcesList = listOf(entity))
+        assertEquals(1, updated.sourcesList.size)
+        assertEquals("Folder A", updated.sourcesList[0].title)
+    }
 }

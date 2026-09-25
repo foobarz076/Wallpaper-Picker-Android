@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.conscrypt.android)
 
     testImplementation(kotlin("test"))
+    testImplementation("org.json:json:20231013")
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

@@ -1,24 +1,141 @@
 package foo.barz.wallpaperpicker.core.source
 
 import android.content.Context
+import android.net.Uri
 import foo.barz.wallpaperpicker.core.cache.WallpaperCacheManager
 import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
+import foo.barz.wallpaperpicker.core.database.WallpaperSourcesDatabase
 import foo.barz.wallpaperpicker.core.model.HttpApiConfig
+import foo.barz.wallpaperpicker.core.model.HttpApiSourceConfig
 import foo.barz.wallpaperpicker.core.model.ImmichConfig
+import foo.barz.wallpaperpicker.core.model.ImmichSourceConfig
+import foo.barz.wallpaperpicker.core.model.LocalFolderSourceConfig
+import foo.barz.wallpaperpicker.core.model.MediaStoreSourceConfig
+import foo.barz.wallpaperpicker.core.model.WallpaperSourceEntity
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.data.PreferencesManager
 
 /**
- * Factory for creating the active WallpaperSource based on user preferences.
+ * Factory for creating active WallpaperSources based on persistent sources database or preferences.
  */
 object WallpaperSourceFactory {
 
+    /**
+     * Creates the active WallpaperSource based on currently enabled source entities.
+     * If multiple sources are enabled, returns a CompositeSource blending them.
+     */
     fun createActiveSource(
         context: Context,
         prefs: PreferencesManager,
         bypassNetworkConstraints: Boolean = false
     ): WallpaperSource {
-        return createSourceByType(context, prefs, prefs.sourceType, bypassNetworkConstraints)
+        val db = WallpaperSourcesDatabase(context)
+        db.migrateFromPreferencesIfNeeded(prefs)
+        val enabledEntities = db.getEnabledSources()
+
+        return when {
+            enabledEntities.isEmpty() -> {
+                createSourceByType(context, prefs, prefs.sourceType, bypassNetworkConstraints)
+            }
+            enabledEntities.size == 1 -> {
+                createSourceFromEntity(context, enabledEntities[0], bypassNetworkConstraints)
+            }
+            else -> {
+                val sources = enabledEntities.map { createSourceFromEntity(context, it, bypassNetworkConstraints) }
+                CompositeSource(sources)
+            }
+        }
+    }
+
+    /**
+     * Resolves all enabled WallpaperSource instances from the sources database.
+     */
+    fun createEnabledSources(
+        context: Context,
+        prefs: PreferencesManager,
+        bypassNetworkConstraints: Boolean = false
+    ): List<WallpaperSource> {
+        val db = WallpaperSourcesDatabase(context)
+        db.migrateFromPreferencesIfNeeded(prefs)
+        val enabledEntities = db.getEnabledSources()
+
+        return if (enabledEntities.isNotEmpty()) {
+            enabledEntities.map { createSourceFromEntity(context, it, bypassNetworkConstraints) }
+        } else {
+            val enabledTypes = prefs.compositeEnabledSources.filter { it != WallpaperSourceType.COMPOSITE }
+            enabledTypes.map { createSourceByType(context, prefs, it, bypassNetworkConstraints) }
+        }
+    }
+
+    /**
+     * Instantiates a WallpaperSource from a persistent WallpaperSourceEntity.
+     */
+    fun createSourceFromEntity(
+        context: Context,
+        entity: WallpaperSourceEntity,
+        bypassNetworkConstraints: Boolean = false
+    ): WallpaperSource {
+        return when (entity.type) {
+            WallpaperSourceType.LOCAL_FOLDER -> {
+                val config = LocalFolderSourceConfig.fromJson(entity.configJson)
+                if (config.folderUri.isBlank()) {
+                    throw IllegalStateException("未配置壁纸文件夹，请先在图源配置中选择文件夹")
+                }
+                LocalFolderSource(context, Uri.parse(config.folderUri))
+            }
+            WallpaperSourceType.MEDIA_STORE -> {
+                val config = MediaStoreSourceConfig.fromJson(entity.configJson)
+                MediaStoreSource(
+                    context = context,
+                    bucketIds = config.albumIds,
+                    albumName = config.albumNames
+                )
+            }
+            WallpaperSourceType.IMMICH -> {
+                val config = ImmichSourceConfig.fromJson(entity.configJson)
+                val immichConfig = ImmichConfig(
+                    serverUrl = config.serverUrl,
+                    apiKey = config.apiKey,
+                    albumIds = config.albumIds,
+                    albumName = config.albumNames,
+                    downloadQuality = config.quality,
+                    ignoreSslErrors = config.ignoreSsl,
+                    wifiOnly = config.wifiOnly
+                )
+                val cacheManager = WallpaperCacheManager(context)
+                ImmichSource(
+                    context = context,
+                    config = immichConfig,
+                    cacheManager = cacheManager,
+                    bypassNetworkConstraints = bypassNetworkConstraints
+                )
+            }
+            WallpaperSourceType.HTTP_API -> {
+                val config = HttpApiSourceConfig.fromJson(entity.configJson)
+                val httpConfig = HttpApiConfig(
+                    presetType = config.preset,
+                    customUrl = config.customUrl,
+                    customJsonPath = config.customJsonPath,
+                    wifiOnly = config.wifiOnly
+                )
+                val cacheManager = WallpaperCacheManager(context)
+                HttpApiSource(
+                    context = context,
+                    config = httpConfig,
+                    cacheManager = cacheManager,
+                    bypassNetworkConstraints = bypassNetworkConstraints
+                )
+            }
+            WallpaperSourceType.FAVORITES -> {
+                FavoritesSource(
+                    context = context,
+                    database = WallpaperHistoryDatabase(context)
+                )
+            }
+            WallpaperSourceType.COMPOSITE -> {
+                throw IllegalArgumentException("Composite cannot be instantiated directly from single entity")
+            }
+        }
     }
 
     /**

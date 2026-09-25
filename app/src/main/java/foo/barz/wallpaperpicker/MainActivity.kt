@@ -7,21 +7,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.viewModels
 import foo.barz.wallpaperpicker.ui.AboutActivity
 import foo.barz.wallpaperpicker.ui.MainScreen
 import foo.barz.wallpaperpicker.ui.MainViewModel
 import foo.barz.wallpaperpicker.ui.ManageSpaceActivity
+import foo.barz.wallpaperpicker.ui.SourceConfigActivity
 import foo.barz.wallpaperpicker.ui.theme.WallpaperPickerTheme
 
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
             WallpaperPickerTheme {
-                val viewModel: MainViewModel = viewModel()
                 val uiState by viewModel.uiState.collectAsState()
 
                 MainScreen(
@@ -32,6 +35,14 @@ class MainActivity : ComponentActivity() {
                     onFetchMediaStoreAlbums = viewModel::fetchMediaStoreAlbums,
                     onMediaStoreAlbumSelected = viewModel::onMediaStoreAlbumSelected,
                     onMediaStoreAlbumsSelected = viewModel::onMediaStoreAlbumsSelected,
+                    onToggleSourceEnabled = viewModel::onToggleSourceEnabled,
+                    onDeleteSource = viewModel::onDeleteSource,
+                    onOpenAddSource = {
+                        startActivity(SourceConfigActivity.createIntent(this))
+                    },
+                    onOpenEditSource = { sourceId ->
+                        startActivity(SourceConfigActivity.createIntent(this, sourceId))
+                    },
                     onOpenInGallery = viewModel::openCurrentWallpaperInGallery,
                     onShareWallpaper = viewModel::shareCurrentWallpaper,
                     onSaveToGallery = viewModel::saveCurrentWallpaperToGallery,
@@ -78,5 +89,10 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.reloadSources()
     }
 }
