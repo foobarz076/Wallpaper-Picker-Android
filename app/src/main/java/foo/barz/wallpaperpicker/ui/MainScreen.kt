@@ -124,10 +124,12 @@ fun MainScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.DASHBOARD) }
+    var isHistorySheetOpen by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.statusMessage) {
-        state.statusMessage?.let {
-            snackbarHostState.showSnackbar(it)
+    LaunchedEffect(state.statusMessage, isHistorySheetOpen) {
+        val msg = state.statusMessage
+        if (!msg.isNullOrBlank() && !isHistorySheetOpen) {
+            snackbarHostState.showSnackbar(msg)
             onClearStatus()
         }
     }
@@ -223,7 +225,9 @@ fun MainScreen(
                         onOpenInGallery = onOpenCustomUriInGallery,
                         onShareWallpaper = onShareCustomWallpaper,
                         onSaveToGallery = onSaveCustomWallpaper,
-                        onUpdateWallpaperPreferences = onUpdateWallpaperPreferences
+                        onUpdateWallpaperPreferences = onUpdateWallpaperPreferences,
+                        onClearStatus = onClearStatus,
+                        onSheetActiveChanged = { isHistorySheetOpen = it }
                     )
 
                     MainTab.SOURCES -> SourcesTab(

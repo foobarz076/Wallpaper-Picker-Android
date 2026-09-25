@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,8 +54,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,6 +78,7 @@ import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
+import foo.barz.wallpaperpicker.ui.components.TopFloatingPillNotification
 import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentSheet
 import java.io.File
 import java.text.SimpleDateFormat
@@ -111,13 +115,23 @@ fun HistoryTab(
         flipHorizontal: Boolean,
         applyImmediately: Boolean
     ) -> Unit = { _, _, _, _, _, _ -> },
+    onClearStatus: () -> Unit = {},
+    onSheetActiveChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var subTab by rememberSaveable { mutableStateOf(HistorySubTab.HISTORY) }
     var selectedItemForDetail by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
     var selectedItemForAdjustment by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
     var showHistoryActionMenu by remember { mutableStateOf(false) }
+    var itemToDelete by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
+    var showClearInvalidConfirmDialog by remember { mutableStateOf(false) }
+    var showClearAllConfirmDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val isAnySheetOpen = selectedItemForDetail != null || selectedItemForAdjustment != null
+    LaunchedEffect(isAnySheetOpen) {
+        onSheetActiveChanged(isAnySheetOpen)
+    }
 
     val currentList = when (subTab) {
         HistorySubTab.HISTORY -> state.historyList
@@ -187,7 +201,7 @@ fun HistoryTab(
                             },
                             onClick = {
                                 showHistoryActionMenu = false
-                                onClearInvalidHistory()
+                                showClearInvalidConfirmDialog = true
                             }
                         )
                         HorizontalDivider()
@@ -215,7 +229,7 @@ fun HistoryTab(
                             },
                             onClick = {
                                 showHistoryActionMenu = false
-                                onClearHistory()
+                                showClearAllConfirmDialog = true
                             }
                         )
                     }
@@ -311,8 +325,7 @@ fun HistoryTab(
                     onRedownloadHistoryItem(item)
                 },
                 onDelete = {
-                    onDeleteHistoryItem(item)
-                    selectedItemForDetail = null
+                    itemToDelete = item
                 },
                 onOpen = { onOpenInGallery(item.displayUri) },
                 onShare = { onShareWallpaper(item.displayUri, item.title) },
@@ -322,6 +335,12 @@ fun HistoryTab(
                     selectedItemForDetail = null
                     selectedItemForAdjustment = target
                 }
+            )
+
+            // Top floating pill banner notification displayed on top of the sheet and scrim
+            TopFloatingPillNotification(
+                message = state.statusMessage,
+                onDismiss = onClearStatus
             )
         }
     }
@@ -341,6 +360,120 @@ fun HistoryTab(
                     flipHorizontal,
                     applyImmediately
                 )
+            }
+        )
+    }
+
+    // Confirmation dialog for single history item deletion
+    itemToDelete?.let { targetItem ->
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("删除历史记录") },
+            text = {
+                val detailText = if (targetItem.isFavorite) {
+                    "确定要删除「${targetItem.title ?: "此壁纸"}」吗？该壁纸已被收藏，删除历史记录将一并移除收藏状态及离线保护副本。"
+                } else {
+                    "确定要从历史记录中删除「${targetItem.title ?: "此壁纸"}」吗？此操作不可撤销。"
+                }
+                Text(detailText)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val toDelete = targetItem
+                        itemToDelete = null
+                        selectedItemForDetail = null
+                        onDeleteHistoryItem(toDelete)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    // Confirmation dialog for clearing invalid history records
+    if (showClearInvalidConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearInvalidConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.CleaningServices,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = { Text("清理失效历史记录") },
+            text = {
+                Text("将扫描并移除所有本地原图已丢失、且未加入收藏的历史记录条目。已收藏的壁纸受离线持久保护，不受影响。是否继续？")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearInvalidConfirmDialog = false
+                        onClearInvalidHistory()
+                    }
+                ) {
+                    Text("立即清理")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearInvalidConfirmDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    // Confirmation dialog for clearing all unfavorited history
+    if (showClearAllConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearAllConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("清空历史记录") },
+            text = {
+                Text("确定要清空所有未收藏的历史壁纸记录吗？已加入收藏的壁纸将完整保留。此操作不可恢复。")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearAllConfirmDialog = false
+                        onClearHistory()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("清空全部")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearAllConfirmDialog = false }) {
+                    Text("取消")
+                }
             }
         )
     }
