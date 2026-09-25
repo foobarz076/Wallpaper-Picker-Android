@@ -106,6 +106,8 @@ fun DashboardTab(
         WallpaperSourceType.MEDIA_STORE -> hasMediaPermission
         WallpaperSourceType.IMMICH -> state.immichServerUrl.isNotBlank() && state.immichApiKey.isNotBlank()
         WallpaperSourceType.HTTP_API -> state.httpPresetType != HttpPresetType.CUSTOM || state.httpCustomUrl.isNotBlank()
+        WallpaperSourceType.FAVORITES -> state.favoritesList.isNotEmpty()
+        WallpaperSourceType.COMPOSITE -> state.compositeEnabledSources.isNotEmpty()
     }
 
     Column(
@@ -254,6 +256,8 @@ fun DashboardTab(
                     WallpaperSourceType.MEDIA_STORE -> "系统相册 (${state.mediaStoreAlbumName ?: "全部照片"})"
                     WallpaperSourceType.IMMICH -> "Immich (${state.immichAlbumName ?: "全部相册"})"
                     WallpaperSourceType.HTTP_API -> state.httpPresetType.label
+                    WallpaperSourceType.FAVORITES -> "我的收藏 (${state.favoritesList.size} 张)"
+                    WallpaperSourceType.COMPOSITE -> "多源混合 (${state.compositeEnabledSources.size} 个启用)"
                 }
                 Text(
                     text = "激活来源: $activeSourceLabel",

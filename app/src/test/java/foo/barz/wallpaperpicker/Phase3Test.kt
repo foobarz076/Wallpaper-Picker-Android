@@ -13,11 +13,13 @@ class Phase3Test {
     @Test
     fun testWallpaperSourceTypes() {
         val types = WallpaperSourceType.values()
-        assertEquals(4, types.size)
+        assertEquals(6, types.size)
         assertEquals("本地文件夹", WallpaperSourceType.LOCAL_FOLDER.displayName)
         assertEquals("系统相册", WallpaperSourceType.MEDIA_STORE.displayName)
         assertEquals("自建相册 (Immich)", WallpaperSourceType.IMMICH.displayName)
         assertEquals("通用网络图源 (HTTP)", WallpaperSourceType.HTTP_API.displayName)
+        assertEquals("我的收藏", WallpaperSourceType.FAVORITES.displayName)
+        assertEquals("多源混合轮播", WallpaperSourceType.COMPOSITE.displayName)
     }
 
     @Test

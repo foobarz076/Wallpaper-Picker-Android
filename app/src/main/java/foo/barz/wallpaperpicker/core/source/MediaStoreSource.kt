@@ -23,9 +23,15 @@ import kotlin.random.Random
  */
 class MediaStoreSource(
     private val context: Context,
-    private val bucketId: String? = null,
+    private val bucketIds: Set<String> = emptySet(),
     private val albumName: String? = null
 ) : WallpaperSource {
+
+    constructor(context: Context, bucketId: String?, albumName: String?) : this(
+        context = context,
+        bucketIds = bucketId?.let { setOf(it) } ?: emptySet(),
+        albumName = albumName
+    )
 
     override val id: String = "media_store"
     override val displayName: String = albumName?.let { "系统相册 ($it)" } ?: "系统相册"
@@ -56,9 +62,10 @@ class MediaStoreSource(
                 runCatching { ContentUris.parseId(Uri.parse(it)) }.getOrNull()
             }
 
-            var (selection, selectionArgs) = if (bucketId != null) {
-                "${MediaStore.Images.Media.MIME_TYPE} LIKE ? AND ${MediaStore.Images.Media.BUCKET_ID} = ?" to
-                        arrayOf("image/%", bucketId)
+            var (selection, selectionArgs) = if (bucketIds.isNotEmpty()) {
+                val placeholders = bucketIds.joinToString(",") { "?" }
+                "${MediaStore.Images.Media.MIME_TYPE} LIKE ? AND ${MediaStore.Images.Media.BUCKET_ID} IN ($placeholders)" to
+                        (arrayOf("image/%") + bucketIds.toTypedArray())
             } else {
                 "${MediaStore.Images.Media.MIME_TYPE} LIKE ?" to
                         arrayOf("image/%")
@@ -165,29 +172,39 @@ class MediaStoreSource(
             val collectionUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
             val projection = arrayOf(
+                MediaStore.Images.Media._ID,
                 MediaStore.Images.Media.BUCKET_ID,
                 MediaStore.Images.Media.BUCKET_DISPLAY_NAME
             )
             val selection = "${MediaStore.Images.Media.MIME_TYPE} LIKE ?"
             val selectionArgs = arrayOf("image/%")
+            val sortOrder = "${MediaStore.Images.Media.DATE_MODIFIED} DESC"
 
-            val albumMap = mutableMapOf<String, Pair<String, Int>>()
+            val albumMap = mutableMapOf<String, Triple<String, Int, Uri?>>()
             var totalCount = 0
+            var firstOverallCover: Uri? = null
 
             try {
-                resolver.query(collectionUri, projection, selection, selectionArgs, null)?.use { cursor ->
+                resolver.query(collectionUri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
                     val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
                     val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+                    val imageIdCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
 
                     while (cursor.moveToNext()) {
+                        val imageId = cursor.getLong(imageIdCol)
+                        val imageUri = ContentUris.withAppendedId(collectionUri, imageId)
+                        if (firstOverallCover == null) {
+                            firstOverallCover = imageUri
+                        }
+
                         totalCount++
                         val bucketId = cursor.getString(idCol) ?: continue
                         val bucketName = cursor.getString(nameCol) ?: "未命名相册"
                         val current = albumMap[bucketId]
                         albumMap[bucketId] = if (current != null) {
-                            current.first to (current.second + 1)
+                            Triple(current.first, current.second + 1, current.third)
                         } else {
-                            bucketName to 1
+                            Triple(bucketName, 1, imageUri)
                         }
                     }
                 }
@@ -196,12 +213,12 @@ class MediaStoreSource(
             }
 
             val list = mutableListOf<MediaStoreAlbum>()
-            list.add(MediaStoreAlbum(id = null, name = "全部照片", count = totalCount))
+            list.add(MediaStoreAlbum(id = null, name = "全部照片", count = totalCount, coverUri = firstOverallCover))
 
             albumMap.entries
                 .sortedByDescending { it.value.second }
-                .forEach { (id, pair) ->
-                    list.add(MediaStoreAlbum(id = id, name = pair.first, count = pair.second))
+                .forEach { (id, triple) ->
+                    list.add(MediaStoreAlbum(id = id, name = triple.first, count = triple.second, coverUri = triple.third))
                 }
 
             list

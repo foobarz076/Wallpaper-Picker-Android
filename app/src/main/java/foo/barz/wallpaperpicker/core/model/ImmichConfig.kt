@@ -14,7 +14,8 @@ enum class ImmichQuality(val label: String) {
 data class ImmichAlbum(
     val id: String,
     val name: String,
-    val assetCount: Int = 0
+    val assetCount: Int = 0,
+    val thumbnailAssetId: String? = null
 )
 
 /**
@@ -25,6 +26,7 @@ data class ImmichConfig(
     val apiKey: String = "",
     val albumId: String? = null,
     val albumName: String? = null,
+    val albumIds: Set<String> = emptySet(),
     val downloadQuality: ImmichQuality = ImmichQuality.PREVIEW,
     val ignoreSslErrors: Boolean = false,
     val wifiOnly: Boolean = true

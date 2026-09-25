@@ -75,11 +75,19 @@ class ImmichSource(
 
         val client = HttpClientProvider.getClient(config.ignoreSslErrors)
 
+        val effectiveAlbumIds = if (config.albumIds.isNotEmpty()) {
+            config.albumIds
+        } else if (!config.albumId.isNullOrEmpty()) {
+            setOf(config.albumId)
+        } else {
+            emptySet()
+        }
+
         // Step 1: Query for target asset ID and file name
-        val (assetId, originalName) = if (config.albumId.isNullOrEmpty()) {
+        val (assetId, originalName) = if (effectiveAlbumIds.isEmpty()) {
             queryRandomAsset(baseUrl, apiKey, client)
         } else {
-            queryAlbumRandomAsset(baseUrl, apiKey, config.albumId, client)
+            queryAlbumRandomAsset(baseUrl, apiKey, effectiveAlbumIds, client)
         }
 
         val displayTitle = originalName.ifEmpty { "Immich 照片 ($assetId)" }
@@ -228,14 +236,16 @@ class ImmichSource(
     private fun queryAlbumRandomAsset(
         baseUrl: String,
         apiKey: String,
-        albumId: String,
+        albumIds: Set<String>,
         client: okhttp3.OkHttpClient
     ): Pair<String, String> {
         // Attempt 1: Search metadata with albumIds
         try {
             val metadataEndpoint = "$baseUrl/api/search/metadata"
+            val albumArray = JSONArray()
+            albumIds.forEach { albumArray.put(it) }
             val payload = JSONObject().apply {
-                put("albumIds", JSONArray().put(albumId))
+                put("albumIds", albumArray)
                 put("type", "IMAGE")
                 put("withDeleted", false)
             }
@@ -271,7 +281,8 @@ class ImmichSource(
         }
 
         // Attempt 2: GET /api/albums/{id} for older Immich servers
-        val albumEndpoint = "$baseUrl/api/albums/$albumId"
+        val targetAlbumId = albumIds.random()
+        val albumEndpoint = "$baseUrl/api/albums/$targetAlbumId"
         val albumRequest = Request.Builder()
             .url(albumEndpoint)
             .header("x-api-key", apiKey)
@@ -337,7 +348,8 @@ class ImmichSource(
                     val id = obj.getString("id")
                     val name = obj.optString("albumName", "未命名相册")
                     val assetCount = obj.optInt("assetCount", 0)
-                    albums.add(ImmichAlbum(id, name, assetCount))
+                    val thumbId = obj.optString("albumThumbnailAssetId").takeIf { it.isNotBlank() }
+                    albums.add(ImmichAlbum(id, name, assetCount, thumbId))
                 }
 
                 albums.sortedBy { it.name }

@@ -53,6 +53,7 @@ data class MainUiState(
     val isIndexingFolder: Boolean = false,
     val mediaStoreAlbumId: String? = null,
     val mediaStoreAlbumName: String? = null,
+    val mediaStoreAlbumIds: Set<String> = emptySet(),
     val mediaStoreAlbums: List<MediaStoreAlbum> = emptyList(),
     val isLoadingMediaStoreAlbums: Boolean = false,
     val httpPresetType: HttpPresetType = HttpPresetType.BING,
@@ -63,11 +64,13 @@ data class MainUiState(
     val immichApiKey: String = "",
     val immichAlbumId: String? = null,
     val immichAlbumName: String? = null,
+    val immichAlbumIds: Set<String> = emptySet(),
     val immichQuality: ImmichQuality = ImmichQuality.PREVIEW,
     val immichIgnoreSsl: Boolean = false,
     val immichWifiOnly: Boolean = true,
     val immichAlbums: List<ImmichAlbum> = emptyList(),
     val isLoadingAlbums: Boolean = false,
+    val compositeEnabledSources: Set<WallpaperSourceType> = emptySet(),
     val cacheSizeBytes: Long = 0L,
     val intervalMinutes: Long = 60L,
     val target: WallpaperTarget = WallpaperTarget.BOTH,
@@ -109,6 +112,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             indexedImageCount = prefs.folderUri?.let { folderIndexDb.getIndexCount(it) } ?: 0,
             mediaStoreAlbumId = prefs.mediaStoreAlbumId,
             mediaStoreAlbumName = prefs.mediaStoreAlbumName,
+            mediaStoreAlbumIds = prefs.mediaStoreAlbumIds,
             httpPresetType = prefs.httpPresetType,
             httpCustomUrl = prefs.httpCustomUrl,
             httpCustomJsonPath = prefs.httpCustomJsonPath,
@@ -117,9 +121,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             immichApiKey = prefs.immichApiKey,
             immichAlbumId = prefs.immichAlbumId,
             immichAlbumName = prefs.immichAlbumName,
+            immichAlbumIds = prefs.immichAlbumIds,
             immichQuality = prefs.immichQuality,
             immichIgnoreSsl = prefs.immichIgnoreSsl,
             immichWifiOnly = prefs.immichWifiOnly,
+            compositeEnabledSources = prefs.compositeEnabledSources,
             cacheSizeBytes = cacheManager.getCacheSizeBytes(),
             intervalMinutes = prefs.intervalMinutes,
             target = prefs.target,
@@ -221,12 +227,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun onMediaStoreAlbumSelected(album: MediaStoreAlbum?) {
         prefs.mediaStoreAlbumId = album?.id
         prefs.mediaStoreAlbumName = album?.name
+        prefs.mediaStoreAlbumIds = album?.id?.let { setOf(it) } ?: emptySet()
         _uiState.update {
             it.copy(
                 mediaStoreAlbumId = album?.id,
+                mediaStoreAlbumIds = album?.id?.let { setOf(it) } ?: emptySet(),
                 mediaStoreAlbumName = album?.name,
                 statusMessage = if (album != null) "已选择相册: ${album.name}" else "已选择: 全部照片"
             )
+        }
+    }
+
+    fun onMediaStoreAlbumsSelected(albumIds: Set<String>, albums: List<MediaStoreAlbum>) {
+        prefs.mediaStoreAlbumIds = albumIds
+        val albumName = when {
+            albumIds.isEmpty() -> "全部照片 (全库随机)"
+            albumIds.size == 1 -> {
+                albums.find { it.id == albumIds.first() }?.name ?: "相册"
+            }
+            else -> {
+                val names = albumIds.mapNotNull { id -> albums.find { it.id == id }?.name }.take(2).joinToString(", ")
+                "已选 ${albumIds.size} 个相册 ($names…)"
+            }
+        }
+        prefs.mediaStoreAlbumName = albumName
+        _uiState.update {
+            it.copy(
+                mediaStoreAlbumId = albumIds.firstOrNull(),
+                mediaStoreAlbumIds = albumIds,
+                mediaStoreAlbumName = albumName,
+                statusMessage = "系统相册已更新: $albumName"
+            )
+        }
+        if (prefs.isScheduled && prefs.sourceType == WallpaperSourceType.MEDIA_STORE) {
+            WallpaperWorker.schedule(getApplication(), prefs.intervalMinutes)
         }
     }
 
@@ -318,11 +352,60 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun onImmichAlbumSelected(album: ImmichAlbum?) {
         prefs.immichAlbumId = album?.id
         prefs.immichAlbumName = album?.name
+        prefs.immichAlbumIds = album?.id?.let { setOf(it) } ?: emptySet()
         _uiState.update {
             it.copy(
                 immichAlbumId = album?.id,
+                immichAlbumIds = album?.id?.let { setOf(it) } ?: emptySet(),
                 immichAlbumName = album?.name,
                 statusMessage = if (album != null) "已选择相册: ${album.name}" else "已选择: 全部相册"
+            )
+        }
+    }
+
+    fun onImmichAlbumsSelected(albumIds: Set<String>, albums: List<ImmichAlbum>) {
+        prefs.immichAlbumIds = albumIds
+        val albumName = when {
+            albumIds.isEmpty() -> "全部相册 (全库随机)"
+            albumIds.size == 1 -> {
+                albums.find { it.id == albumIds.first() }?.name ?: "相册"
+            }
+            else -> {
+                val names = albumIds.mapNotNull { id -> albums.find { it.id == id }?.name }.take(2).joinToString(", ")
+                "已选 ${albumIds.size} 个相册 ($names…)"
+            }
+        }
+        prefs.immichAlbumName = albumName
+        _uiState.update {
+            it.copy(
+                immichAlbumId = albumIds.firstOrNull(),
+                immichAlbumIds = albumIds,
+                immichAlbumName = albumName,
+                statusMessage = "Immich 相册已更新: $albumName"
+            )
+        }
+        if (prefs.isScheduled && prefs.sourceType == WallpaperSourceType.IMMICH) {
+            WallpaperWorker.schedule(getApplication(), prefs.intervalMinutes)
+        }
+    }
+
+    fun onToggleCompositeSource(type: WallpaperSourceType, enabled: Boolean) {
+        val current = _uiState.value.compositeEnabledSources.toMutableSet()
+        if (enabled) {
+            current.add(type)
+        } else {
+            if (current.size > 1) {
+                current.remove(type)
+            } else {
+                _uiState.update { it.copy(statusMessage = "多源混合模式下至少需要保留一个启用的图源") }
+                return
+            }
+        }
+        prefs.compositeEnabledSources = current
+        _uiState.update {
+            it.copy(
+                compositeEnabledSources = current,
+                statusMessage = "已更新混合图源: ${current.joinToString { it.displayName }}"
             )
         }
     }
@@ -516,6 +599,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         return
                     }
                 }
+                WallpaperSourceType.FAVORITES -> {
+                    if (_uiState.value.favoritesList.isEmpty()) {
+                        _uiState.update { it.copy(statusMessage = "暂无收藏壁纸，请先收藏壁纸") }
+                        return
+                    }
+                }
+                WallpaperSourceType.COMPOSITE -> {
+                    if (prefs.compositeEnabledSources.isEmpty()) {
+                        _uiState.update { it.copy(statusMessage = "多源混合模式下未选择任何可用图源") }
+                        return
+                    }
+                }
             }
         }
 
@@ -554,6 +649,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             WallpaperSourceType.IMMICH -> {
                 if (prefs.immichServerUrl.isBlank() || prefs.immichApiKey.isBlank()) {
                     _uiState.update { it.copy(statusMessage = "请先配置 Immich 服务器地址与 API Key") }
+                    return
+                }
+            }
+            WallpaperSourceType.FAVORITES -> {
+                if (_uiState.value.favoritesList.isEmpty()) {
+                    _uiState.update { it.copy(statusMessage = "暂无收藏壁纸，请先收藏壁纸") }
+                    return
+                }
+            }
+            WallpaperSourceType.COMPOSITE -> {
+                if (prefs.compositeEnabledSources.isEmpty()) {
+                    _uiState.update { it.copy(statusMessage = "多源混合模式下未选择任何可用图源") }
                     return
                 }
             }

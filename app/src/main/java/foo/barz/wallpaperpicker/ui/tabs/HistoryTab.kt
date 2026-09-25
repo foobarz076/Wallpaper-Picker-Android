@@ -280,6 +280,8 @@ private fun WallpaperGridCard(
                         WallpaperSourceType.MEDIA_STORE -> "相册"
                         WallpaperSourceType.IMMICH -> "Immich"
                         WallpaperSourceType.HTTP_API -> "HTTP"
+                        WallpaperSourceType.FAVORITES -> "收藏"
+                        WallpaperSourceType.COMPOSITE -> "混合"
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White,

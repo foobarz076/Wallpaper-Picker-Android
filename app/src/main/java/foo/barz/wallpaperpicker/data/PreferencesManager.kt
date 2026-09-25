@@ -132,6 +132,47 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean(KEY_IMMICH_WIFI_ONLY, true)
         set(value) = prefs.edit().putBoolean(KEY_IMMICH_WIFI_ONLY, value).apply()
 
+    var mediaStoreAlbumIds: Set<String>
+        get() {
+            val set = prefs.getStringSet(KEY_MEDIA_STORE_ALBUM_IDS, null)
+            if (!set.isNullOrEmpty()) return set
+            return mediaStoreAlbumId?.let { setOf(it) } ?: emptySet()
+        }
+        set(value) {
+            prefs.edit().putStringSet(KEY_MEDIA_STORE_ALBUM_IDS, value).apply()
+            mediaStoreAlbumId = value.firstOrNull()
+        }
+
+    var immichAlbumIds: Set<String>
+        get() {
+            val set = prefs.getStringSet(KEY_IMMICH_ALBUM_IDS, null)
+            if (!set.isNullOrEmpty()) return set
+            return immichAlbumId?.let { setOf(it) } ?: emptySet()
+        }
+        set(value) {
+            prefs.edit().putStringSet(KEY_IMMICH_ALBUM_IDS, value).apply()
+            immichAlbumId = value.firstOrNull()
+        }
+
+    var compositeEnabledSources: Set<foo.barz.wallpaperpicker.core.model.WallpaperSourceType>
+        get() {
+            val raw = prefs.getStringSet(KEY_COMPOSITE_ENABLED_SOURCES, null)
+            if (raw.isNullOrEmpty()) {
+                return setOf(
+                    foo.barz.wallpaperpicker.core.model.WallpaperSourceType.LOCAL_FOLDER,
+                    foo.barz.wallpaperpicker.core.model.WallpaperSourceType.MEDIA_STORE,
+                    foo.barz.wallpaperpicker.core.model.WallpaperSourceType.FAVORITES
+                )
+            }
+            return raw.mapNotNull { name ->
+                runCatching { foo.barz.wallpaperpicker.core.model.WallpaperSourceType.valueOf(name) }.getOrNull()
+            }.toSet()
+        }
+        set(value) {
+            val set = value.map { it.name }.toSet()
+            prefs.edit().putStringSet(KEY_COMPOSITE_ENABLED_SOURCES, set).apply()
+        }
+
     var lastExecutionStatus: String?
         get() = prefs.getString(KEY_LAST_EXECUTION_STATUS, null)
         set(value) = prefs.edit().putString(KEY_LAST_EXECUTION_STATUS, value).apply()
@@ -212,5 +253,8 @@ class PreferencesManager(context: Context) {
         private const val KEY_IMMICH_QUALITY = "immich_quality"
         private const val KEY_IMMICH_IGNORE_SSL = "immich_ignore_ssl"
         private const val KEY_IMMICH_WIFI_ONLY = "immich_wifi_only"
+        private const val KEY_MEDIA_STORE_ALBUM_IDS = "media_store_album_ids"
+        private const val KEY_IMMICH_ALBUM_IDS = "immich_album_ids"
+        private const val KEY_COMPOSITE_ENABLED_SOURCES = "composite_enabled_sources"
     }
 }

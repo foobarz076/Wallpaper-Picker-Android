@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,16 +19,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Collections
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -41,7 +48,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
@@ -50,11 +59,13 @@ import foo.barz.wallpaperpicker.core.model.ImmichQuality
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
+import foo.barz.wallpaperpicker.ui.components.AlbumPickerSheet
+import foo.barz.wallpaperpicker.ui.components.PickerAlbumItem
 import java.util.Locale
 
 /**
- * Sources tab managing all wallpaper providers (Local Folder, MediaStore, Immich, HTTP API)
- * and their source-specific configuration parameters.
+ * Sources tab managing all wallpaper providers (Local Folder, MediaStore, Immich, HTTP API,
+ * Favorites, and Composite rotation) along with their source-specific configuration parameters.
  */
 @Composable
 fun SourcesTab(
@@ -64,6 +75,7 @@ fun SourcesTab(
     onRescanFolder: () -> Unit,
     onFetchMediaStoreAlbums: () -> Unit,
     onMediaStoreAlbumSelected: (MediaStoreAlbum?) -> Unit,
+    onMediaStoreAlbumsSelected: (Set<String>, List<MediaStoreAlbum>) -> Unit = { _, _ -> },
     onHttpPresetSelected: (HttpPresetType) -> Unit,
     onHttpCustomUrlChanged: (String) -> Unit,
     onHttpCustomJsonPathChanged: (String) -> Unit,
@@ -71,14 +83,19 @@ fun SourcesTab(
     onImmichServerUrlChanged: (String) -> Unit,
     onImmichApiKeyChanged: (String) -> Unit,
     onImmichAlbumSelected: (ImmichAlbum?) -> Unit,
+    onImmichAlbumsSelected: (Set<String>, List<ImmichAlbum>) -> Unit = { _, _ -> },
     onImmichQualitySelected: (ImmichQuality) -> Unit,
     onToggleImmichIgnoreSsl: (Boolean) -> Unit,
     onToggleImmichWifiOnly: (Boolean) -> Unit,
     onFetchImmichAlbums: () -> Unit,
+    onToggleCompositeSource: (WallpaperSourceType, Boolean) -> Unit = { _, _ -> },
+    onNavigateToHistory: () -> Unit = {},
     onClearCache: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var showMediaStorePicker by remember { mutableStateOf(false) }
+    var showImmichPicker by remember { mutableStateOf(false) }
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -109,6 +126,62 @@ fun SourcesTab(
         }
     }
 
+    // MediaStore picker items
+    val mediaStorePickerItems = remember(state.mediaStoreAlbums) {
+        val list = mutableListOf<PickerAlbumItem>()
+        val allPhotosCount = state.mediaStoreAlbums.firstOrNull { it.id == null }?.count
+            ?: state.mediaStoreAlbums.sumOf { it.count }
+        val firstCover = state.mediaStoreAlbums.firstOrNull { it.coverUri != null }?.coverUri
+        list.add(
+            PickerAlbumItem(
+                id = null,
+                name = "全部照片 (全库随机)",
+                count = allPhotosCount,
+                coverUri = firstCover
+            )
+        )
+        state.mediaStoreAlbums.filter { it.id != null }.forEach { album ->
+            list.add(
+                PickerAlbumItem(
+                    id = album.id,
+                    name = album.name,
+                    count = album.count,
+                    coverUri = album.coverUri
+                )
+            )
+        }
+        list
+    }
+
+    // Immich picker items
+    val immichPickerItems = remember(state.immichAlbums, state.immichServerUrl, state.immichApiKey) {
+        val list = mutableListOf<PickerAlbumItem>()
+        val baseUrl = state.immichServerUrl.trimEnd('/')
+        val totalAssets = state.immichAlbums.sumOf { it.assetCount }
+        val firstThumbnailId = state.immichAlbums.firstOrNull { !it.thumbnailAssetId.isNullOrBlank() }?.thumbnailAssetId
+        list.add(
+            PickerAlbumItem(
+                id = null,
+                name = "全部相册 (全库随机)",
+                count = totalAssets,
+                coverUrl = firstThumbnailId?.let { "$baseUrl/api/assets/$it/thumbnail" },
+                apiKey = state.immichApiKey
+            )
+        )
+        state.immichAlbums.filter { !it.id.isNullOrBlank() }.forEach { album ->
+            list.add(
+                PickerAlbumItem(
+                    id = album.id,
+                    name = album.name,
+                    count = album.assetCount,
+                    coverUrl = album.thumbnailAssetId?.let { "$baseUrl/api/assets/$it/thumbnail" },
+                    apiKey = state.immichApiKey
+                )
+            )
+        }
+        list
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -127,6 +200,8 @@ fun SourcesTab(
                             WallpaperSourceType.MEDIA_STORE -> Icons.Default.Collections
                             WallpaperSourceType.IMMICH -> Icons.Default.PhotoLibrary
                             WallpaperSourceType.HTTP_API -> Icons.Default.Cloud
+                            WallpaperSourceType.FAVORITES -> Icons.Default.Favorite
+                            WallpaperSourceType.COMPOSITE -> Icons.Default.Tune
                         },
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
@@ -143,29 +218,16 @@ fun SourcesTab(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FilterChip(
-                        selected = state.sourceType == WallpaperSourceType.LOCAL_FOLDER,
-                        onClick = { onSourceTypeSelected(WallpaperSourceType.LOCAL_FOLDER) },
-                        label = { Text("本地文件夹") }
-                    )
-                    FilterChip(
-                        selected = state.sourceType == WallpaperSourceType.MEDIA_STORE,
-                        onClick = { onSourceTypeSelected(WallpaperSourceType.MEDIA_STORE) },
-                        label = { Text("系统相册") }
-                    )
-                    FilterChip(
-                        selected = state.sourceType == WallpaperSourceType.IMMICH,
-                        onClick = { onSourceTypeSelected(WallpaperSourceType.IMMICH) },
-                        label = { Text("Immich 相册") }
-                    )
-                    FilterChip(
-                        selected = state.sourceType == WallpaperSourceType.HTTP_API,
-                        onClick = { onSourceTypeSelected(WallpaperSourceType.HTTP_API) },
-                        label = { Text("通用 HTTP") }
-                    )
+                    WallpaperSourceType.values().forEach { type ->
+                        FilterChip(
+                            selected = state.sourceType == type,
+                            onClick = { onSourceTypeSelected(type) },
+                            label = { Text(type.displayName) }
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 when (state.sourceType) {
                     WallpaperSourceType.LOCAL_FOLDER -> {
@@ -234,47 +296,79 @@ fun SourcesTab(
                                 Text("授予相册访问权限")
                             }
                         } else {
-                            Row(
+                            Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                colors = CardDefaults.outlinedCardColors()
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = state.mediaStoreAlbumName?.let { "已绑定相册: $it" } ?: "全部照片 (全库随机)",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                OutlinedButton(
-                                    onClick = onFetchMediaStoreAlbums,
-                                    enabled = !state.isLoadingMediaStoreAlbums
-                                ) {
-                                    if (state.isLoadingMediaStoreAlbums) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(16.dp),
-                                            strokeWidth = 2.dp
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "相册组合设置",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = state.mediaStoreAlbumName ?: "全部照片 (全库随机)",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Button(
+                                                onClick = {
+                                                    if (state.mediaStoreAlbums.isEmpty()) {
+                                                        onFetchMediaStoreAlbums()
+                                                    }
+                                                    showMediaStorePicker = true
+                                                }
+                                            ) {
+                                                Text("选择相册")
+                                            }
+                                            OutlinedButton(
+                                                onClick = onFetchMediaStoreAlbums,
+                                                enabled = !state.isLoadingMediaStoreAlbums
+                                            ) {
+                                                if (state.isLoadingMediaStoreAlbums) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(16.dp),
+                                                        strokeWidth = 2.dp
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                }
+                                                Text("刷新")
+                                            }
+                                        }
                                     }
-                                    Text(if (state.mediaStoreAlbums.isEmpty()) "获取相册" else "刷新相册")
-                                }
-                            }
 
-                            if (state.mediaStoreAlbums.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    state.mediaStoreAlbums.forEach { album ->
-                                        FilterChip(
-                                            selected = state.mediaStoreAlbumId == album.id,
-                                            onClick = { onMediaStoreAlbumSelected(if (album.id == null) null else album) },
-                                            label = { Text("${album.name} (${album.count})") }
-                                        )
+                                    // Selected tags preview
+                                    if (state.mediaStoreAlbumIds.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .horizontalScroll(rememberScrollState()),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            state.mediaStoreAlbumIds.forEach { id ->
+                                                val album = state.mediaStoreAlbums.find { it.id == id }
+                                                if (album != null) {
+                                                    FilterChip(
+                                                        selected = true,
+                                                        onClick = {
+                                                            val newIds = state.mediaStoreAlbumIds - id
+                                                            onMediaStoreAlbumsSelected(newIds, state.mediaStoreAlbums)
+                                                        },
+                                                        label = { Text("${album.name} ✕") }
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -316,54 +410,81 @@ fun SourcesTab(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Album selection
-                        Row(
+                        // Album selection & multi-select summary card
+                        Card(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            colors = CardDefaults.outlinedCardColors()
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("相册筛选", style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    text = state.immichAlbumName?.let { "已绑定相册: $it" } ?: "全部相册 (全库随机)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            OutlinedButton(
-                                onClick = onFetchImmichAlbums,
-                                enabled = !state.isLoadingAlbums && state.immichServerUrl.isNotBlank() && state.immichApiKey.isNotBlank()
-                            ) {
-                                if (state.isLoadingAlbums) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "相册组合设置",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = state.immichAlbumName ?: "全部相册 (全库随机)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Button(
+                                            onClick = {
+                                                if (state.immichAlbums.isEmpty()) {
+                                                    onFetchImmichAlbums()
+                                                }
+                                                showImmichPicker = true
+                                            },
+                                            enabled = state.immichServerUrl.isNotBlank() && state.immichApiKey.isNotBlank()
+                                        ) {
+                                            Text("选择相册")
+                                        }
+                                        OutlinedButton(
+                                            onClick = onFetchImmichAlbums,
+                                            enabled = !state.isLoadingAlbums && state.immichServerUrl.isNotBlank() && state.immichApiKey.isNotBlank()
+                                        ) {
+                                            if (state.isLoadingAlbums) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(16.dp),
+                                                    strokeWidth = 2.dp
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                            }
+                                            Text("刷新")
+                                        }
+                                    }
                                 }
-                                Text(if (state.immichAlbums.isEmpty()) "获取相册" else "刷新相册")
-                            }
-                        }
 
-                        if (state.immichAlbums.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                FilterChip(
-                                    selected = state.immichAlbumId == null,
-                                    onClick = { onImmichAlbumSelected(null) },
-                                    label = { Text("全部相册") }
-                                )
-                                state.immichAlbums.forEach { album ->
-                                    FilterChip(
-                                        selected = state.immichAlbumId == album.id,
-                                        onClick = { onImmichAlbumSelected(album) },
-                                        label = { Text("${album.name} (${album.assetCount})") }
-                                    )
+                                // Selected tags preview
+                                if (state.immichAlbumIds.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        state.immichAlbumIds.forEach { id ->
+                                            val album = state.immichAlbums.find { it.id == id }
+                                            if (album != null) {
+                                                FilterChip(
+                                                    selected = true,
+                                                    onClick = {
+                                                        val newIds = state.immichAlbumIds - id
+                                                        onImmichAlbumsSelected(newIds, state.immichAlbums)
+                                                    },
+                                                    label = { Text("${album.name} ✕") }
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -530,11 +651,171 @@ fun SourcesTab(
                             }
                         }
                     }
+
+                    WallpaperSourceType.FAVORITES -> {
+                        Text("离线收藏随机播放", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "从您点赞收藏的历史壁纸中随机抽取轮播。纯离线环境可用，若本地文件被删除或失效将自动跳过并容错。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.outlinedCardColors()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "已收藏壁纸",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "${state.favoritesList.size} 张",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (state.favoritesList.isEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    Icon(
+                                        Icons.Default.Favorite,
+                                        contentDescription = null,
+                                        tint = if (state.favoritesList.isEmpty()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+
+                                if (state.favoritesList.isEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "提示：暂无收藏壁纸。您可以在「控制台」或「历史」页面将喜欢的壁纸点击红心收藏后使用此来源。",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "已就绪。收藏壁纸已做永久缓存保护，支持均匀轮播（Fair Shuffle）。",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedButton(
+                                    onClick = onNavigateToHistory,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("前往历史与收藏")
+                                }
+                            }
+                        }
+                    }
+
+                    WallpaperSourceType.COMPOSITE -> {
+                        Text("多源混合轮播配置", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "按等概率随机轮换以下勾选的图源。若某个图源临时无法获取壁纸（例如离线时），将自动尝试其他已勾选图源。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        val compositeCandidates = listOf(
+                            WallpaperSourceType.LOCAL_FOLDER to (state.folderName?.let { "已选: $it (${state.indexedImageCount} 张)" } ?: "未选择文件夹"),
+                            WallpaperSourceType.MEDIA_STORE to (state.mediaStoreAlbumName ?: "全部照片 (全库随机)"),
+                            WallpaperSourceType.IMMICH to (if (state.immichServerUrl.isNotBlank()) "已配置服务器" else "尚未配置"),
+                            WallpaperSourceType.HTTP_API to state.httpPresetType.label,
+                            WallpaperSourceType.FAVORITES to "${state.favoritesList.size} 张收藏壁纸"
+                        )
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.outlinedCardColors()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                compositeCandidates.forEachIndexed { index, (type, description) ->
+                                    val isChecked = state.compositeEnabledSources.contains(type)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                onToggleCompositeSource(type, !isChecked)
+                                            }
+                                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Checkbox(
+                                            checked = isChecked,
+                                            onCheckedChange = { checked ->
+                                                onToggleCompositeSource(type, checked)
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = type.displayName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    if (index < compositeCandidates.lastIndex) {
+                                        HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    // MediaStore Album Picker Sheet
+    if (showMediaStorePicker) {
+        AlbumPickerSheet(
+            title = "选择系统相册组合",
+            albums = mediaStorePickerItems,
+            selectedIds = state.mediaStoreAlbumIds,
+            onSelectionConfirmed = { selectedIds ->
+                onMediaStoreAlbumsSelected(selectedIds, state.mediaStoreAlbums)
+                showMediaStorePicker = false
+            },
+            onDismissRequest = { showMediaStorePicker = false }
+        )
+    }
+
+    // Immich Album Picker Sheet
+    if (showImmichPicker) {
+        AlbumPickerSheet(
+            title = "选择 Immich 相册组合",
+            albums = immichPickerItems,
+            selectedIds = state.immichAlbumIds,
+            onSelectionConfirmed = { selectedIds ->
+                onImmichAlbumsSelected(selectedIds, state.immichAlbums)
+                showImmichPicker = false
+            },
+            onDismissRequest = { showImmichPicker = false }
+        )
     }
 }
 
