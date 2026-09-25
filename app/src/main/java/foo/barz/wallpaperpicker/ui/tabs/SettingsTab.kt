@@ -25,9 +25,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Policy
@@ -35,7 +40,10 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -46,6 +54,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import foo.barz.wallpaperpicker.core.worker.CompositeTriggerHelper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -80,7 +90,19 @@ fun SettingsTab(
     onToggleReapplyOnScrollChange: (Boolean) -> Unit,
     onReapplyCurrentWallpaper: () -> Unit,
     onToggleSchedule: (Boolean) -> Unit,
+    onToggleIntervalSchedule: (Boolean) -> Unit = {},
     onIntervalSelected: (Long) -> Unit,
+    onToggleExactTimer: (Boolean) -> Unit = {},
+    onToggleDailyAnchor: (Boolean) -> Unit = {},
+    onSetDailyAnchorTime: (Int, Int) -> Unit = { _, _ -> },
+    onAddDailyAnchorTime: (Int, Int) -> Unit = { _, _ -> },
+    onRemoveDailyAnchorTime: (String) -> Unit = {},
+    onToggleScreenOffTrigger: (Boolean) -> Unit = {},
+    onSetScreenOffDelaySeconds: (Int) -> Unit = {},
+    onToggleQuietHours: (Boolean) -> Unit = {},
+    onSetQuietHours: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> },
+    onToggleCooldownSuppression: (Boolean) -> Unit = {},
+    onSetCooldownMinutes: (Long) -> Unit = {},
     onToggleDeferDuringInteraction: (Boolean) -> Unit,
     onToggleFairShuffle: (Boolean) -> Unit,
     onFairShuffleCapacitySelected: (Int) -> Unit = {},
@@ -98,6 +120,8 @@ fun SettingsTab(
     var isIgnoringBatteryOptimizations by remember {
         mutableStateOf(checkBatteryOptimization(context))
     }
+    var showBatteryOptimizationPrompt by remember { mutableStateOf(false) }
+    var isAdvancedExpanded by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -363,22 +387,33 @@ fun SettingsTab(
             }
         }
 
-        // 4. Periodic Schedule Card
+        // 4. Scheduling & Composable Triggers Card
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
+                // Header row with Master Automation Switch
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Icon(
                             Icons.Default.Schedule,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("后台自动定时更换", style = MaterialTheme.typography.titleMedium)
+                        Column {
+                            Text("自动更换调度", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = if (state.isScheduled) "自动轮换中，下方启用的触发方式将并行生效" else "自动更换已停止",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (state.isScheduled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
+                        }
                     }
                     Switch(
                         checked = state.isScheduled,
@@ -386,128 +421,491 @@ fun SettingsTab(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-                Text("更换频率", style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                val intervals = listOf(
-                    15L to "15分钟",
-                    30L to "30分钟",
-                    60L to "1小时",
-                    360L to "6小时",
-                    1440L to "每天"
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    intervals.take(3).forEach { (minutes, label) ->
-                        FilterChip(
-                            selected = state.intervalMinutes == minutes,
-                            onClick = { onIntervalSelected(minutes) },
-                            label = { Text(label) }
-                        )
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    intervals.drop(3).forEach { (minutes, label) ->
-                        FilterChip(
-                            selected = state.intervalMinutes == minutes,
-                            onClick = { onIntervalSelected(minutes) },
-                            label = { Text(label) }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-                HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("使用手机时推迟更换", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            text = "检测到亮屏或正在使用手机时暂缓更换壁纸，防止游戏、观影或打字时发生掉帧卡顿",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                    Switch(
-                        checked = state.deferDuringInteraction,
-                        onCheckedChange = onToggleDeferDuringInteraction
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("智能洗牌防重复 (Fair Shuffle)", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            text = "记忆最近已用壁纸，在一整轮展示完之前避免高频抽取相同图片",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                    Switch(
-                        checked = state.fairShuffle,
-                        onCheckedChange = onToggleFairShuffle
-                    )
-                }
-
-                if (state.fairShuffle) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "记忆窗口深度：",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
+                if (state.isScheduled) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "可组合触发方式 (支持多选组合生效)",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Trigger 1: 按固定间隔周期轮换
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
                     ) {
-                        listOf(20, 50, 100).forEach { capacity ->
-                            FilterChip(
-                                selected = state.fairShuffleCapacity == capacity,
-                                onClick = { onFairShuffleCapacitySelected(capacity) },
-                                label = { Text("$capacity 张") }
-                            )
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("周期轮换 (固定时间间隔)", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = "每隔指定时间自动抽取并应用新壁纸",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                                Switch(
+                                    checked = state.intervalScheduleEnabled,
+                                    onCheckedChange = onToggleIntervalSchedule
+                                )
+                            }
+
+                            if (state.intervalScheduleEnabled) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val intervals = listOf(
+                                    15L to "15分钟",
+                                    30L to "30分钟",
+                                    60L to "1小时",
+                                    360L to "6小时",
+                                    1440L to "每天"
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    intervals.forEach { (minutes, label) ->
+                                        FilterChip(
+                                            selected = state.intervalMinutes == minutes,
+                                            onClick = { onIntervalSelected(minutes) },
+                                            label = { Text(label) }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Trigger 2: 每日定点打卡 (支持多个定点时刻)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("每日定点打卡", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = "在每天指定的固定时刻准点打卡换新（可添加多个时刻）",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                                Switch(
+                                    checked = state.dailyAnchorEnabled,
+                                    onCheckedChange = onToggleDailyAnchor
+                                )
+                            }
+
+                            if (state.dailyAnchorEnabled) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    state.dailyAnchorTimes.sorted().forEach { timeStr ->
+                                        FilterChip(
+                                            selected = true,
+                                            onClick = { onRemoveDailyAnchorTime(timeStr) },
+                                            label = { Text(timeStr) },
+                                            trailingIcon = {
+                                                Icon(
+                                                    Icons.Default.Close,
+                                                    contentDescription = "删除时刻",
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            val cal = java.util.Calendar.getInstance()
+                                            android.app.TimePickerDialog(
+                                                context,
+                                                { _, hour, minute -> onAddDailyAnchorTime(hour, minute) },
+                                                cal.get(java.util.Calendar.HOUR_OF_DAY),
+                                                cal.get(java.util.Calendar.MINUTE),
+                                                true
+                                            ).show()
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("添加时刻", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Trigger 3: 锁屏熄屏后切换 (防抖延迟)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("锁屏熄屏后切换", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = "手机锁屏熄屏后延迟数秒悄悄换好壁纸，再次亮屏解锁即见新图",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                                Switch(
+                                    checked = state.screenOffTriggerEnabled,
+                                    onCheckedChange = onToggleScreenOffTrigger
+                                )
+                            }
+
+                            if (state.screenOffTriggerEnabled) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("熄屏防抖延迟：", style = MaterialTheme.typography.bodySmall)
+                                    listOf(3 to "3秒", 5 to "5秒", 10 to "10秒").forEach { (sec, label) ->
+                                        FilterChip(
+                                            selected = state.screenOffDelaySeconds == sec,
+                                            onClick = { onSetScreenOffDelaySeconds(sec) },
+                                            label = { Text(label) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Precision Mode Row: AlarmManager vs WorkManager
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = "当前牌堆记忆: ${state.fairShuffleRecordedCount} / ${state.fairShuffleCapacity} 张",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text("精细定时器 (AlarmManager 高精度)", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = if (state.exactTimerEnabled) {
+                                    "已启用高精度时钟，规避系统批处理延迟与随机漂移"
+                                } else {
+                                    "关闭时采用系统节能 WorkManager 调度，功耗更低但存在数分钟漂移"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Switch(
+                            checked = state.exactTimerEnabled,
+                            onCheckedChange = { willEnable ->
+                                if (willEnable) {
+                                    if (!isIgnoringBatteryOptimizations) {
+                                        showBatteryOptimizationPrompt = true
+                                    } else {
+                                        onToggleExactTimer(true)
+                                    }
+                                } else {
+                                    onToggleExactTimer(false)
+                                }
+                            }
                         )
-                        OutlinedButton(
-                            onClick = onResetFairShuffleDeck,
-                            enabled = state.fairShuffleRecordedCount > 0,
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    }
+                }
+            }
+        }
+
+        // 4.1 Advanced Safeguards Card (Collapsible)
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text("高级触发防护与策略", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = "夜间免打扰、防碰撞冷却、使用时推迟、洗牌防重复",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                    TextButton(onClick = { isAdvancedExpanded = !isAdvancedExpanded }) {
+                        Text(if (isAdvancedExpanded) "收起" else "展开")
+                        Icon(
+                            if (isAdvancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null
+                        )
+                    }
+                }
+
+                if (isAdvancedExpanded) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Quiet Hours Trigger
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text("夜间免打扰时段 (Quiet Hours)", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "在睡眠时段内静默暂停自动更换，避免夜间唤醒与屏幕耗电",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Switch(
+                            checked = state.quietHoursEnabled,
+                            onCheckedChange = onToggleQuietHours
+                        )
+                    }
+
+                    if (state.quietHoursEnabled) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("重置洗牌牌堆", style = MaterialTheme.typography.labelSmall)
+                            Text("休眠时段：", style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(
+                                onClick = {
+                                    android.app.TimePickerDialog(
+                                        context,
+                                        { _, hour, minute ->
+                                            onSetQuietHours(hour, minute, state.quietHoursEndHour, state.quietHoursEndMinute)
+                                        },
+                                        state.quietHoursStartHour,
+                                        state.quietHoursStartMinute,
+                                        true
+                                    ).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+                            ) {
+                                Text("从 ${CompositeTriggerHelper.formatTime(state.quietHoursStartHour, state.quietHoursStartMinute)}")
+                            }
+
+                            Text("至", style = MaterialTheme.typography.bodySmall)
+
+                            OutlinedButton(
+                                onClick = {
+                                    android.app.TimePickerDialog(
+                                        context,
+                                        { _, hour, minute ->
+                                            onSetQuietHours(state.quietHoursStartHour, state.quietHoursStartMinute, hour, minute)
+                                        },
+                                        state.quietHoursEndHour,
+                                        state.quietHoursEndMinute,
+                                        true
+                                    ).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+                            ) {
+                                Text("到 ${CompositeTriggerHelper.formatTime(state.quietHoursEndHour, state.quietHoursEndMinute)}")
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Cooldown Suppression Trigger
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text("防碰撞冷却抑制 (Cooldown)", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "距上次更换不足指定时间时拦截自动任务，避免与定点时刻或手动更换重叠",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Switch(
+                            checked = state.cooldownSuppressionEnabled,
+                            onCheckedChange = onToggleCooldownSuppression
+                        )
+                    }
+
+                    if (state.cooldownSuppressionEnabled) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(5L to "5分钟", 10L to "10分钟", 15L to "15分钟", 30L to "30分钟").forEach { (minutes, label) ->
+                                FilterChip(
+                                    selected = state.cooldownMinutes == minutes,
+                                    onClick = { onSetCooldownMinutes(minutes) },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Defer during interaction
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("使用手机时推迟更换", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "检测到亮屏或正在使用手机时暂缓更换壁纸，防止游戏、观影或打字时发生掉帧卡顿",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Switch(
+                            checked = state.deferDuringInteraction,
+                            onCheckedChange = onToggleDeferDuringInteraction
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Fair Shuffle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("智能洗牌防重复 (Fair Shuffle)", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "记忆最近已用壁纸，在一整轮展示完之前避免高频抽取相同图片",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                        Switch(
+                            checked = state.fairShuffle,
+                            onCheckedChange = onToggleFairShuffle
+                        )
+                    }
+
+                    if (state.fairShuffle) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "记忆窗口深度：",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(20, 50, 100).forEach { capacity ->
+                                FilterChip(
+                                    selected = state.fairShuffleCapacity == capacity,
+                                    onClick = { onFairShuffleCapacitySelected(capacity) },
+                                    label = { Text("$capacity 张") }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "当前牌堆记忆: ${state.fairShuffleRecordedCount} / ${state.fairShuffleCapacity} 张",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            OutlinedButton(
+                                onClick = onResetFairShuffleDeck,
+                                enabled = state.fairShuffleRecordedCount > 0,
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text("重置洗牌牌堆", style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                     }
                 }
@@ -809,6 +1207,53 @@ fun SettingsTab(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    if (showBatteryOptimizationPrompt) {
+        AlertDialog(
+            onDismissRequest = { showBatteryOptimizationPrompt = false },
+            icon = {
+                Icon(
+                    Icons.Default.BatteryAlert,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = { Text("开启精细定时器需忽略电池优化") },
+            text = {
+                Text(
+                    "Android 系统的低电耗模式 (Doze) 会在息屏休眠时冻结定时器唤醒，导致壁纸无法准时更换。\n\n建议前往系统设置将本应用设为「无限制」或加入电池优化白名单。"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBatteryOptimizationPrompt = false
+                        openAppBatteryDetailsSettings(context)
+                    }
+                ) {
+                    Text("前往设置")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            showBatteryOptimizationPrompt = false
+                            onToggleExactTimer(true)
+                        }
+                    ) {
+                        Text("仍然开启")
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    TextButton(
+                        onClick = { showBatteryOptimizationPrompt = false }
+                    ) {
+                        Text("取消")
+                    }
+                }
+            }
+        )
     }
 }
 

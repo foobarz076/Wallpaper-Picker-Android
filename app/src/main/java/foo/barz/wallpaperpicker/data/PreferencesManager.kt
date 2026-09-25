@@ -6,6 +6,7 @@ import android.net.Uri
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
+import foo.barz.wallpaperpicker.core.worker.CompositeTriggerHelper
 
 /**
  * Lightweight preferences manager for saving app settings and execution state.
@@ -224,6 +225,79 @@ class PreferencesManager(context: Context) {
         }
         set(value) = prefs.edit().putString(KEY_CACHE_SIZE_TIER, value.name).apply()
 
+    var intervalScheduleEnabled: Boolean
+        get() = prefs.getBoolean(KEY_INTERVAL_SCHEDULE_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_INTERVAL_SCHEDULE_ENABLED, value).apply()
+
+    var exactTimerEnabled: Boolean
+        get() = prefs.getBoolean(KEY_EXACT_TIMER_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_EXACT_TIMER_ENABLED, value).apply()
+
+    var dailyAnchorEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DAILY_ANCHOR_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_DAILY_ANCHOR_ENABLED, value).apply()
+
+    var dailyAnchorTimes: Set<String>
+        get() {
+            val set = prefs.getStringSet(KEY_DAILY_ANCHOR_TIMES, null)
+            if (!set.isNullOrEmpty()) return set
+            val legacyTime = CompositeTriggerHelper.formatTime(dailyAnchorHour, dailyAnchorMinute)
+            return setOf(legacyTime)
+        }
+        set(value) {
+            prefs.edit().putStringSet(KEY_DAILY_ANCHOR_TIMES, value).apply()
+            value.firstOrNull()?.let { timeStr ->
+                CompositeTriggerHelper.parseTime(timeStr)?.let { (h, m) ->
+                    dailyAnchorHour = h
+                    dailyAnchorMinute = m
+                }
+            }
+        }
+
+    var dailyAnchorHour: Int
+        get() = prefs.getInt(KEY_DAILY_ANCHOR_HOUR, 8)
+        set(value) = prefs.edit().putInt(KEY_DAILY_ANCHOR_HOUR, value).apply()
+
+    var dailyAnchorMinute: Int
+        get() = prefs.getInt(KEY_DAILY_ANCHOR_MINUTE, 0)
+        set(value) = prefs.edit().putInt(KEY_DAILY_ANCHOR_MINUTE, value).apply()
+
+    var screenOffTriggerEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SCREEN_OFF_TRIGGER_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_SCREEN_OFF_TRIGGER_ENABLED, value).apply()
+
+    var screenOffDelaySeconds: Int
+        get() = prefs.getInt(KEY_SCREEN_OFF_DELAY_SECONDS, 3)
+        set(value) = prefs.edit().putInt(KEY_SCREEN_OFF_DELAY_SECONDS, value).apply()
+
+    var quietHoursEnabled: Boolean
+        get() = prefs.getBoolean(KEY_QUIET_HOURS_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_QUIET_HOURS_ENABLED, value).apply()
+
+    var quietHoursStartHour: Int
+        get() = prefs.getInt(KEY_QUIET_HOURS_START_HOUR, 23)
+        set(value) = prefs.edit().putInt(KEY_QUIET_HOURS_START_HOUR, value).apply()
+
+    var quietHoursStartMinute: Int
+        get() = prefs.getInt(KEY_QUIET_HOURS_START_MINUTE, 0)
+        set(value) = prefs.edit().putInt(KEY_QUIET_HOURS_START_MINUTE, value).apply()
+
+    var quietHoursEndHour: Int
+        get() = prefs.getInt(KEY_QUIET_HOURS_END_HOUR, 7)
+        set(value) = prefs.edit().putInt(KEY_QUIET_HOURS_END_HOUR, value).apply()
+
+    var quietHoursEndMinute: Int
+        get() = prefs.getInt(KEY_QUIET_HOURS_END_MINUTE, 0)
+        set(value) = prefs.edit().putInt(KEY_QUIET_HOURS_END_MINUTE, value).apply()
+
+    var cooldownSuppressionEnabled: Boolean
+        get() = prefs.getBoolean(KEY_COOLDOWN_SUPPRESSION_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_COOLDOWN_SUPPRESSION_ENABLED, value).apply()
+
+    var cooldownMinutes: Long
+        get() = prefs.getLong(KEY_COOLDOWN_MINUTES, 10L)
+        set(value) = prefs.edit().putLong(KEY_COOLDOWN_MINUTES, value).apply()
+
     /**
      * Retrieves the FIFO list of recently applied wallpaper keys.
      */
@@ -292,5 +366,21 @@ class PreferencesManager(context: Context) {
         private const val KEY_WIDGET_SCALE_TYPE = "widget_scale_type"
         private const val KEY_CACHE_SIZE_TIER = "cache_size_tier"
         private const val KEY_FAIR_SHUFFLE_CAPACITY = "fair_shuffle_capacity"
+        private const val KEY_EXACT_TIMER_ENABLED = "exact_timer_enabled"
+        private const val KEY_DAILY_ANCHOR_ENABLED = "daily_anchor_enabled"
+        private const val KEY_DAILY_ANCHOR_HOUR = "daily_anchor_hour"
+        private const val KEY_DAILY_ANCHOR_MINUTE = "daily_anchor_minute"
+        private const val KEY_QUIET_HOURS_ENABLED = "quiet_hours_enabled"
+        private const val KEY_QUIET_HOURS_START_HOUR = "quiet_hours_start_hour"
+        private const val KEY_QUIET_HOURS_START_MINUTE = "quiet_hours_start_minute"
+        private const val KEY_QUIET_HOURS_END_HOUR = "quiet_hours_end_hour"
+        private const val KEY_QUIET_HOURS_END_MINUTE = "quiet_hours_end_minute"
+        private const val KEY_COOLDOWN_SUPPRESSION_ENABLED = "cooldown_suppression_enabled"
+        private const val KEY_COOLDOWN_MINUTES = "cooldown_minutes"
+        private const val KEY_INTERVAL_SCHEDULE_ENABLED = "interval_schedule_enabled"
+        private const val KEY_DAILY_ANCHOR_TIMES = "daily_anchor_times"
+        private const val KEY_SCREEN_OFF_TRIGGER_ENABLED = "screen_off_trigger_enabled"
+        private const val KEY_SCREEN_OFF_DELAY_SECONDS = "screen_off_delay_seconds"
     }
 }
+

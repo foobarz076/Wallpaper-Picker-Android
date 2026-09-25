@@ -34,6 +34,11 @@ import foo.barz.wallpaperpicker.core.source.ImmichSource
 import foo.barz.wallpaperpicker.core.source.MediaStoreSource
 import foo.barz.wallpaperpicker.core.source.WallpaperSourceFactory
 import foo.barz.wallpaperpicker.core.widget.CurrentWallpaperWidgetProvider
+import foo.barz.wallpaperpicker.core.worker.CompositeTriggerHelper
+import foo.barz.wallpaperpicker.core.worker.ScreenOffWatcherService
+import foo.barz.wallpaperpicker.core.worker.WallpaperAlarmScheduler
+import foo.barz.wallpaperpicker.core.worker.WallpaperChangeExecutor
+import foo.barz.wallpaperpicker.core.worker.WallpaperExecutionResult
 import foo.barz.wallpaperpicker.core.worker.WallpaperWorker
 import foo.barz.wallpaperpicker.data.PreferencesManager
 import kotlinx.coroutines.Dispatchers
@@ -107,6 +112,21 @@ data class MainUiState(
     val isRedownloadingHistoryId: Long? = null,
     val sourcesList: List<WallpaperSourceEntity> = emptyList(),
     val widgetScaleType: WidgetScaleType = WidgetScaleType.CROP,
+    val intervalScheduleEnabled: Boolean = true,
+    val exactTimerEnabled: Boolean = false,
+    val dailyAnchorEnabled: Boolean = false,
+    val dailyAnchorHour: Int = 8,
+    val dailyAnchorMinute: Int = 0,
+    val dailyAnchorTimes: Set<String> = setOf("08:00"),
+    val screenOffTriggerEnabled: Boolean = false,
+    val screenOffDelaySeconds: Int = 3,
+    val quietHoursEnabled: Boolean = false,
+    val quietHoursStartHour: Int = 23,
+    val quietHoursStartMinute: Int = 0,
+    val quietHoursEndHour: Int = 7,
+    val quietHoursEndMinute: Int = 0,
+    val cooldownSuppressionEnabled: Boolean = true,
+    val cooldownMinutes: Long = 10L,
     val statusMessage: String? = null
 )
 
@@ -159,7 +179,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             fairShuffleCapacity = prefs.fairShuffleCapacity,
             fairShuffleRecordedCount = prefs.getRecentWallpaperKeys().size,
             cacheSizeTier = prefs.cacheSizeTier,
-            widgetScaleType = prefs.widgetScaleType
+            widgetScaleType = prefs.widgetScaleType,
+            intervalScheduleEnabled = prefs.intervalScheduleEnabled,
+            exactTimerEnabled = prefs.exactTimerEnabled,
+            dailyAnchorEnabled = prefs.dailyAnchorEnabled,
+            dailyAnchorHour = prefs.dailyAnchorHour,
+            dailyAnchorMinute = prefs.dailyAnchorMinute,
+            dailyAnchorTimes = prefs.dailyAnchorTimes,
+            screenOffTriggerEnabled = prefs.screenOffTriggerEnabled,
+            screenOffDelaySeconds = prefs.screenOffDelaySeconds,
+            quietHoursEnabled = prefs.quietHoursEnabled,
+            quietHoursStartHour = prefs.quietHoursStartHour,
+            quietHoursStartMinute = prefs.quietHoursStartMinute,
+            quietHoursEndHour = prefs.quietHoursEndHour,
+            quietHoursEndMinute = prefs.quietHoursEndMinute,
+            cooldownSuppressionEnabled = prefs.cooldownSuppressionEnabled,
+            cooldownMinutes = prefs.cooldownMinutes
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -550,7 +585,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(intervalMinutes = minutes) }
 
         if (prefs.isScheduled) {
-            WallpaperWorker.schedule(getApplication(), minutes)
+            refreshScheduling()
         }
     }
 
@@ -721,12 +756,139 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(isScheduled = enabled) }
 
         if (enabled) {
-            WallpaperWorker.schedule(context, prefs.intervalMinutes)
-            _uiState.update { it.copy(statusMessage = "已启动定时切换 (每 ${prefs.intervalMinutes} 分钟)") }
+            refreshScheduling()
+            _uiState.update { it.copy(statusMessage = "壁纸自动轮播已启动") }
         } else {
+            WallpaperAlarmScheduler.cancel(context)
             WallpaperWorker.cancel(context)
-            _uiState.update { it.copy(statusMessage = "已停止定时切换") }
+            ScreenOffWatcherService.stop(context)
+            _uiState.update { it.copy(statusMessage = "已停止自动轮播") }
         }
+    }
+
+    fun onToggleIntervalSchedule(enabled: Boolean) {
+        prefs.intervalScheduleEnabled = enabled
+        _uiState.update { it.copy(intervalScheduleEnabled = enabled) }
+        if (prefs.isScheduled) {
+            refreshScheduling()
+        }
+    }
+
+    fun onToggleExactTimer(enabled: Boolean) {
+        prefs.exactTimerEnabled = enabled
+        _uiState.update { it.copy(exactTimerEnabled = enabled) }
+        if (prefs.isScheduled) {
+            refreshScheduling()
+            _uiState.update {
+                it.copy(
+                    statusMessage = if (enabled) "已启用高精度 AlarmManager 定时器" else "已切换为系统节能 WorkManager 定时器"
+                )
+            }
+        }
+    }
+
+    fun onToggleDailyAnchor(enabled: Boolean) {
+        prefs.dailyAnchorEnabled = enabled
+        _uiState.update { it.copy(dailyAnchorEnabled = enabled) }
+        if (prefs.isScheduled) {
+            refreshScheduling()
+        }
+    }
+
+    fun onSetDailyAnchorTime(hour: Int, minute: Int) {
+        prefs.dailyAnchorHour = hour
+        prefs.dailyAnchorMinute = minute
+        val timeStr = CompositeTriggerHelper.formatTime(hour, minute)
+        val currentSet = prefs.dailyAnchorTimes.toMutableSet()
+        currentSet.add(timeStr)
+        prefs.dailyAnchorTimes = currentSet
+        _uiState.update {
+            it.copy(
+                dailyAnchorHour = hour,
+                dailyAnchorMinute = minute,
+                dailyAnchorTimes = currentSet
+            )
+        }
+        if (prefs.isScheduled) {
+            refreshScheduling()
+        }
+    }
+
+    fun onAddDailyAnchorTime(hour: Int, minute: Int) {
+        val timeStr = CompositeTriggerHelper.formatTime(hour, minute)
+        val currentSet = prefs.dailyAnchorTimes.toMutableSet()
+        currentSet.add(timeStr)
+        prefs.dailyAnchorTimes = currentSet
+        _uiState.update { it.copy(dailyAnchorTimes = currentSet) }
+        if (prefs.isScheduled) {
+            refreshScheduling()
+        }
+    }
+
+    fun onRemoveDailyAnchorTime(timeStr: String) {
+        val currentSet = prefs.dailyAnchorTimes.toMutableSet()
+        currentSet.remove(timeStr)
+        if (currentSet.isEmpty()) {
+            currentSet.add("08:00")
+        }
+        prefs.dailyAnchorTimes = currentSet
+        _uiState.update { it.copy(dailyAnchorTimes = currentSet) }
+        if (prefs.isScheduled) {
+            refreshScheduling()
+        }
+    }
+
+    fun onToggleScreenOffTrigger(enabled: Boolean) {
+        prefs.screenOffTriggerEnabled = enabled
+        _uiState.update { it.copy(screenOffTriggerEnabled = enabled) }
+        ScreenOffWatcherService.syncWithPreferences(getApplication())
+    }
+
+    fun onSetScreenOffDelaySeconds(seconds: Int) {
+        prefs.screenOffDelaySeconds = seconds
+        _uiState.update { it.copy(screenOffDelaySeconds = seconds) }
+    }
+
+    fun onToggleQuietHours(enabled: Boolean) {
+        prefs.quietHoursEnabled = enabled
+        _uiState.update { it.copy(quietHoursEnabled = enabled) }
+    }
+
+    fun onSetQuietHours(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
+        prefs.quietHoursStartHour = startHour
+        prefs.quietHoursStartMinute = startMinute
+        prefs.quietHoursEndHour = endHour
+        prefs.quietHoursEndMinute = endMinute
+        _uiState.update {
+            it.copy(
+                quietHoursStartHour = startHour,
+                quietHoursStartMinute = startMinute,
+                quietHoursEndHour = endHour,
+                quietHoursEndMinute = endMinute
+            )
+        }
+    }
+
+    fun onToggleCooldownSuppression(enabled: Boolean) {
+        prefs.cooldownSuppressionEnabled = enabled
+        _uiState.update { it.copy(cooldownSuppressionEnabled = enabled) }
+    }
+
+    fun onSetCooldownMinutes(minutes: Long) {
+        prefs.cooldownMinutes = minutes
+        _uiState.update { it.copy(cooldownMinutes = minutes) }
+    }
+
+    private fun refreshScheduling() {
+        val context = getApplication<Application>()
+        if (prefs.exactTimerEnabled) {
+            WallpaperWorker.cancel(context)
+            WallpaperAlarmScheduler.schedule(context)
+        } else {
+            WallpaperAlarmScheduler.cancel(context)
+            WallpaperWorker.schedule(context, prefs.intervalMinutes)
+        }
+        ScreenOffWatcherService.syncWithPreferences(context)
     }
 
     fun changeNow() {
@@ -739,125 +901,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.update { it.copy(isChanging = true, statusMessage = "正在更换壁纸…") }
 
-            val sourceResult = runCatching {
-                // User-triggered manual update bypasses network/wifi restrictions
-                WallpaperSourceFactory.createActiveSource(
-                    getApplication(),
-                    prefs,
-                    bypassNetworkConstraints = true
-                )
+            val result = withContext(Dispatchers.IO) {
+                WallpaperChangeExecutor.execute(getApplication(), isManualTrigger = true)
             }
 
-            if (sourceResult.isFailure) {
-                val error = sourceResult.exceptionOrNull()?.message ?: "初始化图源失败"
-                prefs.lastErrorMessage = error
-                prefs.lastExecutionStatus = "失败: $error"
-                prefs.lastExecutionTimestamp = System.currentTimeMillis()
-                _uiState.update { it.copy(isChanging = false, statusMessage = error, lastErrorMessage = error, lastExecutionStatus = "失败: $error") }
-                return@launch
+            when (result) {
+                is WallpaperExecutionResult.Success -> {
+                    refreshHistoryAndFavorites()
+                    val titleDesc = result.title?.let { "「$it」" } ?: "新壁纸"
+                    _uiState.update {
+                        it.copy(
+                            isChanging = false,
+                            statusMessage = "更换成功: $titleDesc",
+                            lastWallpaperTitle = prefs.lastWallpaperTitle,
+                            lastWallpaperUri = prefs.lastWallpaperUri,
+                            lastChangedText = formatTimestamp(prefs.lastChangedTimestamp, prefs.lastWallpaperTitle),
+                            lastExecutionStatus = prefs.lastExecutionStatus,
+                            lastErrorMessage = null,
+                            cacheSizeBytes = cacheManager.getCacheSizeBytes(),
+                            fairShuffleRecordedCount = prefs.getRecentWallpaperKeys().size
+                        )
+                    }
+                }
+                is WallpaperExecutionResult.Skipped -> {
+                    _uiState.update {
+                        it.copy(
+                            isChanging = false,
+                            statusMessage = result.reason,
+                            lastExecutionStatus = result.reason
+                        )
+                    }
+                }
+                is WallpaperExecutionResult.Failure -> {
+                    val error = result.error.message ?: "更换壁纸失败"
+                    _uiState.update {
+                        it.copy(
+                            isChanging = false,
+                            statusMessage = error,
+                            lastErrorMessage = error,
+                            lastExecutionStatus = "失败: $error"
+                        )
+                    }
+                }
             }
-
-            val source = sourceResult.getOrThrow()
-            val nextResult = source.getNextWallpaper()
-
-            if (nextResult.isFailure) {
-                val error = nextResult.exceptionOrNull()?.message ?: "获取图片失败"
-                prefs.lastErrorMessage = error
-                prefs.lastExecutionStatus = "失败: $error"
-                prefs.lastExecutionTimestamp = System.currentTimeMillis()
-                _uiState.update { it.copy(isChanging = false, statusMessage = error, lastErrorMessage = error, lastExecutionStatus = "失败: $error") }
-                return@launch
-            }
-
-            val data = nextResult.getOrThrow()
-            val customPref = data.sourceUri?.let { uri ->
-                withContext(Dispatchers.IO) { historyDb.getItemByUri(uri.toString()) }
-            }
-            val effectiveScrollMode = customPref?.customScrollMode ?: prefs.scrollMode
-            val effectiveCropFocusX = customPref?.cropFocusX ?: 0.5f
-            val effectiveCropFocusY = customPref?.cropFocusY ?: 0.5f
-            val effectiveFlipHorizontal = customPref?.flipHorizontal ?: false
-
-            val processResult = processor.process(
-                openStream = data.openStream,
-                scrollMode = effectiveScrollMode,
-                cropMode = prefs.cropMode,
-                cropFocusX = effectiveCropFocusX,
-                cropFocusY = effectiveCropFocusY,
-                flipHorizontal = effectiveFlipHorizontal
-            )
-
-            if (processResult.isFailure) {
-                val error = processResult.exceptionOrNull()?.message ?: "图片处理失败"
-                prefs.lastErrorMessage = error
-                prefs.lastExecutionStatus = "失败: $error"
-                prefs.lastExecutionTimestamp = System.currentTimeMillis()
-                _uiState.update { it.copy(isChanging = false, statusMessage = error, lastErrorMessage = error, lastExecutionStatus = "失败: $error") }
-                return@launch
-            }
-
-            val bitmap = processResult.getOrThrow()
-            val applyResult = applier.apply(bitmap, prefs.target)
-
-            if (applyResult.isFailure) {
-                val error = applyResult.exceptionOrNull()?.message ?: "设置壁纸失败"
-                prefs.lastErrorMessage = error
-                prefs.lastExecutionStatus = "失败: $error"
-                prefs.lastExecutionTimestamp = System.currentTimeMillis()
-                _uiState.update { it.copy(isChanging = false, statusMessage = error, lastErrorMessage = error, lastExecutionStatus = "失败: $error") }
-                return@launch
-            }
-
-            val now = System.currentTimeMillis()
-            val concreteType = data.sourceType ?: prefs.sourceType
-            val concreteTitle = data.sourceTitle
-
-            prefs.lastChangedTimestamp = now
-            prefs.lastExecutionTimestamp = now
-            prefs.lastWallpaperTitle = data.title
-            prefs.lastWallpaperUri = data.sourceUri
-            prefs.lastWallpaperSourceType = concreteType
-            prefs.lastWallpaperSourceTitle = concreteTitle
-            prefs.lastErrorMessage = null
-            prefs.lastExecutionStatus = "成功"
-
-            val wallpaperKey = data.sourceUri?.toString() ?: data.title
-            if (wallpaperKey != null) {
-                prefs.recordRecentWallpaperKey(wallpaperKey)
-            }
-
-            data.sourceUri?.let { uri ->
-                historyDb.recordAppliedWallpaper(
-                    sourceUri = uri,
-                    title = data.title,
-                    sourceType = concreteType,
-                    appliedTimestamp = now,
-                    sourceTitle = concreteTitle,
-                    remoteUrl = data.remoteUrl
-                )
-            }
-
-            val history = historyDb.getHistoryList()
-            val favorites = historyDb.getFavoritesList()
-            val isFav = data.sourceUri?.let { uri -> favorites.any { it.sourceUri == uri.toString() } } ?: false
-
-            _uiState.update {
-                it.copy(
-                    isChanging = false,
-                    lastWallpaperTitle = data.title,
-                    lastWallpaperUri = data.sourceUri,
-                    lastChangedText = formatTimestamp(now, data.title),
-                    lastErrorMessage = null,
-                    lastExecutionStatus = "成功",
-                    cacheSizeBytes = cacheManager.getCacheSizeBytes(),
-                    fairShuffleRecordedCount = prefs.getRecentWallpaperKeys().size,
-                    historyList = history,
-                    favoritesList = favorites,
-                    isCurrentFavorite = isFav,
-                    statusMessage = "更换成功: ${data.title ?: "未知图片"}"
-                )
-            }
-            CurrentWallpaperWidgetProvider.updateAllWidgets(getApplication())
         }
     }
 
