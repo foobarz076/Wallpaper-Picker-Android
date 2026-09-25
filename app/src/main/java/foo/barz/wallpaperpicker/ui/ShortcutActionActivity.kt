@@ -1,6 +1,7 @@
 package foo.barz.wallpaperpicker.ui
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import foo.barz.wallpaperpicker.core.action.WallpaperActionManager
@@ -153,18 +154,11 @@ class ShortcutActionActivity : Activity() {
             return
         }
 
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-        scope.launch {
-            val result = WallpaperActionManager.openInGallery(this@ShortcutActionActivity, uri)
-            if (result.isFailure) {
-                Toast.makeText(
-                    applicationContext,
-                    "无法打开图库: ${result.exceptionOrNull()?.localizedMessage ?: "未知错误"}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            finish()
+        val lightboxIntent = Intent(this, WallpaperLightboxActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
+        startActivity(lightboxIntent)
+        finish()
     }
 
     companion object {

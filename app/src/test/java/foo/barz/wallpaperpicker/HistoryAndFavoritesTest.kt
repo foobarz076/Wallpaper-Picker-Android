@@ -287,14 +287,17 @@ class HistoryAndFavoritesTest {
     @Test
     fun testManageSpaceUiStateClearCacheProperties() {
         val state = foo.barz.wallpaperpicker.ui.ManageSpaceUiState()
-        assertFalse(state.showClearCacheDialog)
+        assertFalse(state.showClearWallpaperCacheDialog)
+        assertFalse(state.showClearAllImageCacheDialog)
         assertFalse(state.removeInvalidHistoryOnClean)
 
         val requested = state.copy(
-            showClearCacheDialog = true,
+            showClearWallpaperCacheDialog = true,
+            showClearAllImageCacheDialog = true,
             removeInvalidHistoryOnClean = true
         )
-        assertTrue(requested.showClearCacheDialog)
+        assertTrue(requested.showClearWallpaperCacheDialog)
+        assertTrue(requested.showClearAllImageCacheDialog)
         assertTrue(requested.removeInvalidHistoryOnClean)
     }
 }

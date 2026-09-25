@@ -7,6 +7,7 @@ import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.ui.ShortcutActionActivity
+import foo.barz.wallpaperpicker.ui.WallpaperLightboxActivity
 
 /**
  * Utility helper for managing static and dynamic app shortcuts, as well as pinning shortcuts to the desktop.
@@ -34,9 +35,8 @@ object ShortcutHelper {
                 .setIntent(nextIntent)
                 .build()
 
-            val viewIntent = Intent(context, ShortcutActionActivity::class.java).apply {
-                action = ACTION_VIEW_CURRENT_WALLPAPER
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            val viewIntent = Intent(context, WallpaperLightboxActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val viewShortcut = ShortcutInfoCompat.Builder(context, ID_VIEW_CURRENT)
                 .setShortLabel(context.getString(R.string.shortcut_view_short))
@@ -79,9 +79,8 @@ object ShortcutHelper {
      */
     fun requestPinViewCurrentShortcut(context: Context): Boolean {
         if (!isPinShortcutSupported(context)) return false
-        val viewIntent = Intent(context, ShortcutActionActivity::class.java).apply {
-            action = ACTION_VIEW_CURRENT_WALLPAPER
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val viewIntent = Intent(context, WallpaperLightboxActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val shortcut = ShortcutInfoCompat.Builder(context, ID_VIEW_CURRENT)
             .setShortLabel(context.getString(R.string.shortcut_view_short))

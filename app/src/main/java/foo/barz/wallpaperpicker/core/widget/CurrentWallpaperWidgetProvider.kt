@@ -19,6 +19,7 @@ import foo.barz.wallpaperpicker.core.shortcut.ShortcutHelper
 import foo.barz.wallpaperpicker.core.util.AppLog
 import foo.barz.wallpaperpicker.data.PreferencesManager
 import foo.barz.wallpaperpicker.ui.ShortcutActionActivity
+import foo.barz.wallpaperpicker.ui.WallpaperLightboxActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -160,10 +161,9 @@ class CurrentWallpaperWidgetProvider : AppWidgetProvider() {
                     }
                 }
 
-                // Main card click: View full original in external gallery
-                val viewIntent = Intent(context, ShortcutActionActivity::class.java).apply {
-                    action = ShortcutHelper.ACTION_VIEW_CURRENT_WALLPAPER
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                // Main card click: View full original in WallpaperLightboxViewer
+                val viewIntent = Intent(context, WallpaperLightboxActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
                 val viewPendingIntent = PendingIntent.getActivity(
                     context,

@@ -43,6 +43,16 @@
             android:theme="@style/Theme.TransparentAction">
             <intent-filter>
                 <action android:name="foo.barz.wallpaperpicker.ACTION_NEXT_WALLPAPER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.WallpaperLightboxActivity"
+            android:exported="true"
+            android:label="@string/shortcut_view_short"
+            android:theme="@style/Theme.WallpaperPicker">
+            <intent-filter>
                 <action android:name="foo.barz.wallpaperpicker.ACTION_VIEW_CURRENT_WALLPAPER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>

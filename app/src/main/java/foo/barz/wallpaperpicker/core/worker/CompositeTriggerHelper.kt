@@ -78,6 +78,7 @@ object CompositeTriggerHelper {
     fun parseTime(timeStr: String): Pair<Int, Int>? {
         val parts = timeStr.trim().split(":")
         if (parts.size != 2) return null
+        if (parts[0].length != 2 || parts[1].length != 2) return null
         val hour = parts[0].toIntOrNull() ?: return null
         val minute = parts[1].toIntOrNull() ?: return null
         if (hour !in 0..23 || minute !in 0..59) return null
