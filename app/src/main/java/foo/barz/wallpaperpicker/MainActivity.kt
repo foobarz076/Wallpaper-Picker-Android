@@ -22,6 +22,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        foo.barz.wallpaperpicker.core.shortcut.ShortcutHelper.updateDynamicShortcuts(this)
 
         setContent {
             WallpaperPickerTheme {
@@ -93,6 +94,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.reloadSources()
+        viewModel.refreshFromBackground()
     }
 }

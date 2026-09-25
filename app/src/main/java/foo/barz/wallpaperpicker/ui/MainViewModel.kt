@@ -790,6 +790,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Refreshes UI state when returning from background or after a shortcut/worker execution.
+     */
+    fun refreshFromBackground() {
+        val now = prefs.lastChangedTimestamp
+        _uiState.update {
+            it.copy(
+                lastWallpaperTitle = prefs.lastWallpaperTitle,
+                lastWallpaperUri = prefs.lastWallpaperUri,
+                lastChangedText = formatTimestamp(now, prefs.lastWallpaperTitle),
+                lastExecutionStatus = prefs.lastExecutionStatus,
+                lastErrorMessage = prefs.lastErrorMessage,
+                cacheSizeBytes = cacheManager.getCacheSizeBytes()
+            )
+        }
+        refreshHistoryAndFavorites()
+        reloadSources()
+    }
+
     fun refreshHistoryAndFavorites() {
         val history = historyDb.getHistoryList()
         val favorites = historyDb.getFavoritesList()

@@ -27,10 +27,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Policy
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -462,7 +465,72 @@ fun SettingsTab(
             }
         }
 
-        // 5. Storage and Cache Management Card
+        // 5. Desktop Shortcuts Card
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.TouchApp,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("桌面快捷方式 (App Shortcuts)", style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "支持长按桌面应用图标快捷调起，也可直接将独立图标添加到桌面。点击后静默在后台完成操作并弹出提示，无需打开应用主界面。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val success = foo.barz.wallpaperpicker.core.shortcut.ShortcutHelper.requestPinNextWallpaperShortcut(context)
+                            if (!success) {
+                                android.widget.Toast.makeText(context, "可长按桌面应用图标，将「立即换壁纸」拖拽至桌面", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("添加「换壁纸」到桌面", maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val success = foo.barz.wallpaperpicker.core.shortcut.ShortcutHelper.requestPinViewCurrentShortcut(context)
+                            if (!success) {
+                                android.widget.Toast.makeText(context, "可长按桌面应用图标，将「查看壁纸」拖拽至桌面", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Image,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("添加「看原图」到桌面", maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+        }
+
+        // 6. Storage and Cache Management Card
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

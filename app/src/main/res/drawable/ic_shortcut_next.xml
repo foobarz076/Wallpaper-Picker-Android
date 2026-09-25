@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Circular colored container -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M24,24m-22,0a22,22 0,1,1 44,0a22,22 0,1,1 -44,0" />
+
+    <!-- Centered refresh / shuffle icon -->
+    <group
+        android:translateX="12"
+        android:translateY="12">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12,6v3l4,-4l-4,-4v3c-4.42,0 -8,3.58 -8,8c0,1.57 0.46,3.03 1.24,4.26L6.7,14.8c-0.45,-0.83 -0.7,-1.79 -0.7,-2.8c0,-3.31 2.69,-6 6,-6zM18.76,7.74L17.3,9.2c0.44,0.84 0.7,1.79 0.7,2.8c0,3.31 -2.69,6 -6,6v-3l-4,4l4,4v-3c4.42,0 8,-3.58 8,-8c0,-1.57 -0.46,-3.03 -1.24,-4.26z" />
+    </group>
+</vector>

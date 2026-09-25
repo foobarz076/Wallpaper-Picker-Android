@@ -6,4 +6,8 @@
     <string name="status_failed">更换失败</string>
     <string name="manage_space_title">存储空间管理</string>
     <string name="about_title">关于</string>
+    <string name="shortcut_next_short">立即换壁纸</string>
+    <string name="shortcut_next_long">立即切换壁纸</string>
+    <string name="shortcut_view_short">查看壁纸</string>
+    <string name="shortcut_view_long">查看当前壁纸</string>
 </resources>

@@ -26,6 +26,22 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <activity
+            android:name=".ui.ShortcutActionActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.TransparentAction">
+            <intent-filter>
+                <action android:name="foo.barz.wallpaperpicker.ACTION_NEXT_WALLPAPER" />
+                <action android:name="foo.barz.wallpaperpicker.ACTION_VIEW_CURRENT_WALLPAPER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <activity
