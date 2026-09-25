@@ -67,7 +67,9 @@ class FavoritesSource(
                             }
                         },
                         title = item.title ?: "收藏壁纸 #${item.id}",
-                        sourceUri = uri
+                        sourceUri = uri,
+                        sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.FAVORITES,
+                        sourceTitle = "我的收藏"
                     )
                 }
             }

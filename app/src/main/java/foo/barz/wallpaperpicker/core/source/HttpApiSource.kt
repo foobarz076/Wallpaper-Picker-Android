@@ -51,7 +51,10 @@ class HttpApiSource(
                 // Attempt fallback to local LRU cache pool
                 val cached = cacheManager.getRandomCachedWallpaper(excluded)
                 if (cached != null) {
-                    return@runCatching cached
+                    return@runCatching cached.copy(
+                        sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.HTTP_API,
+                        sourceTitle = displayName
+                    )
                 }
                 throw IllegalStateException("当前处于移动网络或离线状态，且本地缓存池为空")
             }
@@ -62,7 +65,10 @@ class HttpApiSource(
                 // Network error fallback to cached wallpaper
                 val cached = cacheManager.getRandomCachedWallpaper(excluded)
                 if (cached != null) {
-                    return@runCatching cached
+                    return@runCatching cached.copy(
+                        sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.HTTP_API,
+                        sourceTitle = displayName
+                    )
                 }
                 throw e
             }
@@ -143,7 +149,9 @@ class HttpApiSource(
         return WallpaperData(
             openStream = { FileInputStream(savedFile) },
             title = title,
-            sourceUri = Uri.fromFile(savedFile)
+            sourceUri = Uri.fromFile(savedFile),
+            sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.HTTP_API,
+            sourceTitle = displayName
         )
     }
 

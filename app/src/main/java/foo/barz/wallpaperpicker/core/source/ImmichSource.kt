@@ -44,7 +44,12 @@ class ImmichSource(
         if (!networkAllowed) {
             val cached = cacheManager.getRandomCachedWallpaper(excluded)
             if (cached != null) {
-                return@withContext Result.success(cached)
+                return@withContext Result.success(
+                    cached.copy(
+                        sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.IMMICH,
+                        sourceTitle = displayName
+                    )
+                )
             }
             return@withContext Result.failure(IllegalStateException("当前处于移动网络或离线状态，且本地缓存池为空"))
         }
@@ -55,7 +60,12 @@ class ImmichSource(
         } catch (e: Exception) {
             val cached = cacheManager.getRandomCachedWallpaper(excluded)
             if (cached != null) {
-                Result.success(cached)
+                Result.success(
+                    cached.copy(
+                        sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.IMMICH,
+                        sourceTitle = displayName
+                    )
+                )
             } else {
                 Result.failure(e)
             }
@@ -106,10 +116,13 @@ class ImmichSource(
             )
         }
 
+        val concreteTitle = if (config.albumName.isNullOrBlank()) "Immich" else "Immich (${config.albumName})"
         return WallpaperData(
             openStream = { FileInputStream(savedFile) },
             title = displayTitle,
-            sourceUri = Uri.fromFile(savedFile)
+            sourceUri = Uri.fromFile(savedFile),
+            sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.IMMICH,
+            sourceTitle = concreteTitle
         )
     }
 

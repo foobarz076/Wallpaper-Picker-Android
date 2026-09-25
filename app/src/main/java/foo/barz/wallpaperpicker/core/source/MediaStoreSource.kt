@@ -142,13 +142,16 @@ class MediaStoreSource(
 
             val (photoUri, photoName) = chosenData
 
+            val concreteTitle = if (!albumName.isNullOrBlank()) albumName else "系统相册"
             WallpaperData(
                 openStream = {
                     resolver.openInputStream(photoUri)
                         ?: throw FileNotFoundException("无法打开系统相册图片流: $photoUri")
                 },
                 title = photoName,
-                sourceUri = photoUri
+                sourceUri = photoUri,
+                sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.MEDIA_STORE,
+                sourceTitle = concreteTitle
             )
         }
     }

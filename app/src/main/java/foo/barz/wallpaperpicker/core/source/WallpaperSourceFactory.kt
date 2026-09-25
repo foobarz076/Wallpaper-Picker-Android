@@ -81,7 +81,8 @@ object WallpaperSourceFactory {
                 if (config.folderUri.isBlank()) {
                     throw IllegalStateException("未配置壁纸文件夹，请先在图源配置中选择文件夹")
                 }
-                LocalFolderSource(context, Uri.parse(config.folderUri))
+                val folderName = config.folderName.ifBlank { entity.title.ifBlank { null } }
+                LocalFolderSource(context, Uri.parse(config.folderUri), folderName)
             }
             WallpaperSourceType.MEDIA_STORE -> {
                 val config = MediaStoreSourceConfig.fromJson(entity.configJson)
@@ -151,7 +152,8 @@ object WallpaperSourceFactory {
             WallpaperSourceType.LOCAL_FOLDER -> {
                 val folderUri = prefs.folderUri
                     ?: throw IllegalStateException("未选择壁纸文件夹，请先授权选择文件夹")
-                LocalFolderSource(context, folderUri)
+                val folderName = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, folderUri)?.name
+                LocalFolderSource(context, folderUri, folderName)
             }
             WallpaperSourceType.MEDIA_STORE -> {
                 MediaStoreSource(

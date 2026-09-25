@@ -99,10 +99,15 @@ class WallpaperWorker(
             )
         }
 
+        val concreteSourceType = wallpaperData.sourceType ?: prefs.sourceType
+        val concreteSourceTitle = wallpaperData.sourceTitle
+
         prefs.lastChangedTimestamp = System.currentTimeMillis()
         prefs.lastExecutionTimestamp = System.currentTimeMillis()
         prefs.lastWallpaperTitle = wallpaperData.title
         prefs.lastWallpaperUri = wallpaperData.sourceUri
+        prefs.lastWallpaperSourceType = concreteSourceType
+        prefs.lastWallpaperSourceTitle = concreteSourceTitle
         prefs.lastExecutionStatus = "成功"
         prefs.lastErrorMessage = null
 
@@ -118,8 +123,9 @@ class WallpaperWorker(
                 foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase(applicationContext).recordAppliedWallpaper(
                     sourceUri = uri,
                     title = wallpaperData.title,
-                    sourceType = prefs.sourceType,
-                    appliedTimestamp = System.currentTimeMillis()
+                    sourceType = concreteSourceType,
+                    appliedTimestamp = System.currentTimeMillis(),
+                    sourceTitle = concreteSourceTitle
                 )
             }
         }

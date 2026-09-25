@@ -152,11 +152,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Retroactively populate history database with last active wallpaper if empty
         val lastUri = prefs.lastWallpaperUri
         if (lastUri != null && historyDb.getHistoryCount() == 0) {
+            val concreteType = prefs.lastWallpaperSourceType ?: prefs.sourceType
+            val concreteTitle = prefs.lastWallpaperSourceTitle
             historyDb.recordAppliedWallpaper(
                 sourceUri = lastUri,
                 title = prefs.lastWallpaperTitle,
-                sourceType = prefs.sourceType,
-                appliedTimestamp = prefs.lastChangedTimestamp
+                sourceType = concreteType,
+                appliedTimestamp = prefs.lastChangedTimestamp,
+                sourceTitle = concreteTitle
             )
         }
         sourcesDb.migrateFromPreferencesIfNeeded(prefs)
@@ -707,10 +710,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val now = System.currentTimeMillis()
+            val concreteType = data.sourceType ?: prefs.sourceType
+            val concreteTitle = data.sourceTitle
+
             prefs.lastChangedTimestamp = now
             prefs.lastExecutionTimestamp = now
             prefs.lastWallpaperTitle = data.title
             prefs.lastWallpaperUri = data.sourceUri
+            prefs.lastWallpaperSourceType = concreteType
+            prefs.lastWallpaperSourceTitle = concreteTitle
             prefs.lastErrorMessage = null
             prefs.lastExecutionStatus = "成功"
 
@@ -723,8 +731,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 historyDb.recordAppliedWallpaper(
                     sourceUri = uri,
                     title = data.title,
-                    sourceType = prefs.sourceType,
-                    appliedTimestamp = now
+                    sourceType = concreteType,
+                    appliedTimestamp = now,
+                    sourceTitle = concreteTitle
                 )
             }
 
@@ -850,11 +859,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (existing != null) {
             toggleFavorite(existing)
         } else {
+            val concreteType = prefs.lastWallpaperSourceType ?: prefs.sourceType
+            val concreteTitle = prefs.lastWallpaperSourceTitle
             val id = historyDb.recordAppliedWallpaper(
                 sourceUri = currentUri,
                 title = prefs.lastWallpaperTitle,
-                sourceType = prefs.sourceType,
-                appliedTimestamp = prefs.lastChangedTimestamp
+                sourceType = concreteType,
+                appliedTimestamp = prefs.lastChangedTimestamp,
+                sourceTitle = concreteTitle
             )
             historyDb.getItemById(id)?.let { toggleFavorite(it) }
         }
@@ -919,12 +931,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             if (result.isSuccess) {
                 val now = System.currentTimeMillis()
+                val concreteTitle = item.displaySourceBadge
                 prefs.lastChangedTimestamp = now
                 prefs.lastWallpaperTitle = item.title
                 prefs.lastWallpaperUri = Uri.parse(item.sourceUri)
+                prefs.lastWallpaperSourceType = item.sourceType
+                prefs.lastWallpaperSourceTitle = concreteTitle
                 prefs.lastErrorMessage = null
                 prefs.lastExecutionStatus = "成功"
-                historyDb.recordAppliedWallpaper(Uri.parse(item.sourceUri), item.title, item.sourceType, now)
+                historyDb.recordAppliedWallpaper(
+                    sourceUri = Uri.parse(item.sourceUri),
+                    title = item.title,
+                    sourceType = item.sourceType,
+                    appliedTimestamp = now,
+                    sourceTitle = concreteTitle
+                )
                 refreshHistoryAndFavorites()
                 _uiState.update {
                     it.copy(

@@ -9,7 +9,9 @@ import java.io.InputStream
 data class WallpaperData(
     val openStream: () -> InputStream,
     val title: String? = null,
-    val sourceUri: Uri? = null
+    val sourceUri: Uri? = null,
+    val sourceType: WallpaperSourceType? = null,
+    val sourceTitle: String? = null
 )
 
 /**

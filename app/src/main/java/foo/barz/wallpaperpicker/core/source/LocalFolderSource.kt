@@ -16,11 +16,26 @@ import java.io.FileNotFoundException
 class LocalFolderSource(
     private val context: Context,
     private val folderUri: Uri,
+    private val folderName: String? = null,
     private val database: LocalFolderIndexDatabase = LocalFolderIndexDatabase(context)
 ) : WallpaperSource {
 
+    constructor(
+        context: Context,
+        folderUri: Uri,
+        database: LocalFolderIndexDatabase
+    ) : this(context, folderUri, null, database)
+
+    private val resolvedFolderName: String by lazy {
+        folderName?.ifBlank { null }
+            ?: androidx.documentfile.provider.DocumentFile.fromTreeUri(context, folderUri)?.name
+            ?: foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem.extractFolderNameFromUri(folderUri.toString())
+            ?: "本地文件夹"
+    }
+
     override val id: String = "local_folder"
-    override val displayName: String = "本地文件夹"
+    override val displayName: String
+        get() = if (resolvedFolderName != "本地文件夹") "本地文件夹 ($resolvedFolderName)" else "本地文件夹"
 
     override suspend fun getNextWallpaper(): Result<WallpaperData> = withContext(Dispatchers.IO) {
         runCatching {
@@ -52,7 +67,9 @@ class LocalFolderSource(
                     }
                 },
                 title = record.fileName,
-                sourceUri = targetUri
+                sourceUri = targetUri,
+                sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.LOCAL_FOLDER,
+                sourceTitle = resolvedFolderName
             )
         }
     }

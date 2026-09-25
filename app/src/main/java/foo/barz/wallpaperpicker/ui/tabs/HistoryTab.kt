@@ -275,19 +275,15 @@ private fun WallpaperGridCard(
             ) {
                 // Source label tag
                 Text(
-                    text = when (item.sourceType) {
-                        WallpaperSourceType.LOCAL_FOLDER -> "本地"
-                        WallpaperSourceType.MEDIA_STORE -> "相册"
-                        WallpaperSourceType.IMMICH -> "Immich"
-                        WallpaperSourceType.HTTP_API -> "HTTP"
-                        WallpaperSourceType.FAVORITES -> "收藏"
-                        WallpaperSourceType.COMPOSITE -> "混合"
-                    },
+                    text = item.displaySourceBadge,
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                        .padding(end = 36.dp)
+                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
 
@@ -380,7 +376,7 @@ private fun WallpaperDetailSheet(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "来源: ${item.sourceType.displayName} · 更换于 ${formatDateTime(item.appliedTimestamp)}",
+                    text = "来源: ${item.displaySourceDetail} · 更换于 ${formatDateTime(item.appliedTimestamp)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )

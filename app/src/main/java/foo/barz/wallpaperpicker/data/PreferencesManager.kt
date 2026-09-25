@@ -64,6 +64,17 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString(KEY_LAST_URI, null)?.let { Uri.parse(it) }
         set(value) = prefs.edit().putString(KEY_LAST_URI, value?.toString()).apply()
 
+    var lastWallpaperSourceType: foo.barz.wallpaperpicker.core.model.WallpaperSourceType?
+        get() {
+            val name = prefs.getString(KEY_LAST_SOURCE_TYPE, null) ?: return null
+            return runCatching { foo.barz.wallpaperpicker.core.model.WallpaperSourceType.valueOf(name) }.getOrNull()
+        }
+        set(value) = prefs.edit().putString(KEY_LAST_SOURCE_TYPE, value?.name).apply()
+
+    var lastWallpaperSourceTitle: String?
+        get() = prefs.getString(KEY_LAST_SOURCE_TITLE, null)
+        set(value) = prefs.edit().putString(KEY_LAST_SOURCE_TITLE, value).apply()
+
     var mediaStoreAlbumId: String?
         get() = prefs.getString(KEY_MEDIA_STORE_ALBUM_ID, null)
         set(value) = prefs.edit().putString(KEY_MEDIA_STORE_ALBUM_ID, value).apply()
@@ -233,6 +244,8 @@ class PreferencesManager(context: Context) {
         private const val KEY_LAST_TIMESTAMP = "last_timestamp"
         private const val KEY_LAST_TITLE = "last_title"
         private const val KEY_LAST_URI = "last_uri"
+        private const val KEY_LAST_SOURCE_TYPE = "last_source_type"
+        private const val KEY_LAST_SOURCE_TITLE = "last_source_title"
         private const val KEY_LAST_EXECUTION_STATUS = "last_execution_status"
         private const val KEY_LAST_ERROR_MESSAGE = "last_error_message"
         private const val KEY_LAST_EXECUTION_TIMESTAMP = "last_execution_timestamp"

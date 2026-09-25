@@ -36,7 +36,8 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                 $COLUMN_FAVORITE_FILE_PATH TEXT,
                 $COLUMN_CUSTOM_SCROLL_MODE TEXT,
                 $COLUMN_CROP_FOCUS_X REAL,
-                $COLUMN_CROP_FOCUS_Y REAL
+                $COLUMN_CROP_FOCUS_Y REAL,
+                $COLUMN_SOURCE_TITLE TEXT
             )
             """.trimIndent()
         )
@@ -46,8 +47,78 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
-        onCreate(db)
+        if (oldVersion < 2) {
+            runCatching {
+                db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_SOURCE_TITLE TEXT")
+            }
+            healLegacyRecords(db)
+        }
+    }
+
+    override fun onOpen(db: SQLiteDatabase) {
+        super.onOpen(db)
+        healLegacyRecords(db)
+    }
+
+    /**
+     * Retroactively repairs legacy records where sourceType was stored as COMPOSITE
+     * or sourceTitle was missing.
+     */
+    private fun healLegacyRecords(db: SQLiteDatabase) {
+        runCatching {
+            val cursor = db.rawQuery(
+                """
+                SELECT $COLUMN_ID, $COLUMN_SOURCE_URI, $COLUMN_SOURCE_TYPE, $COLUMN_SOURCE_TITLE 
+                FROM $TABLE_NAME 
+                WHERE $COLUMN_SOURCE_TITLE IS NULL OR $COLUMN_SOURCE_TYPE = 'COMPOSITE'
+                """.trimIndent(),
+                null
+            )
+            cursor.use {
+                val idCol = it.getColumnIndexOrThrow(COLUMN_ID)
+                val uriCol = it.getColumnIndexOrThrow(COLUMN_SOURCE_URI)
+                val typeCol = it.getColumnIndexOrThrow(COLUMN_SOURCE_TYPE)
+                val titleCol = it.getColumnIndexOrThrow(COLUMN_SOURCE_TITLE)
+
+                while (it.moveToNext()) {
+                    val id = it.getLong(idCol)
+                    val uri = it.getString(uriCol)
+                    val typeStr = it.getString(typeCol)
+                    val existingSourceTitle = if (!it.isNull(titleCol)) it.getString(titleCol) else null
+
+                    var needUpdate = false
+                    val values = ContentValues()
+
+                    var concreteType = runCatching { WallpaperSourceType.valueOf(typeStr) }
+                        .getOrDefault(WallpaperSourceType.LOCAL_FOLDER)
+
+                    // If recorded as COMPOSITE, infer real concrete type from URI
+                    if (concreteType == WallpaperSourceType.COMPOSITE) {
+                        concreteType = when {
+                            uri.contains("content://media/") -> WallpaperSourceType.MEDIA_STORE
+                            uri.contains("/cache/wallpapers") && uri.contains("immich") -> WallpaperSourceType.IMMICH
+                            uri.contains("/cache/wallpapers") -> WallpaperSourceType.HTTP_API
+                            uri.startsWith("http://") || uri.startsWith("https://") -> WallpaperSourceType.HTTP_API
+                            uri.contains("/files/favorites") -> WallpaperSourceType.FAVORITES
+                            else -> WallpaperSourceType.LOCAL_FOLDER
+                        }
+                        values.put(COLUMN_SOURCE_TYPE, concreteType.name)
+                        needUpdate = true
+                    }
+
+                    // Infer source title if missing
+                    if (existingSourceTitle.isNullOrBlank()) {
+                        val inferredTitle = WallpaperHistoryItem.inferSourceTitleFromUri(uri, concreteType)
+                        values.put(COLUMN_SOURCE_TITLE, inferredTitle)
+                        needUpdate = true
+                    }
+
+                    if (needUpdate) {
+                        db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(id.toString()))
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -58,10 +129,13 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         sourceUri: Uri,
         title: String?,
         sourceType: WallpaperSourceType,
-        appliedTimestamp: Long = System.currentTimeMillis()
+        appliedTimestamp: Long = System.currentTimeMillis(),
+        sourceTitle: String? = null
     ): Long {
         val db = writableDatabase
         val uriString = sourceUri.toString()
+        val concreteSourceTitle = sourceTitle?.ifBlank { null }
+            ?: WallpaperHistoryItem.inferSourceTitleFromUri(uriString, sourceType)
 
         val existing = getItemByUri(uriString)
         return if (existing != null) {
@@ -71,6 +145,7 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                     put(COLUMN_TITLE, title)
                 }
                 put(COLUMN_SOURCE_TYPE, sourceType.name)
+                put(COLUMN_SOURCE_TITLE, concreteSourceTitle)
             }
             db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(existing.id.toString()))
             existing.id
@@ -79,6 +154,7 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                 put(COLUMN_SOURCE_URI, uriString)
                 put(COLUMN_TITLE, title)
                 put(COLUMN_SOURCE_TYPE, sourceType.name)
+                put(COLUMN_SOURCE_TITLE, concreteSourceTitle)
                 put(COLUMN_APPLIED_TIMESTAMP, appliedTimestamp)
                 put(COLUMN_IS_FAVORITE, 0)
             }
@@ -250,6 +326,11 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         val customScrollMode = customScrollModeName?.let {
             runCatching { WallpaperScrollMode.valueOf(it) }.getOrNull()
         }
+        val sourceTitle = if (cursor.getColumnIndex(COLUMN_SOURCE_TITLE) != -1 && !cursor.isNull(cursor.getColumnIndex(COLUMN_SOURCE_TITLE))) {
+            cursor.getString(cursor.getColumnIndex(COLUMN_SOURCE_TITLE))
+        } else {
+            null
+        }
 
         return WallpaperHistoryItem(
             id = id,
@@ -262,19 +343,21 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
             favoriteFilePath = favoriteFilePath,
             customScrollMode = customScrollMode,
             cropFocusX = cropFocusX,
-            cropFocusY = cropFocusY
+            cropFocusY = cropFocusY,
+            sourceTitle = sourceTitle
         )
     }
 
     companion object {
         private const val DATABASE_NAME = "wallpaper_history.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
 
         const val TABLE_NAME = "wallpaper_history"
         const val COLUMN_ID = "id"
         const val COLUMN_SOURCE_URI = "source_uri"
         const val COLUMN_TITLE = "title"
         const val COLUMN_SOURCE_TYPE = "source_type"
+        const val COLUMN_SOURCE_TITLE = "source_title"
         const val COLUMN_APPLIED_TIMESTAMP = "applied_timestamp"
         const val COLUMN_IS_FAVORITE = "is_favorite"
         const val COLUMN_FAVORITE_TIMESTAMP = "favorite_timestamp"
