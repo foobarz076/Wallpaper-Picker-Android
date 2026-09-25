@@ -298,6 +298,10 @@ class PreferencesManager(context: Context) {
         get() = prefs.getLong(KEY_COOLDOWN_MINUTES, 10L)
         set(value) = prefs.edit().putLong(KEY_COOLDOWN_MINUTES, value).apply()
 
+    var ruleEngineEnabled: Boolean
+        get() = prefs.getBoolean(KEY_RULE_ENGINE_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_RULE_ENGINE_ENABLED, value).apply()
+
     /**
      * Retrieves the FIFO list of recently applied wallpaper keys.
      */
@@ -381,6 +385,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_DAILY_ANCHOR_TIMES = "daily_anchor_times"
         private const val KEY_SCREEN_OFF_TRIGGER_ENABLED = "screen_off_trigger_enabled"
         private const val KEY_SCREEN_OFF_DELAY_SECONDS = "screen_off_delay_seconds"
+        private const val KEY_RULE_ENGINE_ENABLED = "rule_engine_enabled"
     }
 }
 

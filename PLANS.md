@@ -173,9 +173,12 @@
       - **每日定点基准点 (Daily Anchor)**：支持设置每天固定时刻（如 08:00），通过 WorkManager `initialDelay` 或按需 AlarmManager 准时刷新一张壁纸，并将后续相对周期轮换以此基准点自动对齐。
       - **夜间免打扰时段 (Quiet Hours)**：用户可自定义休眠区间（如 23:00 ~ 07:00），Worker 唤醒时检测当前系统时间处于静默期则自动跳过，杜绝夜间无谓唤醒耗电。
       - **防碰撞冷却抑制 (Cooldown Suppression)**：当定点打卡时刻与周期轮换任务接近（如 07:55 与 08:00）时，基于 `lastChangedTimestamp` 实施最小时间间隔拦截，避免过密刷新壁纸。
-    - **第二阶段（独立规则日程表 Schedule Rule Engine）**：
+    - **[已实现] 第二阶段（独立规则日程表 Schedule Rule Engine）**：
       - 支持多条调度规则组合（如规则 1：每日 08:00 切换专属 Morning 摄影相册；规则 2：09:00~18:00 每 2 小时随机轮播；规则 3：20:00 切换深色暗黑图源）。
-      - 调度引擎分流：常规任务交由 WorkManager，精确定点与短间隔按需借力 AlarmManager 与轻量前台保活服务。
+      - 独立 SQLite 规则数据库（`ScheduleRulesDatabase`）持久化存储与管理。
+      - 规则引擎（`ScheduleRuleEngine`）动态按触发时刻与事件（定点打卡、时段窗口、熄屏防抖）匹配对应规则，并解析专属图源（指定图源实体、我的收藏或全局源）与指定屏幕目标。
+      - 调度引擎分流：常规任务交由 WorkManager，精确定点与短间隔借力 AlarmManager 高精度时钟与 ScreenOffWatcherService。
+      - 设置页提供直观的可视化多规则卡片管理、新增/编辑弹窗（`ScheduleRuleEditDialog`）、启停开关与默认预设一键载入。
     - **外部环境感知扩展**：
       - 对于基于网络（特定 Wi-Fi SSID）、车载蓝牙连接、充电状态、NFC 触碰、地理围栏等更复杂的外部情境触发，规划收拢至阶段 5.5，通过标准的 **Tasker / Locale 插件** 由专业自动化工具编排触发，避免本应用自身常驻前台监听。
 - **桌面微件 (AppWidget)**：在手机桌面上放置一个快捷按钮，无需打开应用一键切壁纸。

@@ -135,6 +135,13 @@ fun MainScreen(
     onExportFavorites: () -> Unit = {},
     onOpenManageSpace: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
+    onToggleRuleEngine: (Boolean) -> Unit = {},
+    onOpenRuleDialog: (foo.barz.wallpaperpicker.core.model.ScheduleRule?) -> Unit = {},
+    onCloseRuleDialog: () -> Unit = {},
+    onSaveScheduleRule: (foo.barz.wallpaperpicker.core.model.ScheduleRule) -> Unit = {},
+    onDeleteScheduleRule: (String) -> Unit = {},
+    onToggleScheduleRuleEnabled: (String, Boolean) -> Unit = { _, _ -> },
+    onPopulateDefaultRules: () -> Unit = {},
     onChangeNow: () -> Unit,
     onClearStatus: () -> Unit
 ) {
@@ -284,7 +291,14 @@ fun MainScreen(
                         onClearCache = onClearCache,
                         onExportFavorites = onExportFavorites,
                         onOpenManageSpace = onOpenManageSpace,
-                        onOpenAbout = onOpenAbout
+                        onOpenAbout = onOpenAbout,
+                        onToggleRuleEngine = onToggleRuleEngine,
+                        onOpenRuleDialog = onOpenRuleDialog,
+                        onCloseRuleDialog = onCloseRuleDialog,
+                        onSaveScheduleRule = onSaveScheduleRule,
+                        onDeleteScheduleRule = onDeleteScheduleRule,
+                        onToggleScheduleRuleEnabled = onToggleScheduleRuleEnabled,
+                        onPopulateDefaultRules = onPopulateDefaultRules
                     )
                 }
             }

@@ -43,6 +43,10 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.AlertDialog
+import foo.barz.wallpaperpicker.core.model.ScheduleRule
+import foo.barz.wallpaperpicker.core.model.ScheduleRuleSourceBinding
+import foo.barz.wallpaperpicker.core.model.ScheduleRuleTriggerType
+import foo.barz.wallpaperpicker.ui.components.ScheduleRuleEditDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -113,6 +117,13 @@ fun SettingsTab(
     onExportFavorites: () -> Unit = {},
     onOpenManageSpace: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
+    onToggleRuleEngine: (Boolean) -> Unit = {},
+    onOpenRuleDialog: (ScheduleRule?) -> Unit = {},
+    onCloseRuleDialog: () -> Unit = {},
+    onSaveScheduleRule: (ScheduleRule) -> Unit = {},
+    onDeleteScheduleRule: (String) -> Unit = {},
+    onToggleScheduleRuleEnabled: (String, Boolean) -> Unit = { _, _ -> },
+    onPopulateDefaultRules: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -429,6 +440,171 @@ fun SettingsTab(
                     )
                     Spacer(modifier = Modifier.height(14.dp))
 
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = !state.ruleEngineEnabled,
+                            onClick = { onToggleRuleEngine(false) },
+                            label = { Text("主从复合模式") }
+                        )
+                        FilterChip(
+                            selected = state.ruleEngineEnabled,
+                            onClick = {
+                                onToggleRuleEngine(true)
+                                if (state.scheduleRules.isEmpty()) {
+                                    onPopulateDefaultRules()
+                                }
+                            },
+                            label = { Text("独立规则日程表 (Rule Engine)") }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (state.ruleEngineEnabled) {
+                        Text(
+                            text = "规则日程表：根据多条独立规则在指定时段或时刻切换专属图源",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (state.scheduleRules.isEmpty()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("当前暂无调度规则", style = MaterialTheme.typography.bodyMedium)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Button(onClick = { onOpenRuleDialog(null) }) {
+                                            Text("添加新规则")
+                                        }
+                                        OutlinedButton(onClick = onPopulateDefaultRules) {
+                                            Text("载入默认预设")
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                state.scheduleRules.forEach { rule ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (rule.isEnabled)
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                                            else
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                        )
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = rule.name,
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        color = if (rule.isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                                                    )
+                                                    val triggerDesc = when (rule.triggerType) {
+                                                        ScheduleRuleTriggerType.DAILY_TIME -> "每日 ${rule.targetTime} 定点打卡"
+                                                        ScheduleRuleTriggerType.TIME_WINDOW -> "${rule.windowStartTime} ~ ${rule.windowEndTime} (每 ${rule.intervalMinutes} 分钟)"
+                                                        ScheduleRuleTriggerType.SCREEN_OFF -> "锁屏熄屏切换 (延迟 ${rule.screenOffDelaySeconds} 秒)"
+                                                    }
+                                                    Text(
+                                                        text = triggerDesc,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                                Switch(
+                                                    checked = rule.isEnabled,
+                                                    onCheckedChange = { onToggleScheduleRuleEnabled(rule.id, it) }
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .horizontalScroll(rememberScrollState()),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                val sourceText = when (rule.sourceBinding) {
+                                                    ScheduleRuleSourceBinding.ACTIVE_DEFAULT -> "跟随全局激活源"
+                                                    ScheduleRuleSourceBinding.FAVORITES -> "专属: 我的收藏"
+                                                    ScheduleRuleSourceBinding.SPECIFIC_SOURCE -> "专属: ${rule.specificSourceTitle ?: "指定图源"}"
+                                                }
+                                                SuggestionChip(
+                                                    onClick = {},
+                                                    label = { Text(sourceText) }
+                                                )
+                                                SuggestionChip(
+                                                    onClick = {},
+                                                    label = { Text(rule.targetScreen.label) }
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.End
+                                            ) {
+                                                TextButton(
+                                                    onClick = { onOpenRuleDialog(rule) },
+                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text("编辑", style = MaterialTheme.typography.labelMedium)
+                                                }
+                                                TextButton(
+                                                    onClick = { onDeleteScheduleRule(rule.id) },
+                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        "删除",
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        color = MaterialTheme.colorScheme.error
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { onOpenRuleDialog(null) },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("添加调度规则")
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    TextButton(onClick = onPopulateDefaultRules) {
+                                        Text("重置默认预设")
+                                    }
+                                }
+                            }
+                        }
+                    } else {
                     Text(
                         text = "可组合触发方式 (支持多选组合生效)",
                         style = MaterialTheme.typography.labelLarge,
@@ -612,6 +788,7 @@ fun SettingsTab(
                                 }
                             }
                         }
+                    }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -1253,6 +1430,15 @@ fun SettingsTab(
                     }
                 }
             }
+        )
+    }
+
+    if (state.isRuleDialogOpen) {
+        ScheduleRuleEditDialog(
+            initialRule = state.editingRule,
+            availableSources = state.sourcesList,
+            onDismissRequest = onCloseRuleDialog,
+            onSaveRule = onSaveScheduleRule
         )
     }
 }

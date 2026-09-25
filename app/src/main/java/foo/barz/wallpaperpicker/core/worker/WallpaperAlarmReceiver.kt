@@ -33,9 +33,16 @@ class WallpaperAlarmReceiver : BroadcastReceiver() {
             acquire(30_000L) // Safety timeout
         }
 
+        val ruleId = intent.getStringExtra(WallpaperAlarmScheduler.EXTRA_RULE_ID)
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                WallpaperChangeExecutor.execute(context, isManualTrigger = false)
+                WallpaperChangeExecutor.execute(
+                    context = context,
+                    isManualTrigger = false,
+                    ruleId = ruleId,
+                    eventContext = TriggerEventContext.EXACT_ALARM
+                )
             } finally {
                 // Ensure the next alarm is registered
                 WallpaperAlarmScheduler.scheduleNext(context)

@@ -54,7 +54,8 @@ class ScreenOffWatcherService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val prefs = PreferencesManager(this)
-        if (!prefs.isScheduled || !prefs.screenOffTriggerEnabled) {
+        val shouldRun = prefs.isScheduled && (prefs.screenOffTriggerEnabled || (prefs.ruleEngineEnabled && hasEnabledScreenOffRule()))
+        if (!shouldRun) {
             stopSelf()
             return START_NOT_STICKY
         }
@@ -72,19 +73,37 @@ class ScreenOffWatcherService : Service() {
 
     private fun handleScreenOff() {
         val prefs = PreferencesManager(this)
-        if (!prefs.isScheduled || !prefs.screenOffTriggerEnabled) return
+        val shouldHandle = prefs.isScheduled && (prefs.screenOffTriggerEnabled || (prefs.ruleEngineEnabled && hasEnabledScreenOffRule()))
+        if (!shouldHandle) return
 
         pendingChangeJob?.cancel()
         pendingChangeJob = serviceScope.launch {
-            val delaySeconds = prefs.screenOffDelaySeconds.coerceIn(1, 60)
+            val matchingRule = if (prefs.ruleEngineEnabled) {
+                foo.barz.wallpaperpicker.core.database.ScheduleRulesDatabase(applicationContext)
+                    .getEnabledRules()
+                    .firstOrNull { it.triggerType == foo.barz.wallpaperpicker.core.model.ScheduleRuleTriggerType.SCREEN_OFF }
+            } else null
+
+            val delaySeconds = (matchingRule?.screenOffDelaySeconds ?: prefs.screenOffDelaySeconds).coerceIn(1, 60)
             delay(delaySeconds * 1000L)
 
             val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
             // Verify screen is still turned off before applying wallpaper
             if (powerManager?.isInteractive == false) {
-                WallpaperChangeExecutor.execute(applicationContext, isManualTrigger = false)
+                WallpaperChangeExecutor.execute(
+                    context = applicationContext,
+                    isManualTrigger = false,
+                    ruleId = matchingRule?.id,
+                    eventContext = TriggerEventContext.SCREEN_OFF
+                )
             }
         }
+    }
+
+    private fun hasEnabledScreenOffRule(): Boolean {
+        return foo.barz.wallpaperpicker.core.database.ScheduleRulesDatabase(this)
+            .getEnabledRules()
+            .any { it.triggerType == foo.barz.wallpaperpicker.core.model.ScheduleRuleTriggerType.SCREEN_OFF }
     }
 
     private fun registerScreenReceiver() {
@@ -159,7 +178,14 @@ class ScreenOffWatcherService : Service() {
 
         fun syncWithPreferences(context: Context) {
             val prefs = PreferencesManager(context)
-            if (prefs.isScheduled && prefs.screenOffTriggerEnabled) {
+            val shouldRun = prefs.isScheduled && (
+                prefs.screenOffTriggerEnabled || (
+                    prefs.ruleEngineEnabled && foo.barz.wallpaperpicker.core.database.ScheduleRulesDatabase(context)
+                        .getEnabledRules()
+                        .any { it.triggerType == foo.barz.wallpaperpicker.core.model.ScheduleRuleTriggerType.SCREEN_OFF }
+                )
+            )
+            if (shouldRun) {
                 start(context)
             } else {
                 stop(context)

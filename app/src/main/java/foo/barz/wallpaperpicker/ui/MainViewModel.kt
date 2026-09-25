@@ -17,7 +17,11 @@ import foo.barz.wallpaperpicker.core.database.LocalFolderFastScanner
 import foo.barz.wallpaperpicker.core.database.LocalFolderIndexDatabase
 import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
 import foo.barz.wallpaperpicker.core.database.WallpaperSourcesDatabase
+import foo.barz.wallpaperpicker.core.database.ScheduleRulesDatabase
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
+import foo.barz.wallpaperpicker.core.model.ScheduleRule
+import foo.barz.wallpaperpicker.core.model.ScheduleRuleSourceBinding
+import foo.barz.wallpaperpicker.core.model.ScheduleRuleTriggerType
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceEntity
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
@@ -127,6 +131,10 @@ data class MainUiState(
     val quietHoursEndMinute: Int = 0,
     val cooldownSuppressionEnabled: Boolean = true,
     val cooldownMinutes: Long = 10L,
+    val ruleEngineEnabled: Boolean = false,
+    val scheduleRules: List<ScheduleRule> = emptyList(),
+    val isRuleDialogOpen: Boolean = false,
+    val editingRule: ScheduleRule? = null,
     val statusMessage: String? = null
 )
 
@@ -139,6 +147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val folderIndexDb = LocalFolderIndexDatabase(application)
     private val historyDb = WallpaperHistoryDatabase(application)
     private val sourcesDb = WallpaperSourcesDatabase(application)
+    private val scheduleRulesDb = ScheduleRulesDatabase(application)
 
     private val _uiState = MutableStateFlow(
         MainUiState(
@@ -194,7 +203,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             quietHoursEndHour = prefs.quietHoursEndHour,
             quietHoursEndMinute = prefs.quietHoursEndMinute,
             cooldownSuppressionEnabled = prefs.cooldownSuppressionEnabled,
-            cooldownMinutes = prefs.cooldownMinutes
+            cooldownMinutes = prefs.cooldownMinutes,
+            ruleEngineEnabled = prefs.ruleEngineEnabled
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -216,6 +226,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         sourcesDb.migrateFromPreferencesIfNeeded(prefs)
         refreshHistoryAndFavorites()
         reloadSources()
+        loadScheduleRules()
     }
 
     fun reloadSources() {
@@ -879,9 +890,84 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(cooldownMinutes = minutes) }
     }
 
+    fun onToggleRuleEngine(enabled: Boolean) {
+        prefs.ruleEngineEnabled = enabled
+        _uiState.update { it.copy(ruleEngineEnabled = enabled) }
+        refreshScheduling()
+    }
+
+    fun loadScheduleRules() {
+        viewModelScope.launch {
+            val rules = withContext(Dispatchers.IO) {
+                scheduleRulesDb.getAllRules()
+            }
+            _uiState.update { it.copy(scheduleRules = rules) }
+        }
+    }
+
+    fun onOpenRuleDialog(rule: ScheduleRule? = null) {
+        _uiState.update { it.copy(isRuleDialogOpen = true, editingRule = rule) }
+    }
+
+    fun onCloseRuleDialog() {
+        _uiState.update { it.copy(isRuleDialogOpen = false, editingRule = null) }
+    }
+
+    fun onSaveScheduleRule(rule: ScheduleRule) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val exists = scheduleRulesDb.getRuleById(rule.id) != null
+                if (exists) {
+                    scheduleRulesDb.updateRule(rule)
+                } else {
+                    scheduleRulesDb.insertRule(rule)
+                }
+            }
+            loadScheduleRules()
+            refreshScheduling()
+            onCloseRuleDialog()
+            _uiState.update { it.copy(statusMessage = "已保存规则「${rule.name}」") }
+        }
+    }
+
+    fun onDeleteScheduleRule(id: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                scheduleRulesDb.deleteRule(id)
+            }
+            loadScheduleRules()
+            refreshScheduling()
+            _uiState.update { it.copy(statusMessage = "已删除规则") }
+        }
+    }
+
+    fun onToggleScheduleRuleEnabled(id: String, enabled: Boolean) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                scheduleRulesDb.setRuleEnabled(id, enabled)
+            }
+            loadScheduleRules()
+            refreshScheduling()
+        }
+    }
+
+    fun onPopulateDefaultRules() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                scheduleRulesDb.populateDefaultPresetRulesIfNeeded()
+            }
+            loadScheduleRules()
+            refreshScheduling()
+            _uiState.update { it.copy(statusMessage = "已载入默认预设规则") }
+        }
+    }
+
     private fun refreshScheduling() {
         val context = getApplication<Application>()
-        if (prefs.exactTimerEnabled) {
+        if (prefs.ruleEngineEnabled) {
+            WallpaperAlarmScheduler.schedule(context)
+            WallpaperWorker.schedule(context, 15L) // Background fallback heartbeat
+        } else if (prefs.exactTimerEnabled) {
             WallpaperWorker.cancel(context)
             WallpaperAlarmScheduler.schedule(context)
         } else {

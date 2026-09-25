@@ -36,7 +36,9 @@ object WallpaperChangeExecutor {
 
     suspend fun execute(
         context: Context,
-        isManualTrigger: Boolean = false
+        isManualTrigger: Boolean = false,
+        ruleId: String? = null,
+        eventContext: TriggerEventContext = TriggerEventContext.PERIODIC_WORKER
     ): WallpaperExecutionResult {
         val prefs = PreferencesManager(context)
         val now = System.currentTimeMillis()
@@ -84,18 +86,32 @@ object WallpaperChangeExecutor {
             }
         }
 
-        // 4. Create active source
+        // 4. Resolve active schedule rule (Phase 4.2 Schedule Rule Engine)
+        val matchingRule = if (!isManualTrigger && prefs.ruleEngineEnabled) {
+            ScheduleRuleEngine.findMatchingRule(context, now, eventContext, ruleId)
+        } else null
+
+        // 5. Create active source (bound to rule or global)
         val source = runCatching {
-            WallpaperSourceFactory.createActiveSource(
-                context = context,
-                prefs = prefs,
-                bypassNetworkConstraints = isManualTrigger
-            )
+            if (matchingRule != null) {
+                ScheduleRuleEngine.resolveSourceForRule(
+                    context = context,
+                    rule = matchingRule,
+                    prefs = prefs,
+                    bypassNetworkConstraints = isManualTrigger
+                )
+            } else {
+                WallpaperSourceFactory.createActiveSource(
+                    context = context,
+                    prefs = prefs,
+                    bypassNetworkConstraints = isManualTrigger
+                )
+            }
         }.getOrElse { error ->
             return recordFailure(prefs, error)
         }
 
-        // 5. Fetch next wallpaper
+        // 6. Fetch next wallpaper
         val sourceResult = source.getNextWallpaper()
         if (sourceResult.isFailure) {
             return recordFailure(
@@ -159,9 +175,10 @@ object WallpaperChangeExecutor {
             }
         }
 
-        // 10. Apply wallpaper to system
+        // 10. Apply wallpaper to system (rule-specific target if defined, otherwise global preference)
         val applier = WallpaperApplier(context)
-        val applyResult = applier.apply(bitmap, prefs.target)
+        val effectiveTarget = matchingRule?.targetScreen ?: prefs.target
+        val applyResult = applier.apply(bitmap, effectiveTarget)
         if (applyResult.isFailure) {
             return recordFailure(
                 prefs,
@@ -170,7 +187,12 @@ object WallpaperChangeExecutor {
         }
 
         val concreteSourceType = wallpaperData.sourceType ?: prefs.sourceType
-        val concreteSourceTitle = wallpaperData.sourceTitle
+        val baseSourceTitle = wallpaperData.sourceTitle
+        val concreteSourceTitle = if (matchingRule != null) {
+            if (baseSourceTitle.isNullOrBlank()) matchingRule.name else "${matchingRule.name} · $baseSourceTitle"
+        } else {
+            baseSourceTitle
+        }
         val appliedTime = System.currentTimeMillis()
 
         prefs.lastChangedTimestamp = appliedTime
@@ -179,7 +201,7 @@ object WallpaperChangeExecutor {
         prefs.lastWallpaperUri = wallpaperData.sourceUri
         prefs.lastWallpaperSourceType = concreteSourceType
         prefs.lastWallpaperSourceTitle = concreteSourceTitle
-        prefs.lastExecutionStatus = "成功"
+        prefs.lastExecutionStatus = if (matchingRule != null) "成功 (规则: ${matchingRule.name})" else "成功"
         prefs.lastErrorMessage = null
 
         // 11. Record wallpaper key into Fair Shuffle history

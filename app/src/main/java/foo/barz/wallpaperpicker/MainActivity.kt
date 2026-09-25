@@ -105,6 +105,13 @@ class MainActivity : ComponentActivity() {
                     onOpenAbout = {
                         startActivity(Intent(this, AboutActivity::class.java))
                     },
+                    onToggleRuleEngine = viewModel::onToggleRuleEngine,
+                    onOpenRuleDialog = viewModel::onOpenRuleDialog,
+                    onCloseRuleDialog = viewModel::onCloseRuleDialog,
+                    onSaveScheduleRule = viewModel::onSaveScheduleRule,
+                    onDeleteScheduleRule = viewModel::onDeleteScheduleRule,
+                    onToggleScheduleRuleEnabled = viewModel::onToggleScheduleRuleEnabled,
+                    onPopulateDefaultRules = viewModel::onPopulateDefaultRules,
                     onChangeNow = viewModel::changeNow,
                     onClearStatus = viewModel::clearStatusMessage
                 )

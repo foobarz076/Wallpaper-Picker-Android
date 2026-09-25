@@ -15,6 +15,7 @@ import foo.barz.wallpaperpicker.data.PreferencesManager
 object WallpaperAlarmScheduler {
 
     const val ACTION_ALARM_TRIGGER = "foo.barz.wallpaperpicker.ACTION_ALARM_TRIGGER"
+    const val EXTRA_RULE_ID = "extra_rule_id"
     private const val REQUEST_CODE = 2001
 
     /**
@@ -37,6 +38,18 @@ object WallpaperAlarmScheduler {
         WallpaperWorker.cancel(context)
 
         val now = System.currentTimeMillis()
+
+        if (prefs.ruleEngineEnabled) {
+            val nextSchedule = ScheduleRuleEngine.computeNextTriggerMillis(context, now)
+            if (nextSchedule != null) {
+                val (triggerAtMillis, rule) = nextSchedule
+                setAlarm(context, triggerAtMillis, rule.id)
+            } else {
+                cancel(context)
+            }
+            return
+        }
+
         val intervalMs = prefs.intervalMinutes * 60 * 1000L
 
         val intervalTrigger = if (prefs.intervalScheduleEnabled) now + intervalMs else null
@@ -56,7 +69,7 @@ object WallpaperAlarmScheduler {
             }
         }
 
-        setAlarm(context, triggerAtMillis)
+        setAlarm(context, triggerAtMillis, null)
     }
 
     /**
@@ -75,9 +88,9 @@ object WallpaperAlarmScheduler {
         alarmManager.cancel(pendingIntent)
     }
 
-    private fun setAlarm(context: Context, triggerAtMillis: Long) {
+    private fun setAlarm(context: Context, triggerAtMillis: Long, ruleId: String? = null) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val pendingIntent = getPendingIntent(context)
+        val pendingIntent = getPendingIntent(context, ruleId)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager.canScheduleExactAlarms()) {
@@ -92,9 +105,12 @@ object WallpaperAlarmScheduler {
         }
     }
 
-    private fun getPendingIntent(context: Context): PendingIntent {
+    private fun getPendingIntent(context: Context, ruleId: String? = null): PendingIntent {
         val intent = Intent(context, WallpaperAlarmReceiver::class.java).apply {
             action = ACTION_ALARM_TRIGGER
+            if (!ruleId.isNullOrBlank()) {
+                putExtra(EXTRA_RULE_ID, ruleId)
+            }
         }
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
