@@ -3,6 +3,7 @@ package foo.barz.wallpaperpicker.data
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
 
@@ -212,6 +213,17 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean(KEY_FAIR_SHUFFLE, true)
         set(value) = prefs.edit().putBoolean(KEY_FAIR_SHUFFLE, value).apply()
 
+    var fairShuffleCapacity: Int
+        get() = prefs.getInt(KEY_FAIR_SHUFFLE_CAPACITY, 50)
+        set(value) = prefs.edit().putInt(KEY_FAIR_SHUFFLE_CAPACITY, value).apply()
+
+    var cacheSizeTier: CacheSizeTier
+        get() {
+            val name = prefs.getString(KEY_CACHE_SIZE_TIER, CacheSizeTier.STANDARD.name)
+            return runCatching { CacheSizeTier.valueOf(name!!) }.getOrDefault(CacheSizeTier.STANDARD)
+        }
+        set(value) = prefs.edit().putString(KEY_CACHE_SIZE_TIER, value.name).apply()
+
     /**
      * Retrieves the FIFO list of recently applied wallpaper keys.
      */
@@ -223,7 +235,7 @@ class PreferencesManager(context: Context) {
     /**
      * Records a wallpaper key into the FIFO history, evicting the oldest when exceeding capacity.
      */
-    fun recordRecentWallpaperKey(key: String, maxCapacity: Int = 50) {
+    fun recordRecentWallpaperKey(key: String, maxCapacity: Int = fairShuffleCapacity) {
         if (key.isBlank()) return
         val current = getRecentWallpaperKeys().filter { it != key }.toMutableList()
         current.add(key)
@@ -278,5 +290,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_IMMICH_ALBUM_IDS = "immich_album_ids"
         private const val KEY_COMPOSITE_ENABLED_SOURCES = "composite_enabled_sources"
         private const val KEY_WIDGET_SCALE_TYPE = "widget_scale_type"
+        private const val KEY_CACHE_SIZE_TIER = "cache_size_tier"
+        private const val KEY_FAIR_SHUFFLE_CAPACITY = "fair_shuffle_capacity"
     }
 }

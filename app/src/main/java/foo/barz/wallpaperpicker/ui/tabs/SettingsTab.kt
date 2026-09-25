@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
@@ -81,6 +83,9 @@ fun SettingsTab(
     onIntervalSelected: (Long) -> Unit,
     onToggleDeferDuringInteraction: (Boolean) -> Unit,
     onToggleFairShuffle: (Boolean) -> Unit,
+    onFairShuffleCapacitySelected: (Int) -> Unit = {},
+    onResetFairShuffleDeck: () -> Unit = {},
+    onCacheSizeTierSelected: (CacheSizeTier) -> Unit = {},
     onWidgetScaleTypeSelected: (WidgetScaleType) -> Unit = {},
     onClearCache: () -> Unit = {},
     onExportFavorites: () -> Unit = {},
@@ -454,7 +459,7 @@ fun SettingsTab(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("智能洗牌防重复 (Fair Shuffle)", style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            text = "记忆最近 50 张已用壁纸，在一整轮展示完之前避免高频抽取相同图片",
+                            text = "记忆最近已用壁纸，在一整轮展示完之前避免高频抽取相同图片",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -463,6 +468,48 @@ fun SettingsTab(
                         checked = state.fairShuffle,
                         onCheckedChange = onToggleFairShuffle
                     )
+                }
+
+                if (state.fairShuffle) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "记忆窗口深度：",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(20, 50, 100).forEach { capacity ->
+                            FilterChip(
+                                selected = state.fairShuffleCapacity == capacity,
+                                onClick = { onFairShuffleCapacitySelected(capacity) },
+                                label = { Text("$capacity 张") }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "当前牌堆记忆: ${state.fairShuffleRecordedCount} / ${state.fairShuffleCapacity} 张",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        OutlinedButton(
+                            onClick = onResetFairShuffleDeck,
+                            enabled = state.fairShuffleRecordedCount > 0,
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("重置洗牌牌堆", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                 }
             }
         }
@@ -622,7 +669,7 @@ fun SettingsTab(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("临时网络缓存 (LRU 缓存池)", style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            text = "网络图源下载的临时图片，用于离线降级复用。可在下方「深入管理应用存储空间」中清理并选择是否同步清理失效记录",
+                            text = "网络图源下载的临时图片，用于离线降级复用。超出容量上限后按最久未展示 (LRU) 顺序自动淘汰，已收藏壁纸受离线保护永不删除",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -634,6 +681,56 @@ fun SettingsTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // 4.1.3 Cache Size Tier Configuration & Disabled Option
+                Text("自动清理与缓存容量上限", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "配置网络缓存池的最大淘汰容量；达到上限后自动淘汰最旧图片：",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = state.cacheSizeTier == CacheSizeTier.SMALL,
+                            onClick = { onCacheSizeTierSelected(CacheSizeTier.SMALL) },
+                            label = { Text("小 (20MB)") }
+                        )
+                        FilterChip(
+                            selected = state.cacheSizeTier == CacheSizeTier.STANDARD,
+                            onClick = { onCacheSizeTierSelected(CacheSizeTier.STANDARD) },
+                            label = { Text("标准 (50MB)") }
+                        )
+                        FilterChip(
+                            selected = state.cacheSizeTier == CacheSizeTier.LARGE,
+                            onClick = { onCacheSizeTierSelected(CacheSizeTier.LARGE) },
+                            label = { Text("大 (100MB)") }
+                        )
+                    }
+
+                    FilterChip(
+                        selected = state.cacheSizeTier == CacheSizeTier.DISABLED,
+                        onClick = { onCacheSizeTierSelected(CacheSizeTier.DISABLED) },
+                        label = { Text("禁用自动清理 (不限制)") }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = state.cacheSizeTier.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (state.cacheSizeTier == CacheSizeTier.DISABLED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -651,9 +748,16 @@ fun SettingsTab(
                 // Manage Space Activity launcher
                 OutlinedButton(
                     onClick = onOpenManageSpace,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
                 ) {
-                    Text("深入管理应用存储空间…")
+                    Icon(
+                        Icons.Default.CleaningServices,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("管理存储空间与清理缓存…")
                 }
             }
         }

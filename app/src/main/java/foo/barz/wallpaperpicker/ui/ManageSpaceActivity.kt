@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +37,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -81,7 +83,8 @@ data class ManageSpaceUiState(
     val isCalculating: Boolean = true,
     val isClearingCache: Boolean = false,
     val showClearAllDialog: Boolean = false,
-    val showClearCacheDialog: Boolean = false,
+    val showClearWallpaperCacheDialog: Boolean = false,
+    val showClearAllImageCacheDialog: Boolean = false,
     val removeInvalidHistoryOnClean: Boolean = false,
     val statusMessage: String? = null
 ) {
@@ -124,29 +127,73 @@ class ManageSpaceViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun requestClearImageCache() {
-        _uiState.update { it.copy(showClearCacheDialog = true) }
+    fun requestClearWallpaperCacheOnly() {
+        _uiState.update { it.copy(showClearWallpaperCacheDialog = true) }
     }
 
-    fun dismissClearCacheDialog() {
-        _uiState.update { it.copy(showClearCacheDialog = false) }
+    fun dismissClearWallpaperCacheDialog() {
+        _uiState.update { it.copy(showClearWallpaperCacheDialog = false) }
     }
 
-    fun toggleRemoveInvalidHistoryOnClean(checked: Boolean) {
-        _uiState.update { it.copy(removeInvalidHistoryOnClean = checked) }
-    }
-
-    fun confirmClearImageCache() {
+    fun confirmClearWallpaperCacheOnly() {
         val removeHistory = _uiState.value.removeInvalidHistoryOnClean
-        dismissClearCacheDialog()
-        clearImageCache(removeHistory)
+        dismissClearWallpaperCacheDialog()
+        clearWallpaperCacheOnly(removeHistory)
     }
 
     /**
-     * Clears only image cache files without affecting user preferences or background workers.
+     * Clears only downloaded wallpaper files, preserving Coil thumbnail cache.
      * Optionally purges broken non-favorite history entries whose local cached files are deleted.
      */
-    fun clearImageCache(removeInvalidHistory: Boolean = false) {
+    fun clearWallpaperCacheOnly(removeInvalidHistory: Boolean = false) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isClearingCache = true) }
+
+            val oldWp = cacheManager.getCacheSizeBytes()
+            cacheManager.clearCache()
+            val remainingWp = cacheManager.getCacheSizeBytes()
+            val freed = maxOf(0L, oldWp - remainingWp)
+
+            var removedHistoryCount = 0
+            if (removeInvalidHistory) {
+                removedHistoryCount = historyDb.clearInvalidUnfavoritedRecords(getApplication())
+            }
+
+            val msg = if (removedHistoryCount > 0) {
+                "已清理下载壁纸原图缓存 (释放了 ${formatFileSize(freed)})，并同步移除了 $removedHistoryCount 条失效历史记录（缩略图已保留）"
+            } else {
+                "已清理下载壁纸原图缓存 (释放了 ${formatFileSize(freed)})，缩略图已保留"
+            }
+
+            _uiState.update {
+                it.copy(
+                    wallpaperCacheBytes = remainingWp,
+                    isClearingCache = false,
+                    statusMessage = msg
+                )
+            }
+        }
+    }
+
+    fun requestClearAllImageCache() {
+        _uiState.update { it.copy(showClearAllImageCacheDialog = true) }
+    }
+
+    fun dismissClearAllImageCacheDialog() {
+        _uiState.update { it.copy(showClearAllImageCacheDialog = false) }
+    }
+
+    fun confirmClearAllImageCache() {
+        val removeHistory = _uiState.value.removeInvalidHistoryOnClean
+        dismissClearAllImageCacheDialog()
+        clearAllImageCache(removeHistory)
+    }
+
+    /**
+     * Clears all image cache files including wallpaper downloads and Coil thumbnail/disk caches.
+     * Optionally purges broken non-favorite history entries whose local cached files are deleted.
+     */
+    fun clearAllImageCache(removeInvalidHistory: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isClearingCache = true) }
 
@@ -171,9 +218,9 @@ class ManageSpaceViewModel(application: Application) : AndroidViewModel(applicat
             }.getOrDefault(0L)
 
             val msg = if (removedHistoryCount > 0) {
-                "图片缓存已成功清理，并同步移除了 $removedHistoryCount 条失效历史记录"
+                "全部图片缓存已成功清理，并同步移除了 $removedHistoryCount 条失效历史记录"
             } else {
-                "图片缓存已成功清理"
+                "全部图片缓存已成功清理"
             }
 
             _uiState.update {
@@ -185,6 +232,10 @@ class ManageSpaceViewModel(application: Application) : AndroidViewModel(applicat
                 )
             }
         }
+    }
+
+    fun toggleRemoveInvalidHistoryOnClean(checked: Boolean) {
+        _uiState.update { it.copy(removeInvalidHistoryOnClean = checked) }
     }
 
     /**
@@ -226,9 +277,12 @@ class ManageSpaceActivity : ComponentActivity() {
                 ManageSpaceScreen(
                     uiState = uiState,
                     onBackClick = { finish() },
-                    onRequestClearImageCache = viewModel::requestClearImageCache,
-                    onConfirmClearImageCache = viewModel::confirmClearImageCache,
-                    onDismissClearCacheDialog = viewModel::dismissClearCacheDialog,
+                    onRequestClearWallpaperCache = viewModel::requestClearWallpaperCacheOnly,
+                    onConfirmClearWallpaperCache = viewModel::confirmClearWallpaperCacheOnly,
+                    onDismissClearWallpaperCacheDialog = viewModel::dismissClearWallpaperCacheDialog,
+                    onRequestClearAllImageCache = viewModel::requestClearAllImageCache,
+                    onConfirmClearAllImageCache = viewModel::confirmClearAllImageCache,
+                    onDismissClearAllImageCacheDialog = viewModel::dismissClearAllImageCacheDialog,
                     onToggleRemoveInvalidHistory = viewModel::toggleRemoveInvalidHistoryOnClean,
                     onRequestClearAll = viewModel::showClearAllDialog,
                     onConfirmClearAll = viewModel::clearAllData,
@@ -245,9 +299,12 @@ class ManageSpaceActivity : ComponentActivity() {
 fun ManageSpaceScreen(
     uiState: ManageSpaceUiState,
     onBackClick: () -> Unit,
-    onRequestClearImageCache: () -> Unit,
-    onConfirmClearImageCache: () -> Unit,
-    onDismissClearCacheDialog: () -> Unit,
+    onRequestClearWallpaperCache: () -> Unit,
+    onConfirmClearWallpaperCache: () -> Unit,
+    onDismissClearWallpaperCacheDialog: () -> Unit,
+    onRequestClearAllImageCache: () -> Unit,
+    onConfirmClearAllImageCache: () -> Unit,
+    onDismissClearAllImageCacheDialog: () -> Unit,
     onToggleRemoveInvalidHistory: (Boolean) -> Unit,
     onRequestClearAll: () -> Unit,
     onConfirmClearAll: () -> Unit,
@@ -359,7 +416,7 @@ fun ManageSpaceScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "图片缓存",
+                            text = "图片缓存管理",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -368,53 +425,93 @@ fun ManageSpaceScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "包含自动下载的网络壁纸、图片缩略图及视图预加载缓存。清理此项不会删除您的设置、相册目录关联与定时任务。",
+                        text = "已下载的网络壁纸与缩略图缓存独立统计。您可根据需要仅清理下载壁纸大图以保留缩略图预览，或一次性清理全部图片缓存。",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
+                    // Option A: Wallpaper Download Cache Only
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "壁纸缓存: ${formatFileSize(uiState.wallpaperCacheBytes)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                text = "下载壁纸原图缓存",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "缩略图缓存: ${formatFileSize(uiState.coilCacheBytes)}",
+                                text = "网络图源下载的大图文件，用于离线轮换：${formatFileSize(uiState.wallpaperCacheBytes)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             )
                         }
-
-                        Button(
-                            onClick = onRequestClearImageCache,
-                            enabled = !uiState.isCalculating && !uiState.isClearingCache && uiState.totalImageCacheBytes > 0L,
-                            shape = RoundedCornerShape(8.dp)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        OutlinedButton(
+                            onClick = onRequestClearWallpaperCache,
+                            enabled = !uiState.isCalculating && !uiState.isClearingCache && uiState.wallpaperCacheBytes > 0L,
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            if (uiState.isClearingCache) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("清理中…")
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.DeleteOutline,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("清理图片缓存")
-                            }
+                            Text("仅清理下载壁纸", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Item B: Thumbnail Cache Info
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "界面缩略图与视图缓存",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "历史记录与图源列表中的缩略图磁盘缓存：${formatFileSize(uiState.coilCacheBytes)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Option B: Clear All Image Caches
+                    Button(
+                        onClick = onRequestClearAllImageCache,
+                        enabled = !uiState.isCalculating && !uiState.isClearingCache && uiState.totalImageCacheBytes > 0L,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        if (uiState.isClearingCache) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("清理中…")
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("清理全部图片缓存 (${formatFileSize(uiState.totalImageCacheBytes)})")
                         }
                     }
                 }
@@ -480,10 +577,10 @@ fun ManageSpaceScreen(
         }
     }
 
-    // Confirmation dialog for clearing image cache
-    if (uiState.showClearCacheDialog) {
+    // Confirmation dialog for clearing wallpaper download cache only
+    if (uiState.showClearWallpaperCacheDialog) {
         AlertDialog(
-            onDismissRequest = onDismissClearCacheDialog,
+            onDismissRequest = onDismissClearWallpaperCacheDialog,
             icon = {
                 Icon(
                     imageVector = Icons.Default.Warning,
@@ -492,14 +589,15 @@ fun ManageSpaceScreen(
                 )
             },
             title = {
-                Text(text = "清理网络图片缓存？")
+                Text(text = "仅清理下载壁纸原图？")
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "此操作将释放所有已下载的网络壁纸临时文件与缩略图缓存。\n\n" +
+                        text = "此操作仅释放网络图源下载的壁纸原图文件 (${formatFileSize(uiState.wallpaperCacheBytes)})。\n\n" +
+                                "• 缩略图缓存将得到保留，历史记录与图源列表仍可流畅预览。\n" +
                                 "• 已收藏壁纸（已持久化隔离）：不受任何影响。\n" +
-                                "• 未收藏的网络壁纸原图：本地文件将被清理，历史记录中将显示失效（后续支持按需重新从网络下载）。"
+                                "• 未收藏的网络壁纸原图：本地文件将被清理，历史记录中将显示失效（后续可按需从网络重新下载）。"
                     )
                     Row(
                         modifier = Modifier
@@ -524,13 +622,71 @@ fun ManageSpaceScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = onConfirmClearImageCache
+                    onClick = onConfirmClearWallpaperCache
                 ) {
-                    Text("确认清理")
+                    Text("确认清理下载壁纸")
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismissClearCacheDialog) {
+                TextButton(onClick = onDismissClearWallpaperCacheDialog) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    // Confirmation dialog for clearing all image caches
+    if (uiState.showClearAllImageCacheDialog) {
+        AlertDialog(
+            onDismissRequest = onDismissClearAllImageCacheDialog,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(text = "清理全部图片缓存？")
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "此操作将同时释放所有下载的壁纸原图以及界面缩略图与预加载缓存 (${formatFileSize(uiState.totalImageCacheBytes)})。\n\n" +
+                                "• 已收藏壁纸（已持久化隔离）：不受任何影响。\n" +
+                                "• 未收藏的网络壁纸原图：本地文件将被清理，历史记录中将显示失效。\n" +
+                                "• 缩略图将在再次浏览相关列表时按需重新生成。"
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onToggleRemoveInvalidHistory(!uiState.removeInvalidHistoryOnClean)
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = uiState.removeInvalidHistoryOnClean,
+                            onCheckedChange = onToggleRemoveInvalidHistory
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "同时移除失去原图的非收藏历史记录",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = onConfirmClearAllImageCache
+                ) {
+                    Text("确认清理全部图片")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissClearAllImageCacheDialog) {
                     Text("取消")
                 }
             }

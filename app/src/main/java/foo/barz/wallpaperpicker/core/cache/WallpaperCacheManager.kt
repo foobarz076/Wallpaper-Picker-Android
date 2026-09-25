@@ -2,7 +2,9 @@ package foo.barz.wallpaperpicker.core.cache
 
 import android.content.Context
 import android.net.Uri
+import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.WallpaperData
+import foo.barz.wallpaperpicker.data.PreferencesManager
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -78,7 +80,8 @@ class WallpaperCacheManager(private val context: Context) {
             targetFile.setLastModified(System.currentTimeMillis())
         }
 
-        pruneCache()
+        val prefs = PreferencesManager(context)
+        pruneCache(prefs.cacheSizeTier)
         return targetFile
     }
 
@@ -137,6 +140,17 @@ class WallpaperCacheManager(private val context: Context) {
             }
         }
         return allDeleted
+    }
+
+    /**
+     * Prunes the cache pool based on the configured CacheSizeTier.
+     * If the tier disables auto-pruning, no eviction is performed.
+     */
+    fun pruneCache(tier: CacheSizeTier) {
+        if (!tier.isAutoPruneEnabled) {
+            return
+        }
+        pruneCache(tier.maxCount, tier.maxSizeBytes)
     }
 
     /**

@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
@@ -90,6 +91,9 @@ fun MainScreen(
     onToggleSchedule: (Boolean) -> Unit,
     onToggleDeferDuringInteraction: (Boolean) -> Unit,
     onToggleFairShuffle: (Boolean) -> Unit,
+    onFairShuffleCapacitySelected: (Int) -> Unit = {},
+    onResetFairShuffleDeck: () -> Unit = {},
+    onCacheSizeTierSelected: (CacheSizeTier) -> Unit = {},
     onWidgetScaleTypeSelected: (WidgetScaleType) -> Unit = {},
     onToggleFavoriteCurrent: () -> Unit = {},
     onApplyWallpaperFromHistory: (WallpaperHistoryItem) -> Unit = {},
@@ -249,6 +253,9 @@ fun MainScreen(
                         onIntervalSelected = onIntervalSelected,
                         onToggleDeferDuringInteraction = onToggleDeferDuringInteraction,
                         onToggleFairShuffle = onToggleFairShuffle,
+                        onFairShuffleCapacitySelected = onFairShuffleCapacitySelected,
+                        onResetFairShuffleDeck = onResetFairShuffleDeck,
+                        onCacheSizeTierSelected = onCacheSizeTierSelected,
                         onWidgetScaleTypeSelected = onWidgetScaleTypeSelected,
                         onClearCache = onClearCache,
                         onExportFavorites = onExportFavorites,

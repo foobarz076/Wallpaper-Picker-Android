@@ -17,6 +17,7 @@ import foo.barz.wallpaperpicker.core.database.LocalFolderFastScanner
 import foo.barz.wallpaperpicker.core.database.LocalFolderIndexDatabase
 import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
 import foo.barz.wallpaperpicker.core.database.WallpaperSourcesDatabase
+import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceEntity
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
@@ -94,6 +95,9 @@ data class MainUiState(
     val lastErrorMessage: String? = null,
     val deferDuringInteraction: Boolean = true,
     val fairShuffle: Boolean = true,
+    val fairShuffleCapacity: Int = 50,
+    val fairShuffleRecordedCount: Int = 0,
+    val cacheSizeTier: CacheSizeTier = CacheSizeTier.STANDARD,
     val historyList: List<WallpaperHistoryItem> = emptyList(),
     val favoritesList: List<WallpaperHistoryItem> = emptyList(),
     val isCurrentFavorite: Boolean = false,
@@ -152,6 +156,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             lastErrorMessage = prefs.lastErrorMessage,
             deferDuringInteraction = prefs.deferDuringInteraction,
             fairShuffle = prefs.fairShuffle,
+            fairShuffleCapacity = prefs.fairShuffleCapacity,
+            fairShuffleRecordedCount = prefs.getRecentWallpaperKeys().size,
+            cacheSizeTier = prefs.cacheSizeTier,
             widgetScaleType = prefs.widgetScaleType
         )
     )
@@ -578,11 +585,63 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(deferDuringInteraction = enabled) }
     }
 
+    fun onCacheSizeTierSelected(tier: CacheSizeTier) {
+        prefs.cacheSizeTier = tier
+        if (tier.isAutoPruneEnabled) {
+            cacheManager.pruneCache(tier)
+        }
+        val currentSize = cacheManager.getCacheSizeBytes()
+        _uiState.update {
+            it.copy(
+                cacheSizeTier = tier,
+                cacheSizeBytes = currentSize,
+                statusMessage = if (tier.isAutoPruneEnabled) {
+                    "自动清理已设定为「${tier.displayName}」"
+                } else {
+                    "已禁用自动清理，壁纸将不再自动淘汰"
+                }
+            )
+        }
+    }
+
     fun onToggleFairShuffle(enabled: Boolean) {
         prefs.fairShuffle = enabled
-        _uiState.update { it.copy(fairShuffle = enabled) }
         if (!enabled) {
             prefs.clearRecentWallpaperKeys()
+        }
+        _uiState.update {
+            it.copy(
+                fairShuffle = enabled,
+                fairShuffleRecordedCount = if (enabled) prefs.getRecentWallpaperKeys().size else 0,
+                statusMessage = if (enabled) "智能洗牌防重复已开启" else "智能洗牌已关闭，已清空近期抽取记忆"
+            )
+        }
+    }
+
+    fun onFairShuffleCapacitySelected(capacity: Int) {
+        prefs.fairShuffleCapacity = capacity
+        val currentKeys = prefs.getRecentWallpaperKeys()
+        if (currentKeys.size > capacity) {
+            val trimmed = currentKeys.takeLast(capacity)
+            prefs.clearRecentWallpaperKeys()
+            trimmed.forEach { prefs.recordRecentWallpaperKey(it, capacity) }
+        }
+        _uiState.update {
+            it.copy(
+                fairShuffleCapacity = capacity,
+                fairShuffleRecordedCount = prefs.getRecentWallpaperKeys().size,
+                statusMessage = "洗牌防重复记忆容量已调整为 $capacity 张"
+            )
+        }
+    }
+
+    fun onResetFairShuffleDeck() {
+        prefs.clearRecentWallpaperKeys()
+        _uiState.update {
+            it.copy(
+                fairShuffleRecordedCount = 0,
+                statusMessage = "洗牌历史已重置，已开启新一轮全量随机抽取"
+            )
         }
     }
 
@@ -791,6 +850,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     lastErrorMessage = null,
                     lastExecutionStatus = "成功",
                     cacheSizeBytes = cacheManager.getCacheSizeBytes(),
+                    fairShuffleRecordedCount = prefs.getRecentWallpaperKeys().size,
                     historyList = history,
                     favoritesList = favorites,
                     isCurrentFavorite = isFav,
