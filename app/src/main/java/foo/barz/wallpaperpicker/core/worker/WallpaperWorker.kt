@@ -71,7 +71,24 @@ class WallpaperWorker(
             return Result.success()
         }
 
-        val processResult = processor.process(wallpaperData.openStream, prefs.scrollMode, prefs.cropMode)
+        // Query per-image preference override (scroll mode, crop center focus, horizontal flip)
+        val historyDb = foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase(applicationContext)
+        val customPref = wallpaperData.sourceUri?.let { uri ->
+            runCatching { historyDb.getItemByUri(uri.toString()) }.getOrNull()
+        }
+        val effectiveScrollMode = customPref?.customScrollMode ?: prefs.scrollMode
+        val effectiveCropFocusX = customPref?.cropFocusX ?: 0.5f
+        val effectiveCropFocusY = customPref?.cropFocusY ?: 0.5f
+        val effectiveFlipHorizontal = customPref?.flipHorizontal ?: false
+
+        val processResult = processor.process(
+            openStream = wallpaperData.openStream,
+            scrollMode = effectiveScrollMode,
+            cropMode = prefs.cropMode,
+            cropFocusX = effectiveCropFocusX,
+            cropFocusY = effectiveCropFocusY,
+            flipHorizontal = effectiveFlipHorizontal
+        )
         if (processResult.isFailure) {
             return handleFailure(
                 prefs,
@@ -129,6 +146,9 @@ class WallpaperWorker(
                 )
             }
         }
+
+        // Refresh home screen widget thumbnail
+        foo.barz.wallpaperpicker.core.widget.CurrentWallpaperWidgetProvider.updateAllWidgets(applicationContext)
 
         return Result.success()
     }

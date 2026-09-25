@@ -75,6 +75,14 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString(KEY_LAST_SOURCE_TITLE, null)
         set(value) = prefs.edit().putString(KEY_LAST_SOURCE_TITLE, value).apply()
 
+    var widgetScaleType: foo.barz.wallpaperpicker.core.model.WidgetScaleType
+        get() {
+            val name = prefs.getString(KEY_WIDGET_SCALE_TYPE, foo.barz.wallpaperpicker.core.model.WidgetScaleType.CROP.name)
+            return runCatching { foo.barz.wallpaperpicker.core.model.WidgetScaleType.valueOf(name!!) }
+                .getOrDefault(foo.barz.wallpaperpicker.core.model.WidgetScaleType.CROP)
+        }
+        set(value) = prefs.edit().putString(KEY_WIDGET_SCALE_TYPE, value.name).apply()
+
     var mediaStoreAlbumId: String?
         get() = prefs.getString(KEY_MEDIA_STORE_ALBUM_ID, null)
         set(value) = prefs.edit().putString(KEY_MEDIA_STORE_ALBUM_ID, value).apply()
@@ -269,5 +277,6 @@ class PreferencesManager(context: Context) {
         private const val KEY_MEDIA_STORE_ALBUM_IDS = "media_store_album_ids"
         private const val KEY_IMMICH_ALBUM_IDS = "immich_album_ids"
         private const val KEY_COMPOSITE_ENABLED_SOURCES = "composite_enabled_sources"
+        private const val KEY_WIDGET_SCALE_TYPE = "widget_scale_type"
     }
 }

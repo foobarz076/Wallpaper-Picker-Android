@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,6 +37,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,8 +51,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
+import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
+import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
+import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentSheet
 
 /**
  * Dashboard tab displaying current wallpaper preview, immediate actions, status diagnostics,
@@ -60,10 +68,18 @@ fun DashboardTab(
     onShareWallpaper: () -> Unit,
     onSaveToGallery: () -> Unit,
     onToggleFavoriteCurrent: () -> Unit,
+    onUpdateCurrentWallpaperPreferences: (
+        customScrollMode: WallpaperScrollMode?,
+        cropFocusX: Float?,
+        cropFocusY: Float?,
+        flipHorizontal: Boolean,
+        applyImmediately: Boolean
+    ) -> Unit = { _, _, _, _, _ -> },
     onChangeNow: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var showAdjustmentSheet by remember { mutableStateOf(false) }
 
     // Write external storage permission for legacy Android versions (API <= 28)
     val writeStorageLauncher = rememberLauncherForActivityResult(
@@ -234,6 +250,25 @@ fun DashboardTab(
                                 Text(if (state.isCurrentFavorite) "已收藏" else "设为收藏", maxLines = 1)
                             }
                         }
+
+                        OutlinedButton(
+                            onClick = { showAdjustmentSheet = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Tune,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            val customBadge = if (state.currentWallpaperItem?.customScrollMode != null ||
+                                (state.currentWallpaperItem?.cropFocusX != null && state.currentWallpaperItem?.cropFocusX != 0.5f) ||
+                                (state.currentWallpaperItem?.cropFocusY != null && state.currentWallpaperItem?.cropFocusY != 0.5f) ||
+                                state.currentWallpaperItem?.flipHorizontal == true
+                            ) " (已个性化)" else ""
+                            Text("微调构图与滚动$customBadge", maxLines = 1)
+                        }
                     }
                 }
             }
@@ -305,5 +340,28 @@ fun DashboardTab(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    if (showAdjustmentSheet && state.lastWallpaperUri != null) {
+        val targetItem = state.currentWallpaperItem ?: WallpaperHistoryItem(
+            sourceUri = state.lastWallpaperUri.toString(),
+            title = state.lastWallpaperTitle,
+            sourceType = WallpaperSourceType.LOCAL_FOLDER,
+            appliedTimestamp = System.currentTimeMillis()
+        )
+        WallpaperAdjustmentSheet(
+            item = targetItem,
+            globalScrollMode = state.scrollMode,
+            onDismiss = { showAdjustmentSheet = false },
+            onSave = { customScrollMode, cropFocusX, cropFocusY, flipHorizontal, applyImmediately ->
+                onUpdateCurrentWallpaperPreferences(
+                    customScrollMode,
+                    cropFocusX,
+                    cropFocusY,
+                    flipHorizontal,
+                    applyImmediately
+                )
+            }
+        )
     }
 }

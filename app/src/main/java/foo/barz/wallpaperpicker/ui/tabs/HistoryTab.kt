@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -64,8 +65,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
+import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
+import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentSheet
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -91,10 +94,19 @@ fun HistoryTab(
     onOpenInGallery: (Uri) -> Unit,
     onShareWallpaper: (Uri, String?) -> Unit,
     onSaveToGallery: (Uri, String?) -> Unit,
+    onUpdateWallpaperPreferences: (
+        item: WallpaperHistoryItem,
+        customScrollMode: WallpaperScrollMode?,
+        cropFocusX: Float?,
+        cropFocusY: Float?,
+        flipHorizontal: Boolean,
+        applyImmediately: Boolean
+    ) -> Unit = { _, _, _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var subTab by rememberSaveable { mutableStateOf(HistorySubTab.HISTORY) }
     var selectedItemForDetail by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
+    var selectedItemForAdjustment by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val currentList = when (subTab) {
@@ -229,9 +241,33 @@ fun HistoryTab(
                 },
                 onOpen = { onOpenInGallery(item.displayUri) },
                 onShare = { onShareWallpaper(item.displayUri, item.title) },
-                onSave = { onSaveToGallery(item.displayUri, item.title) }
+                onSave = { onSaveToGallery(item.displayUri, item.title) },
+                onOpenAdjustment = {
+                    val target = item
+                    selectedItemForDetail = null
+                    selectedItemForAdjustment = target
+                }
             )
         }
+    }
+
+    // Per-image personalized attribute adjustment sheet
+    selectedItemForAdjustment?.let { item ->
+        WallpaperAdjustmentSheet(
+            item = item,
+            globalScrollMode = state.scrollMode,
+            onDismiss = { selectedItemForAdjustment = null },
+            onSave = { customScrollMode, cropFocusX, cropFocusY, flipHorizontal, applyImmediately ->
+                onUpdateWallpaperPreferences(
+                    item,
+                    customScrollMode,
+                    cropFocusX,
+                    cropFocusY,
+                    flipHorizontal,
+                    applyImmediately
+                )
+            }
+        )
     }
 }
 
@@ -344,7 +380,8 @@ private fun WallpaperDetailSheet(
     onDelete: () -> Unit,
     onOpen: () -> Unit,
     onShare: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    onOpenAdjustment: () -> Unit
 ) {
     val context = LocalContext.current
     val isAccessible = remember(item.displayUri) { isUriAccessible(context, item.displayUri) }
@@ -522,6 +559,24 @@ private fun WallpaperDetailSheet(
                     Text("系统分享", maxLines = 1)
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = onOpenAdjustment,
+            enabled = isAccessible,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+        ) {
+            Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            val customBadge = if (item.customScrollMode != null ||
+                (item.cropFocusX != null && item.cropFocusX != 0.5f) ||
+                (item.cropFocusY != null && item.cropFocusY != 0.5f) ||
+                item.flipHorizontal
+            ) " (已个性化)" else ""
+            Text("微调构图与滚动$customBadge", maxLines = 1)
         }
 
         Spacer(modifier = Modifier.height(10.dp))

@@ -31,7 +31,10 @@ class WallpaperProcessor(private val context: Context) {
     suspend fun process(
         openStream: () -> InputStream,
         scrollMode: WallpaperScrollMode = WallpaperScrollMode.AUTO,
-        cropMode: WallpaperCropMode = WallpaperCropMode.FIT_HEIGHT
+        cropMode: WallpaperCropMode = WallpaperCropMode.FIT_HEIGHT,
+        cropFocusX: Float = 0.5f,
+        cropFocusY: Float = 0.5f,
+        flipHorizontal: Boolean = false
     ): Result<Bitmap> = withContext(Dispatchers.IO) {
         runCatching {
             // Step 1: Decode image bounds only
@@ -63,7 +66,7 @@ class WallpaperProcessor(private val context: Context) {
             } ?: throw IllegalStateException("解码图片失败")
 
             // Step 5: Render scaled and cropped bitmap onto canvas
-            renderScaledBitmap(downsampled, targetWidth, targetHeight, cropMode)
+            renderScaledBitmap(downsampled, targetWidth, targetHeight, cropMode, cropFocusX, cropFocusY, flipHorizontal)
         }
     }
 
@@ -132,38 +135,65 @@ class WallpaperProcessor(private val context: Context) {
         src: Bitmap,
         targetWidth: Int,
         targetHeight: Int,
-        cropMode: WallpaperCropMode
+        cropMode: WallpaperCropMode,
+        cropFocusX: Float = 0.5f,
+        cropFocusY: Float = 0.5f,
+        flipHorizontal: Boolean = false
     ): Bitmap {
-        if (src.width == targetWidth && src.height == targetHeight) {
-            return src
+        // Step 5.1: Apply horizontal flip if enabled
+        val preparedSrc = if (flipHorizontal) {
+            val matrix = android.graphics.Matrix().apply { preScale(-1f, 1f) }
+            val flipped = Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+            if (src != flipped && !src.isRecycled) {
+                src.recycle()
+            }
+            flipped
+        } else {
+            src
+        }
+
+        if (preparedSrc.width == targetWidth && preparedSrc.height == targetHeight && cropFocusX == 0.5f && cropFocusY == 0.5f) {
+            return preparedSrc
         }
 
         val scale = when (cropMode) {
             // Fit height: scale matches target height exactly, preserving 100% vertical content (no cutting heads/feet)
             WallpaperCropMode.FIT_HEIGHT -> {
-                targetHeight.toFloat() / src.height.toFloat()
+                targetHeight.toFloat() / preparedSrc.height.toFloat()
             }
             // Center crop: fill entire target rectangle without black bars
             WallpaperCropMode.CENTER_CROP -> {
                 max(
-                    targetWidth.toFloat() / src.width.toFloat(),
-                    targetHeight.toFloat() / src.height.toFloat()
+                    targetWidth.toFloat() / preparedSrc.width.toFloat(),
+                    targetHeight.toFloat() / preparedSrc.height.toFloat()
                 )
             }
             // Fit center: full image uncropped, letterboxed with black background
             WallpaperCropMode.FIT_CENTER -> {
                 min(
-                    targetWidth.toFloat() / src.width.toFloat(),
-                    targetHeight.toFloat() / src.height.toFloat()
+                    targetWidth.toFloat() / preparedSrc.width.toFloat(),
+                    targetHeight.toFloat() / preparedSrc.height.toFloat()
                 )
             }
         }
 
-        val scaledWidth = (src.width * scale).toInt()
-        val scaledHeight = (src.height * scale).toInt()
+        val scaledWidth = (preparedSrc.width * scale).toInt()
+        val scaledHeight = (preparedSrc.height * scale).toInt()
 
-        val left = (targetWidth - scaledWidth) / 2
-        val top = (targetHeight - scaledHeight) / 2
+        // Calculate crop offset using normalized cropFocusX and cropFocusY (0.0 to 1.0)
+        val left = if (scaledWidth > targetWidth) {
+            val excessWidth = scaledWidth - targetWidth
+            -(excessWidth * cropFocusX.coerceIn(0f, 1f)).toInt()
+        } else {
+            (targetWidth - scaledWidth) / 2
+        }
+
+        val top = if (scaledHeight > targetHeight) {
+            val excessHeight = scaledHeight - targetHeight
+            -(excessHeight * cropFocusY.coerceIn(0f, 1f)).toInt()
+        } else {
+            (targetHeight - scaledHeight) / 2
+        }
 
         val output = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
@@ -175,12 +205,12 @@ class WallpaperProcessor(private val context: Context) {
 
         val paint = Paint(Paint.FILTER_BITMAP_FLAG)
         val destRect = Rect(left, top, left + scaledWidth, top + scaledHeight)
-        val srcRect = Rect(0, 0, src.width, src.height)
+        val srcRect = Rect(0, 0, preparedSrc.width, preparedSrc.height)
 
-        canvas.drawBitmap(src, srcRect, destRect, paint)
+        canvas.drawBitmap(preparedSrc, srcRect, destRect, paint)
 
-        if (src != output && !src.isRecycled) {
-            src.recycle()
+        if (preparedSrc != output && !preparedSrc.isRecycled) {
+            preparedSrc.recycle()
         }
 
         return output

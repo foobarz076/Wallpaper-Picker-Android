@@ -27,10 +27,12 @@ import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
+import foo.barz.wallpaperpicker.core.model.WidgetScaleType
 import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
 import foo.barz.wallpaperpicker.core.source.ImmichSource
 import foo.barz.wallpaperpicker.core.source.MediaStoreSource
 import foo.barz.wallpaperpicker.core.source.WallpaperSourceFactory
+import foo.barz.wallpaperpicker.core.widget.CurrentWallpaperWidgetProvider
 import foo.barz.wallpaperpicker.core.worker.WallpaperWorker
 import foo.barz.wallpaperpicker.data.PreferencesManager
 import kotlinx.coroutines.Dispatchers
@@ -92,9 +94,11 @@ data class MainUiState(
     val historyList: List<WallpaperHistoryItem> = emptyList(),
     val favoritesList: List<WallpaperHistoryItem> = emptyList(),
     val isCurrentFavorite: Boolean = false,
+    val currentWallpaperItem: WallpaperHistoryItem? = null,
     val favoritesSizeBytes: Long = 0L,
     val isExportingFavorites: Boolean = false,
     val sourcesList: List<WallpaperSourceEntity> = emptyList(),
+    val widgetScaleType: WidgetScaleType = WidgetScaleType.CROP,
     val statusMessage: String? = null
 )
 
@@ -143,7 +147,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             lastExecutionStatus = prefs.lastExecutionStatus,
             lastErrorMessage = prefs.lastErrorMessage,
             deferDuringInteraction = prefs.deferDuringInteraction,
-            fairShuffle = prefs.fairShuffle
+            fairShuffle = prefs.fairShuffle,
+            widgetScaleType = prefs.widgetScaleType
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -577,13 +582,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onWidgetScaleTypeSelected(type: WidgetScaleType) {
+        prefs.widgetScaleType = type
+        _uiState.update { it.copy(widgetScaleType = type) }
+        CurrentWallpaperWidgetProvider.updateAllWidgets(getApplication())
+    }
+
     fun reapplyCurrentWallpaper() {
         val uri = _uiState.value.lastWallpaperUri ?: return
         viewModelScope.launch {
+            val currentUriStr = uri.toString()
+            val customPref = withContext(Dispatchers.IO) { historyDb.getItemByUri(currentUriStr) }
+            val effectiveScrollMode = customPref?.customScrollMode ?: prefs.scrollMode
+            val effectiveCropFocusX = customPref?.cropFocusX ?: 0.5f
+            val effectiveCropFocusY = customPref?.cropFocusY ?: 0.5f
+            val effectiveFlipHorizontal = customPref?.flipHorizontal ?: false
+
             _uiState.update {
                 it.copy(
                     isChanging = true,
-                    statusMessage = "正在按「${prefs.cropMode.label} + ${prefs.scrollMode.label}」重新应用壁纸…"
+                    statusMessage = "正在按「${prefs.cropMode.label} + ${effectiveScrollMode.label}」重新应用壁纸…"
                 )
             }
             val processResult = processor.process(
@@ -595,8 +613,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             ?: throw java.io.FileNotFoundException("无法打开图片流: $uri")
                     }
                 },
-                scrollMode = prefs.scrollMode,
-                cropMode = prefs.cropMode
+                scrollMode = effectiveScrollMode,
+                cropMode = prefs.cropMode,
+                cropFocusX = effectiveCropFocusX,
+                cropFocusY = effectiveCropFocusY,
+                flipHorizontal = effectiveFlipHorizontal
             )
 
             if (processResult.isFailure) {
@@ -686,7 +707,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val data = nextResult.getOrThrow()
-            val processResult = processor.process(data.openStream, prefs.scrollMode, prefs.cropMode)
+            val customPref = data.sourceUri?.let { uri ->
+                withContext(Dispatchers.IO) { historyDb.getItemByUri(uri.toString()) }
+            }
+            val effectiveScrollMode = customPref?.customScrollMode ?: prefs.scrollMode
+            val effectiveCropFocusX = customPref?.cropFocusX ?: 0.5f
+            val effectiveCropFocusY = customPref?.cropFocusY ?: 0.5f
+            val effectiveFlipHorizontal = customPref?.flipHorizontal ?: false
+
+            val processResult = processor.process(
+                openStream = data.openStream,
+                scrollMode = effectiveScrollMode,
+                cropMode = prefs.cropMode,
+                cropFocusX = effectiveCropFocusX,
+                cropFocusY = effectiveCropFocusY,
+                flipHorizontal = effectiveFlipHorizontal
+            )
 
             if (processResult.isFailure) {
                 val error = processResult.exceptionOrNull()?.message ?: "图片处理失败"
@@ -756,6 +792,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     statusMessage = "更换成功: ${data.title ?: "未知图片"}"
                 )
             }
+            CurrentWallpaperWidgetProvider.updateAllWidgets(getApplication())
         }
     }
 
@@ -802,7 +839,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 lastChangedText = formatTimestamp(now, prefs.lastWallpaperTitle),
                 lastExecutionStatus = prefs.lastExecutionStatus,
                 lastErrorMessage = prefs.lastErrorMessage,
-                cacheSizeBytes = cacheManager.getCacheSizeBytes()
+                cacheSizeBytes = cacheManager.getCacheSizeBytes(),
+                widgetScaleType = prefs.widgetScaleType
             )
         }
         refreshHistoryAndFavorites()
@@ -813,6 +851,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val history = historyDb.getHistoryList()
         val favorites = historyDb.getFavoritesList()
         val currentUri = prefs.lastWallpaperUri?.toString()
+        val currentItem = currentUri?.let { uriStr ->
+            history.find { it.sourceUri == uriStr } ?: historyDb.getItemByUri(uriStr)
+        }
         val isFav = if (currentUri != null) {
             favorites.any { it.sourceUri == currentUri }
         } else {
@@ -825,6 +866,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 historyList = history,
                 favoritesList = favorites,
                 isCurrentFavorite = isFav,
+                currentWallpaperItem = currentItem,
                 favoritesSizeBytes = favSizeBytes
             )
         }
@@ -944,7 +986,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         context.contentResolver.openInputStream(uri)
                             ?: throw IllegalStateException("无法打开图片流")
                     }
-                    val bitmap = processor.process(streamProvider, prefs.scrollMode, prefs.cropMode).getOrThrow()
+                    val latest = historyDb.getItemById(item.id) ?: historyDb.getItemByUri(item.sourceUri) ?: item
+                    val effectiveScrollMode = latest.customScrollMode ?: prefs.scrollMode
+                    val effectiveCropFocusX = latest.cropFocusX ?: 0.5f
+                    val effectiveCropFocusY = latest.cropFocusY ?: 0.5f
+                    val effectiveFlipHorizontal = latest.flipHorizontal
+
+                    val bitmap = processor.process(
+                        openStream = streamProvider,
+                        scrollMode = effectiveScrollMode,
+                        cropMode = prefs.cropMode,
+                        cropFocusX = effectiveCropFocusX,
+                        cropFocusY = effectiveCropFocusY,
+                        flipHorizontal = effectiveFlipHorizontal
+                    ).getOrThrow()
                     applier.apply(bitmap, prefs.target).getOrThrow()
                 }
             }
@@ -977,6 +1032,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         statusMessage = "壁纸已更换: ${item.title ?: "历史壁纸"}"
                     )
                 }
+                CurrentWallpaperWidgetProvider.updateAllWidgets(getApplication())
             } else {
                 val error = result.exceptionOrNull()?.message ?: "应用壁纸失败"
                 _uiState.update {
@@ -986,6 +1042,103 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         statusMessage = error
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Updates per-image personalized preferences (scroll mode, crop focus, horizontal flip) in database memory.
+     */
+    fun updateWallpaperPreferences(
+        item: WallpaperHistoryItem,
+        customScrollMode: WallpaperScrollMode?,
+        cropFocusX: Float?,
+        cropFocusY: Float?,
+        flipHorizontal: Boolean,
+        applyImmediately: Boolean = false
+    ) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                var targetId = item.id
+                if (targetId == 0L) {
+                    val existing = historyDb.getItemByUri(item.sourceUri)
+                    if (existing != null) {
+                        targetId = existing.id
+                    } else {
+                        targetId = historyDb.recordAppliedWallpaper(
+                            sourceUri = Uri.parse(item.sourceUri),
+                            title = item.title,
+                            sourceType = item.sourceType,
+                            appliedTimestamp = item.appliedTimestamp,
+                            sourceTitle = item.sourceTitle
+                        )
+                    }
+                }
+                historyDb.updateCustomPreferences(
+                    id = targetId,
+                    customScrollMode = customScrollMode,
+                    cropFocusX = cropFocusX,
+                    cropFocusY = cropFocusY,
+                    flipHorizontal = flipHorizontal
+                )
+            }
+            refreshHistoryAndFavorites()
+            _uiState.update { it.copy(statusMessage = "已保存「${item.title ?: "壁纸"}」个性化属性记忆") }
+
+            val currentUriStr = prefs.lastWallpaperUri?.toString()
+            if (applyImmediately || (currentUriStr != null && currentUriStr == item.sourceUri)) {
+                applyWallpaperFromHistory(item.copy(
+                    customScrollMode = customScrollMode,
+                    cropFocusX = cropFocusX,
+                    cropFocusY = cropFocusY,
+                    flipHorizontal = flipHorizontal
+                ))
+            }
+        }
+    }
+
+    /**
+     * Updates personalized preferences for currently applied wallpaper.
+     */
+    fun updateCurrentWallpaperPreferences(
+        customScrollMode: WallpaperScrollMode?,
+        cropFocusX: Float?,
+        cropFocusY: Float?,
+        flipHorizontal: Boolean,
+        applyImmediately: Boolean = true
+    ) {
+        val currentUri = prefs.lastWallpaperUri ?: return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val currentUriStr = currentUri.toString()
+                var existing = historyDb.getItemByUri(currentUriStr)
+                if (existing == null) {
+                    val concreteType = prefs.lastWallpaperSourceType ?: prefs.sourceType
+                    val concreteTitle = prefs.lastWallpaperSourceTitle
+                    val id = historyDb.recordAppliedWallpaper(
+                        sourceUri = currentUri,
+                        title = prefs.lastWallpaperTitle,
+                        sourceType = concreteType,
+                        appliedTimestamp = prefs.lastChangedTimestamp,
+                        sourceTitle = concreteTitle
+                    )
+                    existing = historyDb.getItemById(id)
+                }
+                if (existing != null) {
+                    historyDb.updateCustomPreferences(
+                        id = existing.id,
+                        customScrollMode = customScrollMode,
+                        cropFocusX = cropFocusX,
+                        cropFocusY = cropFocusY,
+                        flipHorizontal = flipHorizontal
+                    )
+                }
+            }
+            refreshHistoryAndFavorites()
+            _uiState.update { it.copy(statusMessage = "已更新当前壁纸个性化属性记忆") }
+
+            if (applyImmediately) {
+                reapplyCurrentWallpaper()
             }
         }
     }

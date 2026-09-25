@@ -40,6 +40,7 @@ import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
+import foo.barz.wallpaperpicker.core.model.WidgetScaleType
 import foo.barz.wallpaperpicker.ui.tabs.DashboardTab
 import foo.barz.wallpaperpicker.ui.tabs.HistoryTab
 import foo.barz.wallpaperpicker.ui.tabs.MainTab
@@ -89,6 +90,7 @@ fun MainScreen(
     onToggleSchedule: (Boolean) -> Unit,
     onToggleDeferDuringInteraction: (Boolean) -> Unit,
     onToggleFairShuffle: (Boolean) -> Unit,
+    onWidgetScaleTypeSelected: (WidgetScaleType) -> Unit = {},
     onToggleFavoriteCurrent: () -> Unit = {},
     onApplyWallpaperFromHistory: (WallpaperHistoryItem) -> Unit = {},
     onToggleFavorite: (WallpaperHistoryItem) -> Unit = {},
@@ -97,6 +99,21 @@ fun MainScreen(
     onOpenCustomUriInGallery: (Uri) -> Unit = {},
     onShareCustomWallpaper: (Uri, String?) -> Unit = { _, _ -> },
     onSaveCustomWallpaper: (Uri, String?) -> Unit = { _, _ -> },
+    onUpdateCurrentWallpaperPreferences: (
+        customScrollMode: WallpaperScrollMode?,
+        cropFocusX: Float?,
+        cropFocusY: Float?,
+        flipHorizontal: Boolean,
+        applyImmediately: Boolean
+    ) -> Unit = { _, _, _, _, _ -> },
+    onUpdateWallpaperPreferences: (
+        item: WallpaperHistoryItem,
+        customScrollMode: WallpaperScrollMode?,
+        cropFocusX: Float?,
+        cropFocusY: Float?,
+        flipHorizontal: Boolean,
+        applyImmediately: Boolean
+    ) -> Unit = { _, _, _, _, _, _ -> },
     onExportFavorites: () -> Unit = {},
     onOpenManageSpace: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
@@ -189,6 +206,7 @@ fun MainScreen(
                         onShareWallpaper = onShareWallpaper,
                         onSaveToGallery = onSaveToGallery,
                         onToggleFavoriteCurrent = onToggleFavoriteCurrent,
+                        onUpdateCurrentWallpaperPreferences = onUpdateCurrentWallpaperPreferences,
                         onChangeNow = onChangeNow
                     )
 
@@ -200,7 +218,8 @@ fun MainScreen(
                         onClearHistory = onClearHistory,
                         onOpenInGallery = onOpenCustomUriInGallery,
                         onShareWallpaper = onShareCustomWallpaper,
-                        onSaveToGallery = onSaveCustomWallpaper
+                        onSaveToGallery = onSaveCustomWallpaper,
+                        onUpdateWallpaperPreferences = onUpdateWallpaperPreferences
                     )
 
                     MainTab.SOURCES -> SourcesTab(
@@ -222,6 +241,7 @@ fun MainScreen(
                         onIntervalSelected = onIntervalSelected,
                         onToggleDeferDuringInteraction = onToggleDeferDuringInteraction,
                         onToggleFairShuffle = onToggleFairShuffle,
+                        onWidgetScaleTypeSelected = onWidgetScaleTypeSelected,
                         onClearCache = onClearCache,
                         onExportFavorites = onExportFavorites,
                         onOpenManageSpace = onOpenManageSpace,

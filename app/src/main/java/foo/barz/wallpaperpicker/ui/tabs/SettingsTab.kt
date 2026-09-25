@@ -61,6 +61,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
+import foo.barz.wallpaperpicker.core.model.WidgetScaleType
 import foo.barz.wallpaperpicker.ui.MainUiState
 import java.util.Locale
 
@@ -80,6 +81,7 @@ fun SettingsTab(
     onIntervalSelected: (Long) -> Unit,
     onToggleDeferDuringInteraction: (Boolean) -> Unit,
     onToggleFairShuffle: (Boolean) -> Unit,
+    onWidgetScaleTypeSelected: (WidgetScaleType) -> Unit = {},
     onClearCache: () -> Unit = {},
     onExportFavorites: () -> Unit = {},
     onOpenManageSpace: () -> Unit = {},
@@ -465,7 +467,7 @@ fun SettingsTab(
             }
         }
 
-        // 5. Desktop Shortcuts Card
+        // 5. Desktop Shortcuts & AppWidgets Card
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -475,11 +477,11 @@ fun SettingsTab(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("桌面快捷方式 (App Shortcuts)", style = MaterialTheme.typography.titleMedium)
+                    Text("桌面快捷方式与微件", style = MaterialTheme.typography.titleMedium)
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "支持长按桌面应用图标快捷调起，也可直接将独立图标添加到桌面。点击后静默在后台完成操作并弹出提示，无需打开应用主界面。",
+                    text = "支持长按桌面应用图标快捷调起，也可直接将独立图标或壁纸微件添加到桌面。点击后静默在后台完成操作并弹出提示，无需打开应用主界面。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -527,6 +529,47 @@ fun SettingsTab(
                         Text("添加「看原图」到桌面", maxLines = 1, style = MaterialTheme.typography.labelMedium)
                     }
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // AppWidget Thumbnail Scaling Configuration
+                Text("桌面微件：当前壁纸缩略图", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "在启动器添加「当前壁纸」微件，点击主体可查看大图，右上角按钮可立即换壁纸。请选择微件内的缩略图裁切模式：",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = state.widgetScaleType == WidgetScaleType.CROP,
+                        onClick = { onWidgetScaleTypeSelected(WidgetScaleType.CROP) },
+                        label = { Text("居中裁切铺满") }
+                    )
+                    FilterChip(
+                        selected = state.widgetScaleType == WidgetScaleType.FIT,
+                        onClick = { onWidgetScaleTypeSelected(WidgetScaleType.FIT) },
+                        label = { Text("保持原比完整") }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (state.widgetScaleType == WidgetScaleType.CROP) {
+                        "铺满微件卡片，边缘无留白，与桌面卡片风格融为一体（默认）"
+                    } else {
+                        "保持原图比例居中展示，上下或左右留黑边，完整展示构图细节"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
 

@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
                     onToggleSchedule = viewModel::toggleSchedule,
                     onToggleDeferDuringInteraction = viewModel::onToggleDeferDuringInteraction,
                     onToggleFairShuffle = viewModel::onToggleFairShuffle,
+                    onWidgetScaleTypeSelected = viewModel::onWidgetScaleTypeSelected,
                     onToggleFavoriteCurrent = viewModel::toggleFavoriteCurrent,
                     onApplyWallpaperFromHistory = viewModel::applyWallpaperFromHistory,
                     onToggleFavorite = viewModel::toggleFavorite,
@@ -78,6 +79,8 @@ class MainActivity : ComponentActivity() {
                     onOpenCustomUriInGallery = viewModel::openUriInGallery,
                     onShareCustomWallpaper = viewModel::shareUri,
                     onSaveCustomWallpaper = viewModel::saveUriToGallery,
+                    onUpdateCurrentWallpaperPreferences = viewModel::updateCurrentWallpaperPreferences,
+                    onUpdateWallpaperPreferences = viewModel::updateWallpaperPreferences,
                     onExportFavorites = viewModel::exportAllFavoritesToGallery,
                     onOpenManageSpace = {
                         startActivity(Intent(this, ManageSpaceActivity::class.java))

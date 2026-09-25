@@ -37,6 +37,7 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                 $COLUMN_CUSTOM_SCROLL_MODE TEXT,
                 $COLUMN_CROP_FOCUS_X REAL,
                 $COLUMN_CROP_FOCUS_Y REAL,
+                $COLUMN_FLIP_HORIZONTAL INTEGER NOT NULL DEFAULT 0,
                 $COLUMN_SOURCE_TITLE TEXT
             )
             """.trimIndent()
@@ -52,6 +53,11 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                 db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_SOURCE_TITLE TEXT")
             }
             healLegacyRecords(db)
+        }
+        if (oldVersion < 3) {
+            runCatching {
+                db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_FLIP_HORIZONTAL INTEGER NOT NULL DEFAULT 0")
+            }
         }
     }
 
@@ -227,6 +233,46 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     /**
+     * Updates per-image custom scroll mode, crop focus coordinates, and horizontal flip preferences by ID.
+     */
+    fun updateCustomPreferences(
+        id: Long,
+        customScrollMode: WallpaperScrollMode?,
+        cropFocusX: Float?,
+        cropFocusY: Float?,
+        flipHorizontal: Boolean
+    ) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_CUSTOM_SCROLL_MODE, customScrollMode?.name)
+            put(COLUMN_CROP_FOCUS_X, cropFocusX)
+            put(COLUMN_CROP_FOCUS_Y, cropFocusY)
+            put(COLUMN_FLIP_HORIZONTAL, if (flipHorizontal) 1 else 0)
+        }
+        db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(id.toString()))
+    }
+
+    /**
+     * Updates per-image custom scroll mode, crop focus coordinates, and horizontal flip preferences by source URI.
+     */
+    fun updateCustomPreferencesByUri(
+        sourceUri: String,
+        customScrollMode: WallpaperScrollMode?,
+        cropFocusX: Float?,
+        cropFocusY: Float?,
+        flipHorizontal: Boolean
+    ) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_CUSTOM_SCROLL_MODE, customScrollMode?.name)
+            put(COLUMN_CROP_FOCUS_X, cropFocusX)
+            put(COLUMN_CROP_FOCUS_Y, cropFocusY)
+            put(COLUMN_FLIP_HORIZONTAL, if (flipHorizontal) 1 else 0)
+        }
+        db.update(TABLE_NAME, values, "$COLUMN_SOURCE_URI = ?", arrayOf(sourceUri))
+    }
+
+    /**
      * Fetches an item by its source URI.
      */
     fun getItemByUri(sourceUri: String): WallpaperHistoryItem? {
@@ -320,6 +366,11 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         } else {
             null
         }
+        val flipHorizontal = if (cursor.getColumnIndex(COLUMN_FLIP_HORIZONTAL) != -1 && !cursor.isNull(cursor.getColumnIndex(COLUMN_FLIP_HORIZONTAL))) {
+            cursor.getInt(cursor.getColumnIndex(COLUMN_FLIP_HORIZONTAL)) == 1
+        } else {
+            false
+        }
 
         val sourceType = runCatching { WallpaperSourceType.valueOf(sourceTypeName) }
             .getOrDefault(WallpaperSourceType.LOCAL_FOLDER)
@@ -344,13 +395,14 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
             customScrollMode = customScrollMode,
             cropFocusX = cropFocusX,
             cropFocusY = cropFocusY,
+            flipHorizontal = flipHorizontal,
             sourceTitle = sourceTitle
         )
     }
 
     companion object {
         private const val DATABASE_NAME = "wallpaper_history.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
 
         const val TABLE_NAME = "wallpaper_history"
         const val COLUMN_ID = "id"
@@ -365,5 +417,6 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         const val COLUMN_CUSTOM_SCROLL_MODE = "custom_scroll_mode"
         const val COLUMN_CROP_FOCUS_X = "crop_focus_x"
         const val COLUMN_CROP_FOCUS_Y = "crop_focus_y"
+        const val COLUMN_FLIP_HORIZONTAL = "flip_horizontal"
     }
 }

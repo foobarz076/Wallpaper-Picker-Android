@@ -125,6 +125,7 @@ class ShortcutActionActivity : Activity() {
                     val sourceBadge = concreteSourceTitle?.let { " · $it" } ?: ""
                     Toast.makeText(applicationContext, "已更换壁纸: $titleDesc$sourceBadge", Toast.LENGTH_SHORT).show()
                 }
+                foo.barz.wallpaperpicker.core.widget.CurrentWallpaperWidgetProvider.updateAllWidgets(applicationContext)
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
