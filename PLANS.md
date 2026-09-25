@@ -3,7 +3,7 @@
 ## 1. 项目愿景与需求背景
 
 ### 1.1 项目定位
-一款轻量、极低功耗、支持多来源（本地相册、自建 Immich / Nextcloud 等私有相册服务、HTTP API 等）的 Android 随机/自动壁纸切换工具。
+一款轻量、极低功耗、支持多来源（本地相册、自建 Immich 服务、Nextcloud / PhotoPrism 私有云、HTTP API 等）的 Android 随机/自动壁纸切换工具。
 
 ### 1.2 核心诉求与约束
 - **跨代系统兼容**：最低支持至 **Android 6.0 (API 23)** 老旧设备，同时适配现代 Android（**API 34+**），确保在低内存（1GB~2GB RAM）设备上不闪退、不耗电。
@@ -94,7 +94,7 @@
 - **实现 `ImmichSource`**：
   - 配置：服务器地址、API Key、相册选择（可选）。
   - 调用 Immich 接口拉取随机照片并安全流式下载。
-  - *(注：对于 Nextcloud Photos / WebDAV 等更多自建相册服务，规划在阶段 5.6 依托统一抽象基类拓展接入)*。
+  - *(注：对于 Nextcloud Memories、PhotoPrism 等更多自建相册服务，规划在阶段 5.6 依托统一抽象基类拓展接入)*。
 - **老设备 TLS 修复**：
   - 引入 `Conscrypt`，修复 Android 6.0 连现代 HTTPS (Let's Encrypt ISRG Root X1) 报证书无效与 TLS 1.3 缺失的问题。
 - **网络与电量策略 (Network & Battery Constraints)**：
@@ -325,15 +325,15 @@
        - `tag_or_album`：按特定相册/标签过滤抽取（如连接车载蓝牙时限定抽取“公路/驾驶”相册，睡眠时抽取“夜景”）。
        - `crop_override`：临时指定构图裁切偏好。
    - **动作 2：无缝切换当前激活源与预设配置 (Switch Active Profile)**：
-     - 允许通过场景一键切流（例如：离开家时自动从 NAS 图源切回本地文件夹，避免消耗移动蜂窝流量）。
+     - 允许通过场景一键切流（例如：离开家时自动从 NAS 图源切回本地文件夹，避免消耗移动蜂窝流量；连上家庭 Wi-Fi 自动切回自建相册服务）。
 
 3. **事件通知与双向变量回传 (Wallpaper Changed Broadcast & Variable Return)**：
    - 壁纸切换完成后，应用向系统发出标准广播 `foo.barz.wallpaperpicker.action.WALLPAPER_CHANGED`。
    - **携带元数据 Bundle**：
-     - 当前壁纸 URI / 本地缓存绝对路径。
-     - 图片所属相册名称与来源类型。
-     - 提取的核心调色板色彩（Palette Primary / Dominant Color 十六进制值）。
-   - **极客联动场景**：Tasker 捕获广播后，可提取 `%wp_title`、`%wp_color` 动态调整第三方桌面部件（KWGT）色彩、状态栏颜色或同步控制房间智能灯光氛围。
+     - 当前壁纸 URI / 本地缓存绝对路径 (`%wp_path`)。
+     - 图片所属相册名称与来源类型 (`%wp_album`, `%wp_source`)。
+     - 提取的核心调色板色彩（Palette Primary / Dominant Color 十六进制值，如 `%wp_color`, `%wp_color_muted`）。
+   - **极客联动场景**：Tasker 捕获广播后，可提取 `%wp_title`、`%wp_color` 动态调整第三方桌面部件（KWGT）色彩、系统状态栏颜色或同步控制房间智能灯光氛围（Home Assistant / 米家）。
 
 4. **系统限制适配与安全边界 (System Limits & Security Boundaries)**：
    - **Android 8.0+ 后台广播穿透**：接收到 Tasker 的 `FIRE_SETTING` 广播后，内部转由 WorkManager 的 `OneTimeWorkRequest` 异步派发，确保在系统 Doze 模式与限制后台服务策略下可靠执行。
@@ -341,32 +341,45 @@
 
 ---
 
-### 6.6 阶段 5.6：多私有云相册矩阵拓展 (Expanded Self-Hosted Photo Services: Nextcloud Photos & Multi-Cloud Matrix)
+### 6.6 阶段 5.6：多私有云自建相册服务矩阵 (Expanded Self-Hosted Photo Services: Nextcloud Memories & PhotoPrism Matrix)
 
 在 Phase 2 完成 Immich 接入的基础上，进一步拓展对自建私有云生态主流相册服务的原生支持，满足 NAS 与自托管用户的多元化资产管理习惯。
 
-1. **Nextcloud Photos & Memories 深度适配**：
-   - **背景与痛点**：Nextcloud 作为全球装机量第一的开源自托管网盘，用户照片量庞大；且官方 Photos 与高性能第三方插件 Memories（基于高效 SQL 索引）并存。
+1. **Nextcloud Memories 深度适配**：
+   - **背景与痛点**：Nextcloud 作为全球装机量第一的开源自托管网盘，用户照片量庞大；且官方原生 Photos 缺乏高效大相册索引，而高性能第三方插件 **Nextcloud Memories**（基于高效 SQL 索引）已成为自建相册事实标准。
    - **安全凭据体系**：
      - 严禁保存用户账户主密码，全面接入 Nextcloud 标准 **App Password (应用专用密码)** 或 OAuth2 授权。
      - 宽容支持非标端口、反向代理二级路径（如 `/nextcloud`）与局域网自签名证书（结合 Conscrypt 与专用安全配置）。
    - **双通路自适应访问引擎 (Dual Engine Architecture)**：
-     - **通路 A：原生 WebDAV / OCS 协议（高通用兜底）**：
-       - 利用 WebDAV `PROPFIND` 命令遍历指定云端相册文件夹（如 `/Photos`、`/InstantUpload`），解析 XML 元数据抽取图片直链。
+     - **通路 A：Nextcloud Memories REST API（高性能首选）**：
+       - 自动检测并优先借力 Memories 扩展 API（`/apps/memories/api/timeline`、`/apps/memories/api/albums`、`/apps/memories/api/random`）。
+       - 享受服务端数十万张照片的毫秒级极速随机索引与标签筛选能力，单次换图请求耗时从数百毫秒降低至几十毫秒，极大减轻树莓派等弱性能 NAS 负载。
+     - **通路 B：原生 WebDAV / OCS 协议（高通用兜底）**：
+       - 若服务端未部署 Memories 插件，无缝自动降级至 WebDAV `PROPFIND` 命令遍历指定云端相册文件夹（如 `/Photos`、`/InstantUpload`），解析 XML 元数据抽取图片直链。
        - 无需服务端额外安装插件，任意标准 Nextcloud 实例即配即用。
-     - **通路 B：Nextcloud Memories REST API（高性能首选）**：
-       - 自动检测并优先借力 Memories 扩展 API（`/apps/memories/api/timeline`、`/apps/memories/api/albums`）。
-       - 享受服务端数十万张照片的极速随机索引与标签筛选能力，单次换图请求耗时从数百毫秒降低至几十毫秒，极大减轻树莓派等弱性能 NAS 负载。
 
-2. **自建私有相册源抽象层 (`SelfHostedSource` 架构泛化)**：
+2. **PhotoPrism 原生接入**：
+   - **背景与特性**：PhotoPrism 是基于 Go 语言构建的极速、高颜值自托管相册服务，原生具备强大的 AI 自动标签、色彩分析、人脸识别与强大的搜索语法，拥有极高的摄影与极客社群占有率。
+   - **安全凭据体系**：
+     - 支持 PhotoPrism 专用 API Token（通过请求头 `X-Auth-Token` 传递）及 HTTP Basic 认证。
+     - 兼容支持公开分享相簿与私有实例。
+   - **检索与抽取引擎 (Query & Retrieval Pipeline)**：
+     - **深度对接 PhotoPrism REST API**：调用 `/api/v1/photos` 与 `/api/v1/albums`。
+     - **高阶检索语法支持**：
+       - 支持按相簿 UID 过滤 (`album:UID`)。
+       - 支持按条件检索与随机抽取：利用 `order:random` 服务端随机排序，结合收藏夹筛选 (`s:favorite`)、色彩主题 (`color:...`)、分类标签 (`label:landscape`) 精准抽取心仪壁纸。
+     - **图像高效流式传输**：
+       - 对接 `/api/v1/photos/{uid}/dl` 高清原图端点或高质量预生成缩略图（如 `fit_2048`），配合 Android 端物理分辨率安全采样，兼顾极致画质与低内存消耗。
+
+3. **自建私有相册源抽象层 (`SelfHostedSource` 架构泛化)**：
    - 提炼通用的自托管相册基类：
      - **智能网络探测**：自适应区分局域网直连（LAN IP）与公网访问（DDNS / Tailscale / 域名），配置差异化网络超时策略。
-     - **通用流式管道**：无缝对接 Phase 2 的容量限制 LRU 临时缓存池与弱网/断网容灾机制。
+     - **通用流式管道**：无缝对接 Phase 2 的容量限制 LRU 临时缓存池与弱网/断网容灾机制（断网自动降级至本地缓存池轮播）。
+   - **交互与体验整合 (UI & Album Picker Integration)**：
+     - 深度复用 Phase 4 的海量相册选择器（Album Picker）：
+       - 远程相册树状分页检索与纵向平滑滚动，淘汰横向滑动。
+       - 支持勾选多个云端相册进行混合轮播抽取。
+       - 云端缩略图预览与离线缓存一键清理。
    - **向前兼容矩阵预留**：
-     - 抽象层保留对 **PhotoPrism**（REST API）、**Synology Photos (群晖相册 API)** 以及通用 **WebDAV 挂载源** 的即插即用扩展槽位，未来新增私有云类型仅需实现元数据提取器。
+     - 抽象层保留对 **Synology Photos (群晖相册 API)** 以及通用 **WebDAV 挂载源** 的即插即用扩展槽位，未来新增私有云类型仅需实现元数据提取器。
 
-3. **交互与体验整合 (UI & Album Picker Integration)**：
-   - 深度复用 Phase 4 的海量相册选择器（Album Picker）：
-     - 远程相册树状分页检索与纵向平滑滚动，淘汰横向滑动。
-     - 支持勾选多个云端相册进行混合轮播抽取。
-     - 云端缩略图预览与离线缓存一键清理。
