@@ -122,7 +122,8 @@ class ImmichSource(
             title = displayTitle,
             sourceUri = Uri.fromFile(savedFile),
             sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.IMMICH,
-            sourceTitle = concreteTitle
+            sourceTitle = concreteTitle,
+            remoteUrl = "immich://$assetId?quality=${config.downloadQuality.name}"
         )
     }
 

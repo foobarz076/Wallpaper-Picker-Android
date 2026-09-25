@@ -151,7 +151,8 @@ class HttpApiSource(
             title = title,
             sourceUri = Uri.fromFile(savedFile),
             sourceType = foo.barz.wallpaperpicker.core.model.WallpaperSourceType.HTTP_API,
-            sourceTitle = displayName
+            sourceTitle = displayName,
+            remoteUrl = directImageUrl
         )
     }
 

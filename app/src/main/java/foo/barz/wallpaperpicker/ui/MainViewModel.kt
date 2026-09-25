@@ -44,10 +44,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 data class MainUiState(
     val sourceType: WallpaperSourceType = WallpaperSourceType.LOCAL_FOLDER,
@@ -97,6 +100,7 @@ data class MainUiState(
     val currentWallpaperItem: WallpaperHistoryItem? = null,
     val favoritesSizeBytes: Long = 0L,
     val isExportingFavorites: Boolean = false,
+    val isRedownloadingHistoryId: Long? = null,
     val sourcesList: List<WallpaperSourceEntity> = emptyList(),
     val widgetScaleType: WidgetScaleType = WidgetScaleType.CROP,
     val statusMessage: String? = null
@@ -769,7 +773,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     title = data.title,
                     sourceType = concreteType,
                     appliedTimestamp = now,
-                    sourceTitle = concreteTitle
+                    sourceTitle = concreteTitle,
+                    remoteUrl = data.remoteUrl
                 )
             }
 
@@ -974,6 +979,166 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Purges only broken or missing non-favorite history entries whose local files are inaccessible.
+     */
+    fun clearInvalidHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val count = historyDb.clearInvalidUnfavoritedRecords(getApplication())
+            withContext(Dispatchers.Main) {
+                refreshHistoryAndFavorites()
+                _uiState.update {
+                    it.copy(
+                        statusMessage = if (count > 0) "已清理 $count 条失效历史记录" else "当前历史记录全部有效，无需清理"
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Re-attempts downloading a historical wallpaper from its remote URL or Immich server.
+     */
+    @OptIn(coil.annotation.ExperimentalCoilApi::class)
+    fun redownloadHistoryItem(item: WallpaperHistoryItem) {
+        if (_uiState.value.isRedownloadingHistoryId != null) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isRedownloadingHistoryId = item.id,
+                    statusMessage = "正在重新下载「${item.title ?: "壁纸"}」…"
+                )
+            }
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    executeRedownload(item)
+                }
+            }
+            result.onSuccess { restoredFile ->
+                val newUri = Uri.fromFile(restoredFile).toString()
+                val newFavPath = if (item.isFavorite) {
+                    promoteToPermanentFavorite(Uri.fromFile(restoredFile))
+                } else {
+                    item.favoriteFilePath
+                }
+                val now = System.currentTimeMillis()
+                historyDb.updateSourceUri(
+                    id = item.id,
+                    sourceUri = newUri,
+                    remoteUrl = item.remoteUrl ?: if (item.sourceUri.startsWith("http")) item.sourceUri else null,
+                    favoriteFilePath = newFavPath,
+                    downloadTimestamp = now
+                )
+                runCatching {
+                    val loader = coil.Coil.imageLoader(getApplication())
+                    loader.diskCache?.remove(newUri)
+                    loader.memoryCache?.remove(coil.memory.MemoryCache.Key(newUri))
+                }
+                refreshHistoryAndFavorites()
+                _uiState.update {
+                    it.copy(
+                        isRedownloadingHistoryId = null,
+                        statusMessage = "壁纸原图已成功重新下载！"
+                    )
+                }
+            }.onFailure { error ->
+                val msg = error.localizedMessage ?: "重新下载失败"
+                _uiState.update {
+                    it.copy(
+                        isRedownloadingHistoryId = null,
+                        statusMessage = "重新下载失败: $msg"
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun executeRedownload(item: WallpaperHistoryItem): File {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+
+        val remoteUrl = item.remoteUrl ?: item.sourceUri
+
+        if (remoteUrl.startsWith("immich://") || item.sourceType == WallpaperSourceType.IMMICH) {
+            val assetId = if (remoteUrl.startsWith("immich://")) {
+                remoteUrl.removePrefix("immich://").substringBefore('?')
+            } else {
+                remoteUrl.substringAfter("/assets/").substringBefore('/')
+            }
+            val qualityParam = if (remoteUrl.contains("quality=")) {
+                remoteUrl.substringAfter("quality=").substringBefore('&')
+            } else {
+                "ORIGINAL"
+            }
+            val quality = runCatching { ImmichQuality.valueOf(qualityParam) }
+                .getOrDefault(ImmichQuality.ORIGINAL)
+
+            val baseUrl = prefs.immichServerUrl.trim().removeSuffix("/")
+            val apiKey = prefs.immichApiKey.trim()
+            if (baseUrl.isBlank()) {
+                throw IllegalStateException("未配置 Immich 服务器地址，请在设置中配置后再试")
+            }
+
+            val url = if (quality == ImmichQuality.ORIGINAL) {
+                "$baseUrl/api/assets/$assetId/original"
+            } else {
+                "$baseUrl/api/assets/$assetId/thumbnail?size=preview"
+            }
+
+            fun buildReq(u: String) = Request.Builder()
+                .url(u)
+                .header("x-api-key", apiKey)
+                .header("Accept", "image/*,*/*")
+                .header("User-Agent", "WallpaperPicker/1.0 (Android)")
+                .build()
+
+            var response = client.newCall(buildReq(url)).execute()
+            if (!response.isSuccessful) {
+                response.close()
+                val fallbackUrl = "$baseUrl/api/assets/$assetId/original"
+                val fallbackResp = client.newCall(buildReq(fallbackUrl)).execute()
+                if (!fallbackResp.isSuccessful) {
+                    val code = fallbackResp.code
+                    fallbackResp.close()
+                    throw IOException("从 Immich 下载原图失败: HTTP $code")
+                }
+                response = fallbackResp
+            }
+            val body = response.body ?: throw IOException("Immich 返回空数据")
+            return body.byteStream().use { input ->
+                cacheManager.saveStream(
+                    inputStream = input,
+                    preferredTitle = item.title,
+                    cacheKey = "immich_${assetId}_${quality.name}"
+                )
+            }
+        } else if (remoteUrl.startsWith("http://") || remoteUrl.startsWith("https://")) {
+            val request = Request.Builder()
+                .url(remoteUrl)
+                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                .build()
+
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                val code = response.code
+                response.close()
+                throw IOException("网络下载失败: HTTP $code")
+            }
+            val body = response.body ?: throw IOException("响应体为空")
+            return body.byteStream().use { input ->
+                cacheManager.saveStream(
+                    inputStream = input,
+                    preferredTitle = item.title,
+                    cacheKey = remoteUrl
+                )
+            }
+        } else {
+            throw IllegalStateException("该记录为本地相册或未包含远端地址，无法重新下载")
+        }
+    }
+
     fun applyWallpaperFromHistory(item: WallpaperHistoryItem) {
         if (_uiState.value.isChanging) return
         viewModelScope.launch {
@@ -1018,7 +1183,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     title = item.title,
                     sourceType = item.sourceType,
                     appliedTimestamp = now,
-                    sourceTitle = concreteTitle
+                    sourceTitle = concreteTitle,
+                    remoteUrl = item.remoteUrl
                 )
                 refreshHistoryAndFavorites()
                 _uiState.update {
@@ -1070,7 +1236,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             title = item.title,
                             sourceType = item.sourceType,
                             appliedTimestamp = item.appliedTimestamp,
-                            sourceTitle = item.sourceTitle
+                            sourceTitle = item.sourceTitle,
+                            remoteUrl = item.remoteUrl
                         )
                     }
                 }

@@ -622,7 +622,7 @@ fun SettingsTab(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("临时网络缓存 (LRU 缓存池)", style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            text = "网络图源下载的临时图片，用于离线降级复用，可安全随时清理",
+                            text = "网络图源下载的临时图片，用于离线降级复用。可在下方「深入管理应用存储空间」中清理并选择是否同步清理失效记录",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -637,26 +637,13 @@ fun SettingsTab(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Action Buttons: Export Favorites & Clear Cache
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Action Button: Export Favorites
+                OutlinedButton(
+                    onClick = onExportFavorites,
+                    enabled = state.favoritesList.isNotEmpty() && !state.isExportingFavorites,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedButton(
-                        onClick = onExportFavorites,
-                        enabled = state.favoritesList.isNotEmpty() && !state.isExportingFavorites,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(if (state.isExportingFavorites) "正在导出…" else "导出全部收藏")
-                    }
-
-                    OutlinedButton(
-                        onClick = onClearCache,
-                        enabled = state.cacheSizeBytes > 0L,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("清理临时缓存")
-                    }
+                    Text(if (state.isExportingFavorites) "正在导出…" else "导出全部收藏")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))

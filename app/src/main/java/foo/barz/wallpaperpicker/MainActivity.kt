@@ -76,6 +76,8 @@ class MainActivity : ComponentActivity() {
                     onToggleFavorite = viewModel::toggleFavorite,
                     onDeleteHistoryItem = viewModel::deleteHistoryItem,
                     onClearHistory = viewModel::clearUnfavoritedHistory,
+                    onClearInvalidHistory = viewModel::clearInvalidHistory,
+                    onRedownloadHistoryItem = viewModel::redownloadHistoryItem,
                     onOpenCustomUriInGallery = viewModel::openUriInGallery,
                     onShareCustomWallpaper = viewModel::shareUri,
                     onSaveCustomWallpaper = viewModel::saveUriToGallery,

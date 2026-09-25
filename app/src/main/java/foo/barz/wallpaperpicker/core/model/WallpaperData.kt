@@ -11,7 +11,8 @@ data class WallpaperData(
     val title: String? = null,
     val sourceUri: Uri? = null,
     val sourceType: WallpaperSourceType? = null,
-    val sourceTitle: String? = null
+    val sourceTitle: String? = null,
+    val remoteUrl: String? = null
 )
 
 /**

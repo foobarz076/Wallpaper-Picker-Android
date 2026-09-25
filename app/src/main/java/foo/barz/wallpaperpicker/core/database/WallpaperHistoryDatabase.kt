@@ -38,7 +38,9 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                 $COLUMN_CROP_FOCUS_X REAL,
                 $COLUMN_CROP_FOCUS_Y REAL,
                 $COLUMN_FLIP_HORIZONTAL INTEGER NOT NULL DEFAULT 0,
-                $COLUMN_SOURCE_TITLE TEXT
+                $COLUMN_SOURCE_TITLE TEXT,
+                $COLUMN_REMOTE_URL TEXT,
+                $COLUMN_DOWNLOAD_TIMESTAMP INTEGER NOT NULL DEFAULT 0
             )
             """.trimIndent()
         )
@@ -59,11 +61,54 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                 db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_FLIP_HORIZONTAL INTEGER NOT NULL DEFAULT 0")
             }
         }
+        if (oldVersion < 4) {
+            runCatching {
+                db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_REMOTE_URL TEXT")
+            }
+        }
+        if (oldVersion < 5) {
+            runCatching {
+                db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_DOWNLOAD_TIMESTAMP INTEGER NOT NULL DEFAULT 0")
+            }
+        }
     }
 
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
+        ensureColumnsExist(db)
         healLegacyRecords(db)
+    }
+
+    /**
+     * Dynamically verifies and creates any missing columns across app version updates,
+     * protecting against out-of-order schema states or skipped migration increments.
+     */
+    private fun ensureColumnsExist(db: SQLiteDatabase) {
+        runCatching {
+            val existingColumns = mutableSetOf<String>()
+            val cursor = db.rawQuery("PRAGMA table_info($TABLE_NAME)", null)
+            cursor.use {
+                val nameCol = it.getColumnIndex("name")
+                while (it.moveToNext()) {
+                    if (nameCol != -1) {
+                        existingColumns.add(it.getString(nameCol).lowercase())
+                    }
+                }
+            }
+
+            if (!existingColumns.contains(COLUMN_SOURCE_TITLE.lowercase())) {
+                db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_SOURCE_TITLE TEXT")
+            }
+            if (!existingColumns.contains(COLUMN_FLIP_HORIZONTAL.lowercase())) {
+                db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_FLIP_HORIZONTAL INTEGER NOT NULL DEFAULT 0")
+            }
+            if (!existingColumns.contains(COLUMN_REMOTE_URL.lowercase())) {
+                db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_REMOTE_URL TEXT")
+            }
+            if (!existingColumns.contains(COLUMN_DOWNLOAD_TIMESTAMP.lowercase())) {
+                db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COLUMN_DOWNLOAD_TIMESTAMP INTEGER NOT NULL DEFAULT 0")
+            }
+        }
     }
 
     /**
@@ -136,7 +181,8 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         title: String?,
         sourceType: WallpaperSourceType,
         appliedTimestamp: Long = System.currentTimeMillis(),
-        sourceTitle: String? = null
+        sourceTitle: String? = null,
+        remoteUrl: String? = null
     ): Long {
         val db = writableDatabase
         val uriString = sourceUri.toString()
@@ -152,6 +198,9 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                 }
                 put(COLUMN_SOURCE_TYPE, sourceType.name)
                 put(COLUMN_SOURCE_TITLE, concreteSourceTitle)
+                if (!remoteUrl.isNullOrBlank()) {
+                    put(COLUMN_REMOTE_URL, remoteUrl)
+                }
             }
             db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(existing.id.toString()))
             existing.id
@@ -163,6 +212,9 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                 put(COLUMN_SOURCE_TITLE, concreteSourceTitle)
                 put(COLUMN_APPLIED_TIMESTAMP, appliedTimestamp)
                 put(COLUMN_IS_FAVORITE, 0)
+                if (!remoteUrl.isNullOrBlank()) {
+                    put(COLUMN_REMOTE_URL, remoteUrl)
+                }
             }
             db.insert(TABLE_NAME, null, values)
         }
@@ -317,6 +369,81 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     /**
+     * Deletes non-favorite history records whose local files do not exist or are inaccessible.
+     * Retains all favorited items intact.
+     * @return The number of records removed.
+     */
+    fun clearInvalidUnfavoritedRecords(context: Context): Int {
+        val db = writableDatabase
+        val cursor = db.rawQuery(
+            "SELECT $COLUMN_ID, $COLUMN_SOURCE_URI, $COLUMN_SOURCE_TYPE FROM $TABLE_NAME WHERE $COLUMN_IS_FAVORITE = 0",
+            null
+        )
+        val idsToDelete = mutableListOf<Long>()
+        cursor.use {
+            val idCol = it.getColumnIndexOrThrow(COLUMN_ID)
+            val uriCol = it.getColumnIndexOrThrow(COLUMN_SOURCE_URI)
+            while (it.moveToNext()) {
+                val id = it.getLong(idCol)
+                val uriStr = it.getString(uriCol)
+                val uri = Uri.parse(uriStr)
+                val isAccessible = runCatching {
+                    if (uri.scheme == "file") {
+                        val path = uri.path ?: return@runCatching false
+                        val file = java.io.File(path)
+                        file.exists() && file.canRead() && file.length() > 0L
+                    } else if (uri.scheme == "content") {
+                        context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { true } ?: false
+                    } else {
+                        true
+                    }
+                }.getOrDefault(false)
+
+                if (!isAccessible) {
+                    idsToDelete.add(id)
+                }
+            }
+        }
+
+        if (idsToDelete.isEmpty()) return 0
+
+        db.beginTransaction()
+        try {
+            for (id in idsToDelete) {
+                db.delete(TABLE_NAME, "$COLUMN_ID = ?", arrayOf(id.toString()))
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return idsToDelete.size
+    }
+
+    /**
+     * Updates source URI, optional remote URL, and persistent favorite file path upon re-download.
+     */
+    fun updateSourceUri(
+        id: Long,
+        sourceUri: String,
+        remoteUrl: String? = null,
+        favoriteFilePath: String? = null,
+        downloadTimestamp: Long = System.currentTimeMillis()
+    ) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_SOURCE_URI, sourceUri)
+            put(COLUMN_DOWNLOAD_TIMESTAMP, downloadTimestamp)
+            if (!remoteUrl.isNullOrBlank()) {
+                put(COLUMN_REMOTE_URL, remoteUrl)
+            }
+            if (!favoriteFilePath.isNullOrBlank()) {
+                put(COLUMN_FAVORITE_FILE_PATH, favoriteFilePath)
+            }
+        }
+        db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(id.toString()))
+    }
+
+    /**
      * Returns total count of history items.
      */
     fun getHistoryCount(): Int {
@@ -382,6 +509,16 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         } else {
             null
         }
+        val remoteUrl = if (cursor.getColumnIndex(COLUMN_REMOTE_URL) != -1 && !cursor.isNull(cursor.getColumnIndex(COLUMN_REMOTE_URL))) {
+            cursor.getString(cursor.getColumnIndex(COLUMN_REMOTE_URL))
+        } else {
+            null
+        }
+        val downloadTimestamp = if (cursor.getColumnIndex(COLUMN_DOWNLOAD_TIMESTAMP) != -1 && !cursor.isNull(cursor.getColumnIndex(COLUMN_DOWNLOAD_TIMESTAMP))) {
+            cursor.getLong(cursor.getColumnIndex(COLUMN_DOWNLOAD_TIMESTAMP))
+        } else {
+            0L
+        }
 
         return WallpaperHistoryItem(
             id = id,
@@ -396,13 +533,15 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
             cropFocusX = cropFocusX,
             cropFocusY = cropFocusY,
             flipHorizontal = flipHorizontal,
-            sourceTitle = sourceTitle
+            sourceTitle = sourceTitle,
+            remoteUrl = remoteUrl,
+            downloadTimestamp = downloadTimestamp
         )
     }
 
     companion object {
         private const val DATABASE_NAME = "wallpaper_history.db"
-        private const val DATABASE_VERSION = 3
+        private const val DATABASE_VERSION = 5
 
         const val TABLE_NAME = "wallpaper_history"
         const val COLUMN_ID = "id"
@@ -418,5 +557,7 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         const val COLUMN_CROP_FOCUS_X = "crop_focus_x"
         const val COLUMN_CROP_FOCUS_Y = "crop_focus_y"
         const val COLUMN_FLIP_HORIZONTAL = "flip_horizontal"
+        const val COLUMN_REMOTE_URL = "remote_url"
+        const val COLUMN_DOWNLOAD_TIMESTAMP = "download_timestamp"
     }
 }

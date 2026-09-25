@@ -25,7 +25,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -35,9 +38,12 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -64,6 +70,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
@@ -91,6 +98,8 @@ fun HistoryTab(
     onToggleFavorite: (WallpaperHistoryItem) -> Unit,
     onDeleteHistoryItem: (WallpaperHistoryItem) -> Unit,
     onClearHistory: () -> Unit,
+    onClearInvalidHistory: () -> Unit = {},
+    onRedownloadHistoryItem: (WallpaperHistoryItem) -> Unit = {},
     onOpenInGallery: (Uri) -> Unit,
     onShareWallpaper: (Uri, String?) -> Unit,
     onSaveToGallery: (Uri, String?) -> Unit,
@@ -107,6 +116,7 @@ fun HistoryTab(
     var subTab by rememberSaveable { mutableStateOf(HistorySubTab.HISTORY) }
     var selectedItemForDetail by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
     var selectedItemForAdjustment by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
+    var showHistoryActionMenu by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val currentList = when (subTab) {
@@ -141,15 +151,74 @@ fun HistoryTab(
             }
 
             if (subTab == HistorySubTab.HISTORY && state.historyList.isNotEmpty()) {
-                IconButton(
-                    onClick = onClearHistory,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "清除非收藏历史",
-                        tint = MaterialTheme.colorScheme.outline
-                    )
+                Box {
+                    IconButton(
+                        onClick = { showHistoryActionMenu = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.DeleteSweep,
+                            contentDescription = "历史清理选项",
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showHistoryActionMenu,
+                        onDismissRequest = { showHistoryActionMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text("一键清理失效记录", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = "仅移除原图已丢失的非收藏条目",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.CleaningServices,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            onClick = {
+                                showHistoryActionMenu = false
+                                onClearInvalidHistory()
+                            }
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(
+                                        text = "清空全部非收藏历史",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    Text(
+                                        text = "删除所有未加星标的历史记录",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            onClick = {
+                                showHistoryActionMenu = false
+                                onClearHistory()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -218,7 +287,10 @@ fun HistoryTab(
     }
 
     // Detail Action Bottom Sheet
-    selectedItemForDetail?.let { item ->
+    selectedItemForDetail?.let { currentDetailItem ->
+        val item = state.historyList.find { it.id == currentDetailItem.id }
+            ?: state.favoritesList.find { it.id == currentDetailItem.id }
+            ?: currentDetailItem
         ModalBottomSheet(
             onDismissRequest = { selectedItemForDetail = null },
             sheetState = sheetState
@@ -226,14 +298,17 @@ fun HistoryTab(
             WallpaperDetailSheet(
                 item = item,
                 isApplying = state.isChanging,
+                isRedownloading = state.isRedownloadingHistoryId == item.id,
                 onApply = {
                     onApplyWallpaper(item)
                     selectedItemForDetail = null
                 },
                 onToggleFavorite = {
                     onToggleFavorite(item)
-                    // Keep sheet open and update item favorite status
                     selectedItemForDetail = item.copy(isFavorite = !item.isFavorite)
+                },
+                onRedownload = {
+                    onRedownloadHistoryItem(item)
                 },
                 onDelete = {
                     onDeleteHistoryItem(item)
@@ -277,6 +352,11 @@ private fun WallpaperGridCard(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isAccessible = remember(item.displayUri, item.downloadTimestamp) {
+        isUriAccessible(context, item.displayUri)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -290,12 +370,37 @@ private fun WallpaperGridCard(
                 .fillMaxWidth()
                 .aspectRatio(9f / 16f)
         ) {
+            val cardImageRequest = remember(item.displayUri, item.downloadTimestamp) {
+                ImageRequest.Builder(context)
+                    .data(item.displayUri)
+                    .memoryCacheKey("${item.displayUri}_${item.downloadTimestamp}")
+                    .build()
+            }
             AsyncImage(
-                model = item.displayUri,
+                model = cardImageRequest,
                 contentDescription = item.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+
+            // Semi-transparent overlay badge for inaccessible images
+            if (!isAccessible) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.45f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (item.canRedownload) "原图失效 · 可重下" else "原图已失效",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.65f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
 
             // Top gradient & favorite action button
             Box(
@@ -375,8 +480,10 @@ private fun WallpaperGridCard(
 private fun WallpaperDetailSheet(
     item: WallpaperHistoryItem,
     isApplying: Boolean,
+    isRedownloading: Boolean = false,
     onApply: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onRedownload: () -> Unit = {},
     onDelete: () -> Unit,
     onOpen: () -> Unit,
     onShare: () -> Unit,
@@ -384,7 +491,9 @@ private fun WallpaperDetailSheet(
     onOpenAdjustment: () -> Unit
 ) {
     val context = LocalContext.current
-    val isAccessible = remember(item.displayUri) { isUriAccessible(context, item.displayUri) }
+    val isAccessible = remember(item.displayUri, item.downloadTimestamp) {
+        isUriAccessible(context, item.displayUri)
+    }
 
     Column(
         modifier = Modifier
@@ -395,8 +504,14 @@ private fun WallpaperDetailSheet(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val sheetImageRequest = remember(item.displayUri, item.downloadTimestamp) {
+                ImageRequest.Builder(context)
+                    .data(item.displayUri)
+                    .memoryCacheKey("${item.displayUri}_${item.downloadTimestamp}")
+                    .build()
+            }
             AsyncImage(
-                model = item.displayUri,
+                model = sheetImageRequest,
                 contentDescription = item.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -440,28 +555,65 @@ private fun WallpaperDetailSheet(
                     .fillMaxWidth()
                     .padding(bottom = 12.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "原图已被外部删除或无法访问",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "该原图在本地或相册中已失效，无法再次设为壁纸。您可以删除此记录以清理列表。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
-                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "原图已被清理或无法访问",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (item.canRedownload) {
+                                    "本地缓存已丢失，但检测到远端下载源，可点击下方重新下载以恢复原图并设为壁纸。"
+                                } else {
+                                    "该原图在本地相册中已失效或未包含远端地址，无法直接恢复。您可以删除此记录以清理列表。"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
+
+                    if (item.canRedownload) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Button(
+                            onClick = onRedownload,
+                            enabled = !isRedownloading,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (isRedownloading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("正在重新下载…")
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDownload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("从网络重新下载原图")
+                            }
+                        }
                     }
                 }
             }

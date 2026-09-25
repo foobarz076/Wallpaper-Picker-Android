@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -59,6 +61,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.Coil
 import foo.barz.wallpaperpicker.core.cache.WallpaperCacheManager
+import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
 import foo.barz.wallpaperpicker.ui.theme.WallpaperPickerTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,6 +81,8 @@ data class ManageSpaceUiState(
     val isCalculating: Boolean = true,
     val isClearingCache: Boolean = false,
     val showClearAllDialog: Boolean = false,
+    val showClearCacheDialog: Boolean = false,
+    val removeInvalidHistoryOnClean: Boolean = false,
     val statusMessage: String? = null
 ) {
     val totalImageCacheBytes: Long
@@ -91,6 +96,7 @@ data class ManageSpaceUiState(
 class ManageSpaceViewModel(application: Application) : AndroidViewModel(application) {
 
     private val cacheManager = WallpaperCacheManager(application)
+    private val historyDb = WallpaperHistoryDatabase(application)
     private val _uiState = MutableStateFlow(ManageSpaceUiState())
     val uiState: StateFlow<ManageSpaceUiState> = _uiState.asStateFlow()
 
@@ -118,10 +124,29 @@ class ManageSpaceViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun requestClearImageCache() {
+        _uiState.update { it.copy(showClearCacheDialog = true) }
+    }
+
+    fun dismissClearCacheDialog() {
+        _uiState.update { it.copy(showClearCacheDialog = false) }
+    }
+
+    fun toggleRemoveInvalidHistoryOnClean(checked: Boolean) {
+        _uiState.update { it.copy(removeInvalidHistoryOnClean = checked) }
+    }
+
+    fun confirmClearImageCache() {
+        val removeHistory = _uiState.value.removeInvalidHistoryOnClean
+        dismissClearCacheDialog()
+        clearImageCache(removeHistory)
+    }
+
     /**
      * Clears only image cache files without affecting user preferences or background workers.
+     * Optionally purges broken non-favorite history entries whose local cached files are deleted.
      */
-    fun clearImageCache() {
+    fun clearImageCache(removeInvalidHistory: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isClearingCache = true) }
 
@@ -135,17 +160,28 @@ class ManageSpaceViewModel(application: Application) : AndroidViewModel(applicat
                 loader.memoryCache?.clear()
             }
 
+            var removedHistoryCount = 0
+            if (removeInvalidHistory) {
+                removedHistoryCount = historyDb.clearInvalidUnfavoritedRecords(getApplication())
+            }
+
             val remainingWp = cacheManager.getCacheSizeBytes()
             val remainingCoil = runCatching {
                 Coil.imageLoader(getApplication()).diskCache?.size ?: 0L
             }.getOrDefault(0L)
+
+            val msg = if (removedHistoryCount > 0) {
+                "图片缓存已成功清理，并同步移除了 $removedHistoryCount 条失效历史记录"
+            } else {
+                "图片缓存已成功清理"
+            }
 
             _uiState.update {
                 it.copy(
                     wallpaperCacheBytes = remainingWp,
                     coilCacheBytes = remainingCoil,
                     isClearingCache = false,
-                    statusMessage = "图片缓存已成功清理"
+                    statusMessage = msg
                 )
             }
         }
@@ -190,7 +226,10 @@ class ManageSpaceActivity : ComponentActivity() {
                 ManageSpaceScreen(
                     uiState = uiState,
                     onBackClick = { finish() },
-                    onClearImageCache = viewModel::clearImageCache,
+                    onRequestClearImageCache = viewModel::requestClearImageCache,
+                    onConfirmClearImageCache = viewModel::confirmClearImageCache,
+                    onDismissClearCacheDialog = viewModel::dismissClearCacheDialog,
+                    onToggleRemoveInvalidHistory = viewModel::toggleRemoveInvalidHistoryOnClean,
                     onRequestClearAll = viewModel::showClearAllDialog,
                     onConfirmClearAll = viewModel::clearAllData,
                     onDismissDialog = viewModel::dismissClearAllDialog,
@@ -206,7 +245,10 @@ class ManageSpaceActivity : ComponentActivity() {
 fun ManageSpaceScreen(
     uiState: ManageSpaceUiState,
     onBackClick: () -> Unit,
-    onClearImageCache: () -> Unit,
+    onRequestClearImageCache: () -> Unit,
+    onConfirmClearImageCache: () -> Unit,
+    onDismissClearCacheDialog: () -> Unit,
+    onToggleRemoveInvalidHistory: (Boolean) -> Unit,
     onRequestClearAll: () -> Unit,
     onConfirmClearAll: () -> Unit,
     onDismissDialog: () -> Unit,
@@ -352,7 +394,7 @@ fun ManageSpaceScreen(
                         }
 
                         Button(
-                            onClick = onClearImageCache,
+                            onClick = onRequestClearImageCache,
                             enabled = !uiState.isCalculating && !uiState.isClearingCache && uiState.totalImageCacheBytes > 0L,
                             shape = RoundedCornerShape(8.dp)
                         ) {
@@ -436,6 +478,63 @@ fun ManageSpaceScreen(
                 }
             }
         }
+    }
+
+    // Confirmation dialog for clearing image cache
+    if (uiState.showClearCacheDialog) {
+        AlertDialog(
+            onDismissRequest = onDismissClearCacheDialog,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(text = "清理网络图片缓存？")
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "此操作将释放所有已下载的网络壁纸临时文件与缩略图缓存。\n\n" +
+                                "• 已收藏壁纸（已持久化隔离）：不受任何影响。\n" +
+                                "• 未收藏的网络壁纸原图：本地文件将被清理，历史记录中将显示失效（后续支持按需重新从网络下载）。"
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onToggleRemoveInvalidHistory(!uiState.removeInvalidHistoryOnClean)
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = uiState.removeInvalidHistoryOnClean,
+                            onCheckedChange = onToggleRemoveInvalidHistory
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "同时移除失去原图的非收藏历史记录",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = onConfirmClearImageCache
+                ) {
+                    Text("确认清理")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissClearCacheDialog) {
+                    Text("取消")
+                }
+            }
+        )
     }
 
     // Confirmation dialog for clearing all data

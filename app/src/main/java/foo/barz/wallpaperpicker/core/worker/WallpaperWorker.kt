@@ -142,7 +142,8 @@ class WallpaperWorker(
                     title = wallpaperData.title,
                     sourceType = concreteSourceType,
                     appliedTimestamp = System.currentTimeMillis(),
-                    sourceTitle = concreteSourceTitle
+                    sourceTitle = concreteSourceTitle,
+                    remoteUrl = wallpaperData.remoteUrl
                 )
             }
         }

@@ -52,6 +52,24 @@ class HistoryAndFavoritesTest {
         assertEquals(WallpaperScrollMode.AUTO, item.customScrollMode)
         assertEquals(0.5f, item.cropFocusX)
         assertEquals(0.5f, item.cropFocusY)
+        assertEquals(0L, item.downloadTimestamp)
+    }
+
+    @Test
+    fun testWallpaperHistoryItemDownloadTimestampInvalidatesEquality() {
+        val original = WallpaperHistoryItem(
+            id = 50L,
+            sourceUri = "file:///data/user/0/cache/wallpapers/wp_123.jpg",
+            title = "Sample.jpg",
+            sourceType = WallpaperSourceType.HTTP_API,
+            appliedTimestamp = 1700000000000L,
+            downloadTimestamp = 0L
+        )
+
+        val redownloaded = original.copy(downloadTimestamp = 1700000099000L)
+        // Ensure Compose detects difference even when sourceUri and all other fields are identical
+        kotlin.test.assertNotEquals(original, redownloaded)
+        assertEquals(1700000099000L, redownloaded.downloadTimestamp)
     }
 
     @Test
@@ -223,5 +241,60 @@ class HistoryAndFavoritesTest {
 
         val uri5 = "file:///data/user/0/foo.barz.wallpaperpicker/cache/wallpapers/cached.jpg"
         assertNull(WallpaperHistoryItem.extractFolderNameFromUri(uri5))
+    }
+
+    @Test
+    fun testCanRedownloadProperty() {
+        val localItem = WallpaperHistoryItem(
+            id = 201L,
+            sourceUri = "/storage/emulated/0/DCIM/photo.jpg",
+            title = "Local Photo",
+            sourceType = WallpaperSourceType.LOCAL_FOLDER,
+            appliedTimestamp = 1700000000000L
+        )
+        assertFalse(localItem.canRedownload)
+
+        val httpDirectItem = WallpaperHistoryItem(
+            id = 202L,
+            sourceUri = "https://picsum.photos/1080/1920",
+            title = "Direct Network",
+            sourceType = WallpaperSourceType.HTTP_API,
+            appliedTimestamp = 1700000000000L
+        )
+        assertTrue(httpDirectItem.canRedownload)
+
+        val cachedItemWithRemoteUrl = WallpaperHistoryItem(
+            id = 203L,
+            sourceUri = "file:///data/user/0/cache/wallpapers/wp_123.jpg",
+            title = "Cached Bing",
+            sourceType = WallpaperSourceType.HTTP_API,
+            appliedTimestamp = 1700000000000L,
+            remoteUrl = "https://bing.com/th?id=OHR.jpg"
+        )
+        assertTrue(cachedItemWithRemoteUrl.canRedownload)
+
+        val immichItemWithRemoteUrl = WallpaperHistoryItem(
+            id = 204L,
+            sourceUri = "file:///data/user/0/cache/wallpapers/wp_456.jpg",
+            title = "Cached Immich",
+            sourceType = WallpaperSourceType.IMMICH,
+            appliedTimestamp = 1700000000000L,
+            remoteUrl = "immich://asset-uuid-123?quality=ORIGINAL"
+        )
+        assertTrue(immichItemWithRemoteUrl.canRedownload)
+    }
+
+    @Test
+    fun testManageSpaceUiStateClearCacheProperties() {
+        val state = foo.barz.wallpaperpicker.ui.ManageSpaceUiState()
+        assertFalse(state.showClearCacheDialog)
+        assertFalse(state.removeInvalidHistoryOnClean)
+
+        val requested = state.copy(
+            showClearCacheDialog = true,
+            removeInvalidHistoryOnClean = true
+        )
+        assertTrue(requested.showClearCacheDialog)
+        assertTrue(requested.removeInvalidHistoryOnClean)
     }
 }

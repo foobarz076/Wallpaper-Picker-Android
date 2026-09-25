@@ -116,7 +116,8 @@ class ShortcutActionActivity : Activity() {
                         title = wallpaperData.title,
                         sourceType = concreteSourceType,
                         appliedTimestamp = now,
-                        sourceTitle = concreteSourceTitle
+                        sourceTitle = concreteSourceTitle,
+                        remoteUrl = wallpaperData.remoteUrl
                     )
                 }
 

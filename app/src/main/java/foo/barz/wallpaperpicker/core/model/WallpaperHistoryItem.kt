@@ -19,8 +19,18 @@ data class WallpaperHistoryItem(
     val cropFocusX: Float? = null,
     val cropFocusY: Float? = null,
     val flipHorizontal: Boolean = false,
-    val sourceTitle: String? = null
+    val sourceTitle: String? = null,
+    val remoteUrl: String? = null,
+    val downloadTimestamp: Long = 0L
 ) {
+    /**
+     * Determines whether this item has a known remote URL or can be re-downloaded.
+     */
+    val canRedownload: Boolean
+        get() = !remoteUrl.isNullOrBlank() ||
+                sourceUri.startsWith("http://") ||
+                sourceUri.startsWith("https://")
+
     /**
      * Resolves the safest URI for image loading.
      * When favorited with a promoted persistent file, returns the permanent file URI.
