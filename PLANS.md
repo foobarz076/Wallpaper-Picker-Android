@@ -3,7 +3,7 @@
 ## 1. 项目愿景与需求背景
 
 ### 1.1 项目定位
-一款轻量、极低功耗、支持多来源（本地相册、自建 Immich 服务、HTTP API 等）的 Android 随机/自动壁纸切换工具。
+一款轻量、极低功耗、支持多来源（本地相册、自建 Immich / Nextcloud 等私有相册服务、HTTP API 等）的 Android 随机/自动壁纸切换工具。
 
 ### 1.2 核心诉求与约束
 - **跨代系统兼容**：最低支持至 **Android 6.0 (API 23)** 老旧设备，同时适配现代 Android（**API 34+**），确保在低内存（1GB~2GB RAM）设备上不闪退、不耗电。
@@ -79,7 +79,7 @@
 - ❌ **海量目录索引与扫描（> 1,000 张）**：MVP 仅支持几百张以内的专属壁纸目录，不引入 SQLite / Room。
 - ❌ **历史记录与防重样去重（Shuffle 队列）**：MVP 仅做纯随机挑选。
 - ❌ **桌面小部件（AppWidget）与快捷方式**。
-- ❌ **双击桌面切壁纸、手势联动**。
+- ❌ **双击桌面切壁纸、手势联动与外部自动化（Tasker 等）**。
 - ❌ **壁纸特效（模糊、滤镜、暗色模式遮罩）**。
 - ❌ **多源加权混合轮播**。
 
@@ -94,6 +94,7 @@
 - **实现 `ImmichSource`**：
   - 配置：服务器地址、API Key、相册选择（可选）。
   - 调用 Immich 接口拉取随机照片并安全流式下载。
+  - *(注：对于 Nextcloud Photos / WebDAV 等更多自建相册服务，规划在阶段 5.6 依托统一抽象基类拓展接入)*。
 - **老设备 TLS 修复**：
   - 引入 `Conscrypt`，修复 Android 6.0 连现代 HTTPS (Let's Encrypt ISRG Root X1) 报证书无效与 TLS 1.3 缺失的问题。
 - **网络与电量策略 (Network & Battery Constraints)**：
@@ -175,6 +176,8 @@
     - **第二阶段（独立规则日程表 Schedule Rule Engine）**：
       - 支持多条调度规则组合（如规则 1：每日 08:00 切换专属 Morning 摄影相册；规则 2：09:00~18:00 每 2 小时随机轮播；规则 3：20:00 切换深色暗黑图源）。
       - 调度引擎分流：常规任务交由 WorkManager，精确定点与短间隔按需借力 AlarmManager 与轻量前台保活服务。
+    - **外部环境感知扩展**：
+      - 对于基于网络（特定 Wi-Fi SSID）、车载蓝牙连接、充电状态、NFC 触碰、地理围栏等更复杂的外部情境触发，规划收拢至阶段 5.5，通过标准的 **Tasker / Locale 插件** 由专业自动化工具编排触发，避免本应用自身常驻前台监听。
 - **桌面微件 (AppWidget)**：在手机桌面上放置一个快捷按钮，无需打开应用一键切壁纸。
 - **设计升级**：支持 Material You 动态主题取色，优化弱网/失败时的静默降级与通知提示。
 
@@ -302,3 +305,68 @@
 - [ ] **Anti-Features（反特性）审查**：
   - 审查预设 HTTP API：避免硬编码闭源商业图源，避免被打上 `NonFreeNet` 标签。
   - 确认禁用或剥离一切应用内外部 APK 自下载代码，避免被标记 `UpstreamNonFree`。
+
+---
+
+### 6.5 阶段 5.5：第三方自动化与 Tasker 插件生态 (Tasker / Locale Automation Plugin)
+
+为满足高阶极客用户与情境感知联动需求，在不增加本应用常驻后台电量消耗的前提下，接入 Android 经典自动化生态。
+
+1. **架构原则：专业的事交给专业工具 (Delegation Philosophy)**：
+   - 避免本应用自行常驻后台监听 Wi-Fi 变更、车载蓝牙配对、地理围栏或充电状态（杜绝电池隐形损耗与申请高危敏感权限）。
+   - 遵循业界成熟的 **Tasker / Locale Plugin 协议** 与标准 **Intent 广播机制**，由外部专业自动化 App（Tasker、MacroDroid、Automate 等）完成复杂的环境上下文感知与条件编排，本应用作为无状态执行器响应。
+
+2. **核心动作插件 (Tasker Action Plugin - `TwoFortyFourAM` 标准)**：
+   - **动作 1：立即触发壁纸更换 (Trigger Next Wallpaper)**：
+     - 提供独立轻量设置 Activity（`EditSettingActivity`），支持用户在 Tasker 内配置动作参数并持久化为 Bundle。
+     - **可选覆写参数 (Optional Override Parameters)**：
+       - `target_screen`：指定更换屏幕目标（`SYSTEM` 桌面 / `LOCK` 锁屏 / `BOTH` 两者）。
+       - `source_type`：临时覆盖当前激活源（例如强行从本地缓存或指定私有相册拉取）。
+       - `tag_or_album`：按特定相册/标签过滤抽取（如连接车载蓝牙时限定抽取“公路/驾驶”相册，睡眠时抽取“夜景”）。
+       - `crop_override`：临时指定构图裁切偏好。
+   - **动作 2：无缝切换当前激活源与预设配置 (Switch Active Profile)**：
+     - 允许通过场景一键切流（例如：离开家时自动从 NAS 图源切回本地文件夹，避免消耗移动蜂窝流量）。
+
+3. **事件通知与双向变量回传 (Wallpaper Changed Broadcast & Variable Return)**：
+   - 壁纸切换完成后，应用向系统发出标准广播 `foo.barz.wallpaperpicker.action.WALLPAPER_CHANGED`。
+   - **携带元数据 Bundle**：
+     - 当前壁纸 URI / 本地缓存绝对路径。
+     - 图片所属相册名称与来源类型。
+     - 提取的核心调色板色彩（Palette Primary / Dominant Color 十六进制值）。
+   - **极客联动场景**：Tasker 捕获广播后，可提取 `%wp_title`、`%wp_color` 动态调整第三方桌面部件（KWGT）色彩、状态栏颜色或同步控制房间智能灯光氛围。
+
+4. **系统限制适配与安全边界 (System Limits & Security Boundaries)**：
+   - **Android 8.0+ 后台广播穿透**：接收到 Tasker 的 `FIRE_SETTING` 广播后，内部转由 WorkManager 的 `OneTimeWorkRequest` 异步派发，确保在系统 Doze 模式与限制后台服务策略下可靠执行。
+   - **防死循环与冷却抑制**：内置最小调用时间保护（如 5 秒防抖），拦截外部脚本异常死循环连续触发，保护网络带宽与低配设备内存。
+
+---
+
+### 6.6 阶段 5.6：多私有云相册矩阵拓展 (Expanded Self-Hosted Photo Services: Nextcloud Photos & Multi-Cloud Matrix)
+
+在 Phase 2 完成 Immich 接入的基础上，进一步拓展对自建私有云生态主流相册服务的原生支持，满足 NAS 与自托管用户的多元化资产管理习惯。
+
+1. **Nextcloud Photos & Memories 深度适配**：
+   - **背景与痛点**：Nextcloud 作为全球装机量第一的开源自托管网盘，用户照片量庞大；且官方 Photos 与高性能第三方插件 Memories（基于高效 SQL 索引）并存。
+   - **安全凭据体系**：
+     - 严禁保存用户账户主密码，全面接入 Nextcloud 标准 **App Password (应用专用密码)** 或 OAuth2 授权。
+     - 宽容支持非标端口、反向代理二级路径（如 `/nextcloud`）与局域网自签名证书（结合 Conscrypt 与专用安全配置）。
+   - **双通路自适应访问引擎 (Dual Engine Architecture)**：
+     - **通路 A：原生 WebDAV / OCS 协议（高通用兜底）**：
+       - 利用 WebDAV `PROPFIND` 命令遍历指定云端相册文件夹（如 `/Photos`、`/InstantUpload`），解析 XML 元数据抽取图片直链。
+       - 无需服务端额外安装插件，任意标准 Nextcloud 实例即配即用。
+     - **通路 B：Nextcloud Memories REST API（高性能首选）**：
+       - 自动检测并优先借力 Memories 扩展 API（`/apps/memories/api/timeline`、`/apps/memories/api/albums`）。
+       - 享受服务端数十万张照片的极速随机索引与标签筛选能力，单次换图请求耗时从数百毫秒降低至几十毫秒，极大减轻树莓派等弱性能 NAS 负载。
+
+2. **自建私有相册源抽象层 (`SelfHostedSource` 架构泛化)**：
+   - 提炼通用的自托管相册基类：
+     - **智能网络探测**：自适应区分局域网直连（LAN IP）与公网访问（DDNS / Tailscale / 域名），配置差异化网络超时策略。
+     - **通用流式管道**：无缝对接 Phase 2 的容量限制 LRU 临时缓存池与弱网/断网容灾机制。
+   - **向前兼容矩阵预留**：
+     - 抽象层保留对 **PhotoPrism**（REST API）、**Synology Photos (群晖相册 API)** 以及通用 **WebDAV 挂载源** 的即插即用扩展槽位，未来新增私有云类型仅需实现元数据提取器。
+
+3. **交互与体验整合 (UI & Album Picker Integration)**：
+   - 深度复用 Phase 4 的海量相册选择器（Album Picker）：
+     - 远程相册树状分页检索与纵向平滑滚动，淘汰横向滑动。
+     - 支持勾选多个云端相册进行混合轮播抽取。
+     - 云端缩略图预览与离线缓存一键清理。
