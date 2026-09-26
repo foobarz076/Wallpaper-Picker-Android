@@ -109,4 +109,42 @@ class AppLogTest {
         assertEquals(Log.INFO, loggedEntries[0].priority)
         assertEquals(Log.WARN, loggedEntries[1].priority)
     }
+
+    @Test
+    fun testRingBufferRecordsAndClearsLogs() {
+        AppLog.clearLogs()
+        assertEquals(0, AppLog.getLogCount())
+
+        AppLog.i("BufferTag", "Message 1")
+        AppLog.w("BufferTag", "Message 2")
+
+        assertEquals(2, AppLog.getLogCount())
+        val logs = AppLog.getLogs()
+        assertEquals(2, logs.size)
+        assertEquals("Message 1", logs[0].message)
+        assertEquals("Message 2", logs[1].message)
+
+        val formatted = AppLog.formatLogs(sanitize = false)
+        assertTrue(formatted.contains("[I/BufferTag] Message 1"))
+        assertTrue(formatted.contains("[W/BufferTag] Message 2"))
+
+        AppLog.clearLogs()
+        assertEquals(0, AppLog.getLogCount())
+        assertTrue(AppLog.getLogs().isEmpty())
+    }
+
+    @Test
+    fun testRingBufferEvictsOldestWhenFull() {
+        AppLog.clearLogs()
+        for (i in 1..AppLog.MAX_BUFFER_CAPACITY + 10) {
+            AppLog.i("BufferTag", "Entry $i")
+        }
+
+        assertEquals(AppLog.MAX_BUFFER_CAPACITY, AppLog.getLogCount())
+        val logs = AppLog.getLogs()
+        // The first 10 entries should have been evicted
+        assertEquals("Entry 11", logs.first().message)
+        assertEquals("Entry ${AppLog.MAX_BUFFER_CAPACITY + 10}", logs.last().message)
+        AppLog.clearLogs()
+    }
 }

@@ -20,7 +20,9 @@ class WallpaperWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
+        foo.barz.wallpaperpicker.core.util.AppLog.i("WallpaperWorker", "Periodic WorkManager trigger executed (attempt=$runAttemptCount)")
         val result = WallpaperChangeExecutor.execute(applicationContext, isManualTrigger = false)
+        foo.barz.wallpaperpicker.core.util.AppLog.i("WallpaperWorker", "WallpaperWorker completed with result: $result")
         return when (result) {
             is WallpaperExecutionResult.Success -> Result.success()
             is WallpaperExecutionResult.Skipped -> Result.success()

@@ -9,6 +9,7 @@ import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
 import foo.barz.wallpaperpicker.core.source.WallpaperSourceFactory
 import foo.barz.wallpaperpicker.core.widget.CurrentWallpaperWidgetProvider
 import foo.barz.wallpaperpicker.data.PreferencesManager
+import foo.barz.wallpaperpicker.core.util.AppLog
 import java.io.FileNotFoundException
 import java.io.IOException
 
@@ -40,6 +41,7 @@ object WallpaperChangeExecutor {
         ruleId: String? = null,
         eventContext: TriggerEventContext = TriggerEventContext.PERIODIC_WORKER
     ): WallpaperExecutionResult {
+        AppLog.i("WallpaperChangeExecutor", "Starting execution: isManual=$isManualTrigger, eventContext=$eventContext, ruleId=$ruleId")
         val prefs = PreferencesManager(context)
         val now = System.currentTimeMillis()
 
@@ -54,6 +56,7 @@ object WallpaperChangeExecutor {
                 )
             ) {
                 val reason = "夜间免打扰时段，已跳过更换"
+                AppLog.i("WallpaperChangeExecutor", "Execution skipped: $reason")
                 prefs.lastExecutionStatus = reason
                 prefs.lastExecutionTimestamp = now
                 return WallpaperExecutionResult.Skipped(reason)
@@ -69,6 +72,7 @@ object WallpaperChangeExecutor {
                 )
             ) {
                 val reason = "距离上次更换过近 (冷却抑制中)，已跳过本次更换"
+                AppLog.i("WallpaperChangeExecutor", "Execution skipped: $reason")
                 prefs.lastExecutionStatus = reason
                 prefs.lastExecutionTimestamp = now
                 return WallpaperExecutionResult.Skipped(reason)
@@ -80,6 +84,7 @@ object WallpaperChangeExecutor {
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
             if (powerManager?.isInteractive == true) {
                 val reason = "设备正在使用中，已推迟更换"
+                AppLog.i("WallpaperChangeExecutor", "Execution skipped: $reason")
                 prefs.lastExecutionStatus = reason
                 prefs.lastExecutionTimestamp = now
                 return WallpaperExecutionResult.Skipped(reason)
@@ -110,6 +115,7 @@ object WallpaperChangeExecutor {
         }.getOrElse { error ->
             return recordFailure(prefs, error)
         }
+        AppLog.i("WallpaperChangeExecutor", "Resolved source: ${source.id} (${source.displayName})")
 
         // 6. Fetch next wallpaper
         val sourceResult = source.getNextWallpaper()
@@ -121,6 +127,7 @@ object WallpaperChangeExecutor {
         }
 
         val wallpaperData = sourceResult.getOrThrow()
+        AppLog.i("WallpaperChangeExecutor", "Fetched candidate: title='${wallpaperData.title}', uri=${wallpaperData.sourceUri}")
 
         // 6. Check if same wallpaper
         val isSameWallpaper = wallpaperData.sourceUri != null &&
@@ -129,6 +136,7 @@ object WallpaperChangeExecutor {
 
         if (isSameWallpaper) {
             val reason = "壁纸无变化，已跳过重复应用"
+            AppLog.i("WallpaperChangeExecutor", "Execution skipped: $reason")
             prefs.lastExecutionStatus = reason
             prefs.lastErrorMessage = null
             prefs.lastExecutionTimestamp = now
@@ -169,6 +177,7 @@ object WallpaperChangeExecutor {
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
             if (powerManager?.isInteractive == true) {
                 val reason = "设备正在使用中，已推迟更换"
+                AppLog.i("WallpaperChangeExecutor", "Execution skipped: $reason")
                 prefs.lastExecutionStatus = reason
                 prefs.lastExecutionTimestamp = System.currentTimeMillis()
                 return WallpaperExecutionResult.Skipped(reason)
@@ -203,6 +212,7 @@ object WallpaperChangeExecutor {
         prefs.lastWallpaperSourceTitle = concreteSourceTitle
         prefs.lastExecutionStatus = if (matchingRule != null) "成功 (规则: ${matchingRule.name})" else "成功"
         prefs.lastErrorMessage = null
+        AppLog.i("WallpaperChangeExecutor", "Successfully applied wallpaper: title='${wallpaperData.title}', target=$effectiveTarget, source='$concreteSourceTitle'")
 
         // 11. Record wallpaper key into Fair Shuffle history
         val wallpaperKey = wallpaperData.sourceUri?.toString() ?: wallpaperData.title
@@ -233,6 +243,7 @@ object WallpaperChangeExecutor {
 
     private fun recordFailure(prefs: PreferencesManager, error: Throwable): WallpaperExecutionResult.Failure {
         val errorMsg = error.localizedMessage ?: error.javaClass.simpleName
+        AppLog.e("WallpaperChangeExecutor", "Execution failed: $errorMsg", error)
         prefs.lastErrorMessage = errorMsg
         prefs.lastExecutionStatus = "失败: $errorMsg"
         prefs.lastExecutionTimestamp = System.currentTimeMillis()

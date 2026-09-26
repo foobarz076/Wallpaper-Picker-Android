@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
@@ -1379,6 +1380,25 @@ fun SettingsTab(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("查看应用关于、诊断与第三方许可…")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(context, foo.barz.wallpaperpicker.ui.AboutActivity::class.java).apply {
+                            putExtra(foo.barz.wallpaperpicker.ui.AboutActivity.EXTRA_OPEN_LOGS, true)
+                        }
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Article,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("查看与导出运行诊断日志…")
                 }
             }
         }

@@ -34,6 +34,7 @@ class WallpaperAlarmReceiver : BroadcastReceiver() {
         }
 
         val ruleId = intent.getStringExtra(WallpaperAlarmScheduler.EXTRA_RULE_ID)
+        foo.barz.wallpaperpicker.core.util.AppLog.i("WallpaperAlarmReceiver", "Exact alarm triggered: ruleId=$ruleId")
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
