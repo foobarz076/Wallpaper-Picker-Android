@@ -35,7 +35,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.ScheduleRule
 import foo.barz.wallpaperpicker.core.model.ScheduleRuleSourceBinding
 import foo.barz.wallpaperpicker.core.model.ScheduleRuleTriggerType
@@ -98,9 +100,9 @@ fun SchedulingSettingsSubPage(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text("自动更换总开关", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.sched_master_switch_title), style = MaterialTheme.typography.titleMedium)
                             Text(
-                                text = if (state.isScheduled) "自动轮换中，下方启用的触发方式将并行生效" else "自动更换已停止",
+                                text = if (state.isScheduled) stringResource(R.string.sched_master_switch_active) else stringResource(R.string.sched_master_switch_stopped),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (state.isScheduled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
@@ -117,7 +119,7 @@ fun SchedulingSettingsSubPage(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Text("调度引擎模式", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.sched_engine_mode_title), style = MaterialTheme.typography.titleSmall)
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
@@ -127,7 +129,7 @@ fun SchedulingSettingsSubPage(
                         FilterChip(
                             selected = !state.ruleEngineEnabled,
                             onClick = { onToggleRuleEngine(false) },
-                            label = { Text("主从复合模式") }
+                            label = { Text(stringResource(R.string.sched_engine_mode_composite)) }
                         )
                         FilterChip(
                             selected = state.ruleEngineEnabled,
@@ -137,7 +139,7 @@ fun SchedulingSettingsSubPage(
                                     onPopulateDefaultRules()
                                 }
                             },
-                            label = { Text("独立规则日程表 (Rule Engine)") }
+                            label = { Text(stringResource(R.string.sched_engine_mode_rules)) }
                         )
                     }
 
@@ -145,7 +147,7 @@ fun SchedulingSettingsSubPage(
 
                     if (state.ruleEngineEnabled) {
                         Text(
-                            text = "规则日程表：根据多条独立规则在指定时段或时刻切换专属图源与目标屏幕",
+                            text = stringResource(R.string.sched_rules_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -162,14 +164,14 @@ fun SchedulingSettingsSubPage(
                                     modifier = Modifier.padding(16.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Text("当前暂无调度规则", style = MaterialTheme.typography.bodyMedium)
+                                    Text(stringResource(R.string.sched_rules_empty_title), style = MaterialTheme.typography.bodyMedium)
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Button(onClick = { onOpenRuleDialog(null) }) {
-                                            Text("添加新规则")
+                                            Text(stringResource(R.string.sched_rules_btn_add))
                                         }
                                         OutlinedButton(onClick = onPopulateDefaultRules) {
-                                            Text("载入默认预设")
+                                            Text(stringResource(R.string.sched_rules_btn_load_default))
                                         }
                                     }
                                 }
@@ -199,9 +201,9 @@ fun SchedulingSettingsSubPage(
                                                         color = if (rule.isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
                                                     )
                                                     val triggerDesc = when (rule.triggerType) {
-                                                        ScheduleRuleTriggerType.DAILY_TIME -> "每日 ${rule.targetTime} 定点打卡"
-                                                        ScheduleRuleTriggerType.TIME_WINDOW -> "${rule.windowStartTime} ~ ${rule.windowEndTime} (每 ${rule.intervalMinutes} 分钟)"
-                                                        ScheduleRuleTriggerType.SCREEN_OFF -> "锁屏熄屏切换 (延迟 ${rule.screenOffDelaySeconds} 秒)"
+                                                        ScheduleRuleTriggerType.DAILY_TIME -> stringResource(R.string.sched_rule_trigger_daily_format, rule.targetTime)
+                                                        ScheduleRuleTriggerType.TIME_WINDOW -> stringResource(R.string.sched_rule_trigger_window_format, rule.windowStartTime, rule.windowEndTime, rule.intervalMinutes)
+                                                        ScheduleRuleTriggerType.SCREEN_OFF -> stringResource(R.string.sched_rule_trigger_screen_off_format, rule.screenOffDelaySeconds)
                                                     }
                                                     Text(
                                                         text = triggerDesc,
@@ -224,9 +226,9 @@ fun SchedulingSettingsSubPage(
                                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                                             ) {
                                                 val sourceText = when (rule.sourceBinding) {
-                                                    ScheduleRuleSourceBinding.ACTIVE_DEFAULT -> "跟随全局激活源"
-                                                    ScheduleRuleSourceBinding.FAVORITES -> "专属: 我的收藏"
-                                                    ScheduleRuleSourceBinding.SPECIFIC_SOURCE -> "专属: ${rule.specificSourceTitle ?: "指定图源"}"
+                                                    ScheduleRuleSourceBinding.ACTIVE_DEFAULT -> stringResource(rule.sourceBinding.displayNameRes)
+                                                    ScheduleRuleSourceBinding.FAVORITES -> stringResource(R.string.sched_rule_binding_favorites)
+                                                    ScheduleRuleSourceBinding.SPECIFIC_SOURCE -> stringResource(R.string.sched_rule_binding_dedicated_prefix, rule.specificSourceTitle ?: stringResource(R.string.sched_rule_binding_specified_fallback))
                                                 }
                                                 SuggestionChip(
                                                     onClick = {},
@@ -234,7 +236,7 @@ fun SchedulingSettingsSubPage(
                                                 )
                                                 SuggestionChip(
                                                     onClick = {},
-                                                    label = { Text(rule.targetScreen.label) }
+                                                    label = { Text(stringResource(rule.targetScreen.labelRes)) }
                                                 )
                                             }
 
@@ -247,14 +249,14 @@ fun SchedulingSettingsSubPage(
                                                     onClick = { onOpenRuleDialog(rule) },
                                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                                 ) {
-                                                    Text("编辑", style = MaterialTheme.typography.labelMedium)
+                                                    Text(stringResource(R.string.sched_rule_btn_edit), style = MaterialTheme.typography.labelMedium)
                                                 }
                                                 TextButton(
                                                     onClick = { onDeleteScheduleRule(rule.id) },
                                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                                 ) {
                                                     Text(
-                                                        "删除",
+                                                        stringResource(R.string.action_delete),
                                                         style = MaterialTheme.typography.labelMedium,
                                                         color = MaterialTheme.colorScheme.error
                                                     )
@@ -275,11 +277,11 @@ fun SchedulingSettingsSubPage(
                                     ) {
                                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("添加调度规则")
+                                        Text(stringResource(R.string.sched_rules_btn_add))
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
                                     TextButton(onClick = onPopulateDefaultRules) {
-                                        Text("重置默认预设")
+                                        Text(stringResource(R.string.sched_rules_btn_reset_defaults))
                                     }
                                 }
                             }
@@ -287,7 +289,7 @@ fun SchedulingSettingsSubPage(
                     } else {
                         // Master-Slave Composite Triggers
                         Text(
-                            text = "可组合触发方式 (支持多选组合生效)",
+                            text = stringResource(R.string.sched_composite_section_title),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -307,9 +309,9 @@ fun SchedulingSettingsSubPage(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("周期轮换 (固定时间间隔)", style = MaterialTheme.typography.bodyMedium)
+                                        Text(stringResource(R.string.sched_trigger_interval_title), style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            text = "每隔指定时间自动抽取并应用新壁纸",
+                                            text = stringResource(R.string.sched_trigger_interval_desc),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.outline
                                         )
@@ -323,11 +325,11 @@ fun SchedulingSettingsSubPage(
                                 if (state.intervalScheduleEnabled) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     val intervals = listOf(
-                                        15L to "15分钟",
-                                        30L to "30分钟",
-                                        60L to "1小时",
-                                        360L to "6小时",
-                                        1440L to "每天"
+                                        15L to stringResource(R.string.rule_interval_15m),
+                                        30L to stringResource(R.string.rule_interval_30m),
+                                        60L to stringResource(R.string.rule_interval_1h),
+                                        360L to stringResource(R.string.rule_interval_6h),
+                                        1440L to stringResource(R.string.sched_interval_every_day)
                                     )
                                     Row(
                                         modifier = Modifier
@@ -363,9 +365,9 @@ fun SchedulingSettingsSubPage(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("每日定点打卡", style = MaterialTheme.typography.bodyMedium)
+                                        Text(stringResource(R.string.sched_trigger_daily_title), style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            text = "在每天指定的固定时刻准点打卡换新（可添加多个时刻）",
+                                            text = stringResource(R.string.sched_trigger_daily_desc),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.outline
                                         )
@@ -393,7 +395,7 @@ fun SchedulingSettingsSubPage(
                                                 trailingIcon = {
                                                     Icon(
                                                         Icons.Default.Close,
-                                                        contentDescription = "删除时刻",
+                                                        contentDescription = stringResource(R.string.sched_daily_btn_delete_tooltip),
                                                         modifier = Modifier.size(14.dp)
                                                     )
                                                 }
@@ -415,7 +417,7 @@ fun SchedulingSettingsSubPage(
                                         ) {
                                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("添加时刻", style = MaterialTheme.typography.bodySmall)
+                                            Text(stringResource(R.string.sched_daily_btn_add_time), style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
                                 }
@@ -438,9 +440,9 @@ fun SchedulingSettingsSubPage(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("锁屏熄屏后切换", style = MaterialTheme.typography.bodyMedium)
+                                        Text(stringResource(R.string.sched_trigger_screen_off_title), style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            text = "手机锁屏熄屏后延迟数秒悄悄换好壁纸，再次亮屏解锁即见新图",
+                                            text = stringResource(R.string.sched_trigger_screen_off_desc),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.outline
                                         )
@@ -458,12 +460,12 @@ fun SchedulingSettingsSubPage(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Text("熄屏防抖延迟：", style = MaterialTheme.typography.bodySmall)
-                                        listOf(3 to "3秒", 5 to "5秒", 10 to "10秒").forEach { (sec, label) ->
+                                        Text(stringResource(R.string.rule_screen_off_delay_label), style = MaterialTheme.typography.bodySmall)
+                                        listOf(3, 5, 10).forEach { sec ->
                                             FilterChip(
                                                 selected = state.screenOffDelaySeconds == sec,
                                                 onClick = { onSetScreenOffDelaySeconds(sec) },
-                                                label = { Text(label) }
+                                                label = { Text(stringResource(R.string.rule_delay_seconds_format, sec)) }
                                             )
                                         }
                                     }
@@ -483,12 +485,12 @@ fun SchedulingSettingsSubPage(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                            Text("精细定时器 (AlarmManager 高精度)", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.sched_exact_timer_title), style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 text = if (state.exactTimerEnabled) {
-                                    "已启用高精度时钟，规避系统批处理延迟与随机漂移"
+                                    stringResource(R.string.sched_exact_timer_active_desc)
                                 } else {
-                                    "关闭时采用系统节能 WorkManager 调度，功耗更低但存在数分钟漂移"
+                                    stringResource(R.string.sched_exact_timer_inactive_desc)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline

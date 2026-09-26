@@ -39,4 +39,518 @@
     <string name="action_close">关闭</string>
     <string name="action_refresh">刷新</string>
     <string name="action_share">分享</string>
+    <string name="action_copy">复制</string>
+    <string name="action_clear">清空</string>
+
+    <!-- Dashboard Tab -->
+    <string name="dash_no_sources_enabled">未启用任何图源</string>
+    <string name="dash_local_folder_format">本地文件夹 (%s)</string>
+    <string name="dash_multiple_sources_format">多源混合 (%d 个启用图源)</string>
+    <string name="dash_multiple_sources_badge">多源混合</string>
+    <string name="dash_current_wallpaper">当前壁纸</string>
+    <string name="dash_preview_content_desc">当前壁纸预览</string>
+    <string name="dash_action_favorite">设为收藏</string>
+    <string name="dash_action_favorited">已收藏</string>
+    <string name="dash_current_in_use">当前正在使用的壁纸</string>
+    <string name="dash_customized_composition">已个性化构图 · </string>
+    <string name="dash_tap_fullscreen_hint">点击全屏手势查看与缩放</string>
+    <string name="dash_fullscreen_btn">全屏</string>
+    <string name="dash_action_tune">微调构图</string>
+    <string name="dash_action_save">保存相册</string>
+    <string name="dash_action_share">系统分享</string>
+    <string name="dash_action_open_gallery">图库打开</string>
+    <string name="dash_empty_title">尚未更换过壁纸</string>
+    <string name="dash_empty_desc">配置图源后点击下方按钮即可立即更换第一张壁纸</string>
+    <string name="dash_status_title">当前状态</string>
+    <string name="dash_active_source">激活来源: %s</string>
+    <string name="dash_last_changed">上次更换: %s</string>
+    <string name="dash_schedule_on_format">定时调度: 已开启 (每 %d 分钟)</string>
+    <string name="dash_schedule_off">定时调度: 未开启</string>
+    <string name="dash_last_error">最近执行异常: %s</string>
+    <string name="dash_last_status">最近执行状态: %s</string>
+    <string name="dash_changing">正在处理并更换壁纸…</string>
+    <string name="dash_change_now">立即更换壁纸</string>
+
+    <!-- Wallpaper Adjustment Sheet -->
+    <string name="adjust_title">单图属性调整与构图微调</string>
+    <string name="adjust_preview_title">构图实时模拟预览</string>
+    <string name="adjust_preview_desc">预览构图</string>
+    <string name="adjust_current_focus">当前焦点坐标: (%1$d%%, %2$d%%)</string>
+    <string name="adjust_mirrored_badge"> · 已水平镜像</string>
+    <string name="adjust_flip_title">水平镜像翻转</string>
+    <string name="adjust_flip_desc">左右镜像画面，便于避开桌面图标或修正视线</string>
+    <string name="adjust_crop_focus_title">裁剪中心焦点微调</string>
+    <string name="adjust_focus_x_label">水平焦点 (X):</string>
+    <string name="adjust_focus_x_left">偏左 (%d%%)</string>
+    <string name="adjust_focus_x_right">偏右 (%d%%)</string>
+    <string name="adjust_focus_x_center">居中 (%d%%)</string>
+    <string name="adjust_focus_y_label">垂直焦点 (Y):</string>
+    <string name="adjust_focus_y_top">顶部/头部 (%d%%)</string>
+    <string name="adjust_focus_y_bottom">底部/下移 (%d%%)</string>
+    <string name="adjust_focus_y_center">居中 (%d%%)</string>
+    <string name="adjust_preset_head">头部优先</string>
+    <string name="adjust_preset_center">标准居中</string>
+    <string name="adjust_preset_bottom">底部优先</string>
+    <string name="adjust_scroll_title">桌面视差滚动策略</string>
+    <string name="adjust_scroll_desc">可单独覆写此壁纸的滚动表现，默认跟随全局设置</string>
+    <string name="adjust_scroll_follow_global">跟随全局</string>
+    <string name="adjust_scroll_auto">自适应</string>
+    <string name="adjust_scroll_always">平移</string>
+    <string name="adjust_scroll_never">单屏</string>
+    <string name="adjust_scroll_global_format">当前跟随全局设置: %s</string>
+    <string name="adjust_scroll_auto_desc">AUTO: 宽图视差平移，竖图锁定单屏不拉伸</string>
+    <string name="adjust_scroll_always_desc">ALWAYS: 强制生成双倍屏宽画布随桌面滚动</string>
+    <string name="adjust_scroll_never_desc">NEVER: 严格锁定单屏显示，禁止任何平移</string>
+    <string name="adjust_reset_global">重置为全局默认</string>
+    <string name="adjust_save_memory_only">仅保存记忆</string>
+    <string name="adjust_save_and_apply">保存并应用</string>
+
+    <!-- Lightbox Viewer & Activity -->
+    <string name="lightbox_full_image">壁纸大图</string>
+    <string name="lightbox_original_image">当前壁纸原图</string>
+    <string name="lightbox_open_in_gallery">在外部图库中打开</string>
+    <string name="lightbox_saved_to_gallery">壁纸已保存至系统相册</string>
+    <string name="lightbox_save_failed">保存失败: %s</string>
+    <string name="lightbox_added_favorite">已添加到收藏</string>
+    <string name="lightbox_removed_favorite">已取消收藏</string>
+    <string name="lightbox_cannot_open_gallery">无法打开外部图库</string>
+    <string name="lightbox_share_failed">分享壁纸失败</string>
+    <string name="lightbox_composition_saved">构图设置已保存</string>
+    <string name="action_back">返回</string>
+
+    <!-- Time Formatting -->
+    <string name="time_just_now">刚刚</string>
+    <string name="time_minutes_ago">%d分钟前</string>
+    <string name="time_hours_ago">%d小时前</string>
+    <string name="time_days_ago">%d天前</string>
+
+    <!-- History Tab -->
+    <string name="hist_subtab_all_format">全部历史 (%d)</string>
+    <string name="hist_subtab_favorites_format">我的收藏 (%d)</string>
+    <string name="hist_clean_options">历史清理选项</string>
+    <string name="hist_menu_clean_invalid">一键清理失效记录</string>
+    <string name="hist_menu_clean_invalid_desc">仅移除原图已丢失的非收藏条目</string>
+    <string name="hist_menu_clear_all">清空全部非收藏历史</string>
+    <string name="hist_menu_clear_all_desc">删除所有未加星标的历史记录</string>
+    <string name="hist_empty_fav_title">暂无收藏壁纸</string>
+    <string name="hist_empty_fav_desc">在历史壁纸或控制台中点击爱心，即可永久收藏并支持离线使用</string>
+    <string name="hist_empty_all_title">暂无历史壁纸记录</string>
+    <string name="hist_empty_all_desc">每次成功更换壁纸后，均会自动记录在此处</string>
+    <string name="hist_dialog_delete_title">删除历史记录</string>
+    <string name="hist_dialog_delete_fav_msg">确定要删除「%s」吗？该壁纸已被收藏，删除历史记录将一并移除收藏状态及离线保护副本。</string>
+    <string name="hist_dialog_delete_msg">确定要从历史记录中删除「%s」吗？此操作不可撤销。</string>
+    <string name="hist_item_this_wallpaper">此壁纸</string>
+    <string name="hist_dialog_clear_invalid_title">清理失效历史记录</string>
+    <string name="hist_dialog_clear_invalid_msg">将扫描并移除所有本地原图已丢失、且未加入收藏的历史记录条目。已收藏的壁纸受离线持久保护，不受影响。是否继续？</string>
+    <string name="hist_dialog_clear_invalid_btn">立即清理</string>
+    <string name="hist_dialog_clear_all_title">清空历史记录</string>
+    <string name="hist_dialog_clear_all_msg">确定要清空所有未收藏的历史壁纸记录吗？已加入收藏的壁纸将完整保留。此操作不可恢复。</string>
+    <string name="hist_dialog_clear_all_btn">清空全部</string>
+    <string name="hist_badge_inaccessible_redownloadable">原图失效 · 可重下</string>
+    <string name="hist_badge_inaccessible">原图已失效</string>
+    <string name="hist_action_favorite">设为收藏</string>
+    <string name="hist_action_favorited">已收藏</string>
+    <string name="hist_unknown_wallpaper">未知壁纸</string>
+    <string name="hist_detail_source_format">来源: %1$s · 更换于 %2$s</string>
+    <string name="hist_detail_favorited_badge">已加入收藏 (离线永久保留)</string>
+    <string name="hist_detail_missing_title">原图已被清理或无法访问</string>
+    <string name="hist_detail_missing_redownload_desc">本地缓存已丢失，但检测到远端下载源，可点击下方重新下载以恢复原图并设为壁纸。</string>
+    <string name="hist_detail_missing_desc">该原图在本地相册中已失效或未包含远端地址，无法直接恢复。您可以删除此记录以清理列表。</string>
+    <string name="hist_action_redownloading">正在重新下载…</string>
+    <string name="hist_action_redownload">从网络重新下载原图</string>
+    <string name="hist_action_applying">正在应用壁纸…</string>
+    <string name="hist_action_cannot_apply">原图已失效无法应用</string>
+    <string name="hist_action_set_current">设为当前壁纸</string>
+    <string name="hist_action_gallery">图库打开</string>
+    <string name="hist_action_save">保存相册</string>
+    <string name="hist_action_tune">微调构图与滚动</string>
+    <string name="hist_badge_customized"> (已个性化)</string>
+    <string name="hist_action_delete_record">删除此记录</string>
+
+    <!-- Manage Space Activity -->
+    <string name="manage_space_cleanable_cache">可清理图片缓存</string>
+    <string name="manage_space_calculating">正在计算占用空间…</string>
+    <string name="manage_space_image_cache_title">图片缓存管理</string>
+    <string name="manage_space_image_cache_desc">已下载的网络壁纸与缩略图缓存独立统计。您可根据需要仅清理下载壁纸大图以保留缩略图预览，或一次性清理全部图片缓存。</string>
+    <string name="manage_space_wp_cache_title">下载壁纸原图缓存</string>
+    <string name="manage_space_wp_cache_desc">网络图源下载的大图文件，用于离线轮换：%s</string>
+    <string name="manage_space_btn_clear_wp">仅清理下载壁纸</string>
+    <string name="manage_space_thumb_cache_title">界面缩略图与视图缓存</string>
+    <string name="manage_space_thumb_cache_desc">历史记录与图源列表中的缩略图磁盘缓存：%s</string>
+    <string name="manage_space_btn_clearing">清理中…</string>
+    <string name="manage_space_btn_clear_all_format">清理全部图片缓存 (%s)</string>
+    <string name="manage_space_clear_data_title">清除所有数据</string>
+    <string name="manage_space_clear_data_desc">将完全重置应用，彻底删除所有已保存的图源配置、文件夹索引数据库、定时切换任务及本地缓存。操作后应用将直接关闭，重新打开时如同初次安装。</string>
+    <string name="manage_space_btn_clear_data">清空全部数据</string>
+    <string name="manage_space_dialog_wp_title">仅清理下载壁纸原图？</string>
+    <string name="manage_space_dialog_wp_msg">此操作仅释放网络图源下载的壁纸原图文件 (%s)。\n\n• 缩略图缓存将得到保留，历史记录与图源列表仍可流畅预览。\n• 已收藏壁纸（已持久化隔离）：不受任何影响。\n• 未收藏的网络壁纸原图：本地文件将被清理，历史记录中将显示失效（后续可按需从网络重新下载）。</string>
+    <string name="manage_space_chk_remove_invalid">同时移除失去原图的非收藏历史记录</string>
+    <string name="manage_space_btn_confirm_wp">确认清理下载壁纸</string>
+    <string name="manage_space_dialog_all_cache_title">清理全部图片缓存？</string>
+    <string name="manage_space_dialog_all_cache_msg">此操作将同时释放所有下载的壁纸原图以及界面缩略图与预加载缓存 (%s)。\n\n• 已收藏壁纸（已持久化隔离）：不受任何影响。\n• 未收藏的网络壁纸原图：本地文件将被清理，历史记录中将显示失效。\n• 缩略图将在再次浏览相关列表时按需重新生成。</string>
+    <string name="manage_space_btn_confirm_all_cache">确认清理全部图片</string>
+    <string name="manage_space_dialog_reset_title">确认清空应用所有数据？</string>
+    <string name="manage_space_dialog_reset_msg">此操作不可撤销！这将会清除所有配置、定时任务、本地索引及图片缓存。执行后应用将立即退出。</string>
+    <string name="manage_space_btn_confirm_reset">确认清空并退出</string>
+    <string name="manage_space_status_wp_cleared_with_history">已清理下载壁纸原图缓存 (释放了 %1$s)，并同步移除了 %2$d 条失效历史记录（缩略图已保留）</string>
+    <string name="manage_space_status_wp_cleared">已清理下载壁纸原图缓存 (释放了 %s)，缩略图已保留</string>
+    <string name="manage_space_status_all_cleared_with_history">全部图片缓存已成功清理，并同步移除了 %d 条失效历史记录</string>
+    <string name="manage_space_status_all_cleared">全部图片缓存已成功清理</string>
+
+    <!-- Source Types -->
+    <string name="source_type_local_folder">本地文件夹</string>
+    <string name="source_type_media_store">系统相册</string>
+    <string name="source_type_custom_photos">自选照片集</string>
+    <string name="source_type_favorites">我的收藏</string>
+    <string name="source_type_immich">自建相册 (Immich)</string>
+    <string name="source_type_http_api">通用网络图源 (HTTP)</string>
+    <string name="source_type_composite">多源混合轮播</string>
+
+    <!-- HTTP Presets -->
+    <string name="http_preset_bing">Bing 每日壁纸</string>
+    <string name="http_preset_picsum">Picsum 随机摄影</string>
+    <string name="http_preset_custom">自定义 HTTP API</string>
+
+    <!-- Sources Tab -->
+    <string name="source_tab_header_title">壁纸图源管理</string>
+    <string name="source_tab_status_none">未启用任何图源，自动轮播将暂停</string>
+    <string name="source_tab_status_single">已启用 1 个图源: %s</string>
+    <string name="source_tab_status_multiple">已启用 %d 个图源 · 自动混合随机轮播</string>
+    <string name="source_tab_empty_title">尚未配置任何图源</string>
+    <string name="source_tab_empty_desc">添加本地文件夹、系统相册、Immich 或网络图源后即可自动轮播</string>
+    <string name="source_tab_btn_add">添加图源</string>
+    <string name="source_tab_fab_add">添加图源</string>
+    <string name="source_card_custom_photos_format">%d 张自选照片</string>
+    <string name="source_card_folder_format">%1$s · %2$d 张图片</string>
+    <string name="source_card_folder_empty">尚未选择文件夹</string>
+    <string name="source_card_immich_format">%1$s · %2$s</string>
+    <string name="source_card_immich_empty">尚未配置服务器</string>
+    <string name="source_card_favorites_format">离线持久收藏 · %d 张已收藏</string>
+    <string name="source_card_composite">多源混合</string>
+
+    <!-- Album Picker Sheet -->
+    <string name="album_picker_subtitle">支持多选组合轮播，未选择时默认全库随机</string>
+    <string name="album_picker_search_hint">搜索相册名称…</string>
+    <string name="album_picker_clear_search">清除搜索</string>
+    <string name="album_picker_chip_all_random">全库随机</string>
+    <string name="album_picker_chip_select_all_format">全选 (%d)</string>
+    <string name="album_picker_chip_clear_selection">清空选择</string>
+    <string name="album_picker_all_photos_desc">%d 张照片 · 全库混合随机抽取</string>
+    <string name="album_picker_photos_count_format">%d 张照片</string>
+    <string name="album_picker_mode_all">当前模式: 全库随机</string>
+    <string name="album_picker_mode_selected_format">已选 %d 个相册组合</string>
+
+    <!-- Source Config Activity -->
+    <string name="source_config_edit_title">编辑壁纸图源</string>
+    <string name="source_config_add_title">添加壁纸图源</string>
+    <string name="source_config_delete_tooltip">删除图源</string>
+    <string name="source_config_err_photos_empty">请至少挑选一张照片加入自选集</string>
+    <string name="source_config_err_folder_empty">请先选择壁纸文件夹</string>
+    <string name="source_config_err_http_empty">请填写自定义 HTTP 网址</string>
+    <string name="source_config_err_immich_empty">请填写 Immich 服务器地址与 API Key</string>
+    <string name="source_config_err_media_permission">请先授予相册访问权限或挑选照片</string>
+    <string name="source_config_err_media_empty">尚未挑选任何照片，请先点击挑选照片</string>
+    <string name="source_config_err_fetch_albums_failed">获取相册失败: %s</string>
+    <string name="source_config_btn_save_changes">保存更改</string>
+    <string name="source_config_btn_save_and_enable">保存并启用</string>
+    <string name="source_config_step1_edit">图源类型</string>
+    <string name="source_config_step1_add">1. 选择图源类型</string>
+    <string name="source_config_name_section">图源名称</string>
+    <string name="source_config_name_label">自定义标题</string>
+    <string name="source_config_name_hint">例如：相机精选壁纸</string>
+    <string name="source_config_detail_section">图源详细配置</string>
+    <string name="source_config_photos_desc">从系统照片选择器挑选照片。所选照片将复制到应用私有存储中，不受系统相册权限变动或清理缓存影响。</string>
+    <string name="source_config_photos_none">尚未选择任何照片</string>
+    <string name="source_config_photos_importing">正在导入照片…</string>
+    <string name="source_config_photos_btn_pick">从相册挑选照片</string>
+    <string name="source_config_photos_count_format">已选 %d 张照片</string>
+    <string name="source_config_photos_btn_append">追加照片</string>
+    <string name="source_config_photos_btn_clear">清空照片</string>
+    <string name="source_config_folder_selected_format">已选目录: %s</string>
+    <string name="source_config_folder_none">尚未选择文件夹</string>
+    <string name="source_config_folder_scanning">正在扫描图片…</string>
+    <string name="source_config_folder_count_format">检索到 %d 张图片</string>
+    <string name="source_config_folder_btn_change">更换文件夹</string>
+    <string name="source_config_folder_btn_select">选择文件夹</string>
+    <string name="source_config_media_unauthorized">尚未授权相册访问</string>
+    <string name="source_config_media_btn_grant">选择相册或挑选照片</string>
+    <string name="source_config_media_partial_format">系统相册 (已选 %d 张)</string>
+    <string name="source_config_media_btn_manage">管理所选照片</string>
+    <string name="source_config_media_btn_pick">挑选照片</string>
+    <string name="source_config_media_selected_format">当前选择: %s</string>
+    <string name="source_config_media_btn_pick_combo">选择相册组合</string>
+    <string name="source_config_media_all_photos">全部照片 (全库随机)</string>
+    <string name="source_config_media_selected_count_format">已选 %d 张照片</string>
+    <string name="source_config_media_selected_albums_format">已选 %d 个相册</string>
+    <string name="source_config_media_picker_title">选择系统相册组合</string>
+    <string name="source_config_immich_picker_title">选择 Immich 相册组合</string>
+    <string name="source_config_immich_server_url">服务器地址 (Server URL)</string>
+    <string name="source_config_immich_api_key">API Key</string>
+    <string name="source_config_immich_album_filter_format">相册筛选: %s</string>
+    <string name="source_config_immich_all_albums">全部相册 (全库随机)</string>
+    <string name="source_config_immich_quality">下载画质</string>
+    <string name="source_config_immich_quality_preview">高清预览 (省流)</string>
+    <string name="source_config_immich_quality_original">原始全尺寸</string>
+    <string name="source_config_immich_ignore_ssl">忽略自签名证书</string>
+    <string name="source_config_immich_ignore_ssl_desc">局域网自签名 HTTPS 建议开启</string>
+    <string name="source_config_wifi_only">仅在 Wi-Fi 下下载</string>
+    <string name="source_config_immich_wifi_desc">移动蜂窝网络下复用缓存或跳过</string>
+    <string name="source_config_http_url">API 网址 (URL)</string>
+    <string name="source_config_http_json_path">图片字段路径 (可选 JSONPath)</string>
+    <string name="source_config_http_json_path_hint">例如 images[0].url</string>
+    <string name="source_config_http_wifi_desc">避免在移动网络下消耗流量</string>
+    <string name="source_config_fav_desc">离线收藏图源仅从您收藏的历史壁纸中随机挑选。高可靠性、完全离线可用。</string>
+    <string name="source_config_fav_count_format">当前已收藏壁纸数量: %d 张</string>
+    <string name="source_config_delete_dialog_title">确认删除图源</string>
+    <string name="source_config_delete_dialog_msg">确定要删除「%s」吗？删除后此图源将不再参与轮播。</string>
+    <string name="source_config_this_source">此图源</string>
+    <string name="source_config_btn_confirm_delete">确认删除</string>
+
+    <!-- Wallpaper Target -->
+    <string name="target_system">仅桌面</string>
+    <string name="target_lock">仅锁屏</string>
+    <string name="target_both">桌面与锁屏</string>
+
+    <!-- Schedule Rule Trigger Types -->
+    <string name="rule_trigger_daily_time">每日定点打卡</string>
+    <string name="rule_trigger_time_window">时段周期轮播</string>
+    <string name="rule_trigger_screen_off">锁屏熄屏触发</string>
+
+    <!-- Schedule Rule Source Binding Strategy -->
+    <string name="rule_binding_active_default">跟随全局激活源</string>
+    <string name="rule_binding_specific_source">指定专属图源</string>
+    <string name="rule_binding_favorites">我的收藏</string>
+
+    <!-- Schedule Rule Edit Dialog -->
+    <string name="rule_dialog_title_edit">编辑调度规则</string>
+    <string name="rule_dialog_title_create">新建调度规则</string>
+    <string name="rule_name_label">规则名称</string>
+    <string name="rule_name_hint">例如：晨间相册、工作时段轮换</string>
+    <string name="rule_err_name_empty">请输入规则名称</string>
+    <string name="rule_err_select_source">请选择绑定的专属图源</string>
+    <string name="rule_trigger_type_section">触发方式</string>
+    <string name="rule_daily_time_label">定点打卡时刻：</string>
+    <string name="rule_window_range_label">时段区间：</string>
+    <string name="rule_window_from_format">从 %s</string>
+    <string name="rule_window_to_label">至</string>
+    <string name="rule_window_to_format">到 %s</string>
+    <string name="rule_interval_label">轮换间隔：</string>
+    <string name="rule_interval_15m">15分钟</string>
+    <string name="rule_interval_30m">30分钟</string>
+    <string name="rule_interval_1h">1小时</string>
+    <string name="rule_interval_2h">2小时</string>
+    <string name="rule_interval_4h">4小时</string>
+    <string name="rule_interval_6h">6小时</string>
+    <string name="rule_screen_off_delay_label">熄屏防抖延迟：</string>
+    <string name="rule_delay_seconds_format">%d秒</string>
+    <string name="rule_binding_section">专属图源绑定</string>
+    <string name="rule_binding_select_label">选择绑定的图源实例：</string>
+    <string name="rule_binding_no_sources">尚未在「图源管理」中配置图源，请先添加图源</string>
+    <string name="rule_target_section">更换应用目标</string>
+
+    <!-- Settings SubPage Category Definitions -->
+    <string name="subpage_display_title">壁纸呈现与构图</string>
+    <string name="subpage_display_desc">目标屏幕、裁切构图、视差随动及即时生效</string>
+    <string name="subpage_scheduling_title">自动更换调度</string>
+    <string name="subpage_scheduling_desc">定时轮换、规则日程表、定点时刻与精细定时器</string>
+    <string name="subpage_safeguards_title">高级策略与防护</string>
+    <string name="subpage_safeguards_desc">夜间免打扰、防碰撞冷却、使用中避让与智能洗牌</string>
+    <string name="subpage_widgets_title">桌面微件与快捷方式</string>
+    <string name="subpage_widgets_desc">桌面快捷方式、微件缩略图裁剪与控制中心磁贴</string>
+    <string name="subpage_storage_title">存储与缓存管理</string>
+    <string name="subpage_storage_desc">临时缓存上限、已收藏壁纸、导出备份与深度清理</string>
+    <string name="subpage_about_title">关于、保活与诊断</string>
+    <string name="subpage_about_desc">电池优化排查、系统保活指南、诊断日志与开源许可</string>
+
+    <!-- Wallpaper Crop Mode -->
+    <string name="crop_fit_height_label">高度优先 (防切头)</string>
+    <string name="crop_fit_height_desc">以屏幕高度为准铺满，100% 完整保留画面纵向内容，保护人像头部</string>
+    <string name="crop_center_crop_label">居中充满</string>
+    <string name="crop_center_crop_desc">等比缩放至完全填满屏幕，四周不留黑边，适合风景图</string>
+    <string name="crop_fit_center_label">原图完整</string>
+    <string name="crop_fit_center_desc">等比缩放至画面完整可见，不足区域保持黑底，保留画面全貌</string>
+
+    <!-- Wallpaper Scroll Mode -->
+    <string name="scroll_auto_label">智能自适应</string>
+    <string name="scroll_auto_desc">横图/宽图自动随桌面平移；竖图锁定单屏，保持清晰不拉伸</string>
+    <string name="scroll_never_label">锁定居中</string>
+    <string name="scroll_never_desc">严格单屏显示不滚动，推荐不支持壁纸平移的定制 ROM 或桌面</string>
+    <string name="scroll_always_label">强制视差</string>
+    <string name="scroll_always_desc">生成超宽幅壁纸，适合原生 Pixel/AOSP 等多屏平移桌面</string>
+
+    <!-- Widget Scale Type -->
+    <string name="widget_scale_crop_label">铺满裁切</string>
+    <string name="widget_scale_crop_desc">按微件大小居中铺满，无留白，视觉感饱满</string>
+    <string name="widget_scale_fit_label">完整展示</string>
+    <string name="widget_scale_fit_desc">保持原图长宽比完整显示，两边根据比例自适应留空</string>
+
+    <!-- Cache Size Tier -->
+    <string name="cache_tier_small_label">小容量 (20MB / 10张)</string>
+    <string name="cache_tier_small_desc">适合存储紧张或低配设备，最小化磁盘占用</string>
+    <string name="cache_tier_standard_label">标准 (50MB / 25张)</string>
+    <string name="cache_tier_standard_desc">推荐设置，兼顾离线轮播容灾与空间开销</string>
+    <string name="cache_tier_large_label">大容量 (100MB / 50张)</string>
+    <string name="cache_tier_large_desc">适合长期离线或多源混合囤图</string>
+    <string name="cache_tier_disabled_label">不限制容量</string>
+    <string name="cache_tier_disabled_desc">不对缓存大小设限，需手动清理</string>
+
+    <!-- Battery Optimization Dialog -->
+    <string name="battery_dialog_title">开启精细定时器需忽略电池优化</string>
+    <string name="battery_dialog_msg">Android 系统的低电耗模式 (Doze) 会在息屏休眠时冻结定时器唤醒，导致壁纸无法准时更换。\n\n建议前往系统设置将本应用设为「无限制」或加入电池优化白名单。</string>
+    <string name="battery_dialog_btn_settings">前往设置</string>
+    <string name="battery_dialog_btn_enable_anyway">仍然开启</string>
+
+    <!-- Settings Root Content Dynamic Summaries -->
+    <string name="settings_battery_banner_title">开启电池无限制以保障准时更换</string>
+    <string name="settings_battery_banner_desc">点击前往配置系统白名单与厂商保活指南</string>
+    <string name="settings_summary_scheduling_stopped">已停止自动轮换</string>
+    <string name="settings_summary_scheduling_rules_format">规则日程表已生效 (%d 条规则启用)</string>
+    <string name="settings_summary_trigger_interval_format">周期 %dm</string>
+    <string name="settings_summary_trigger_anchors_format">定点打卡 (%d次)</string>
+    <string name="settings_summary_trigger_screen_off">锁屏熄屏换</string>
+    <string name="settings_summary_scheduling_standby">已开启 · 待激活触发器</string>
+    <string name="settings_summary_scheduling_active_format">已开启 · %s</string>
+    <string name="settings_summary_quiet_active">免打扰生效中</string>
+    <string name="settings_summary_quiet_inactive">免打扰已关闭</string>
+    <string name="settings_summary_smart_shuffle_format">智能洗牌 (%d张)</string>
+    <string name="settings_summary_pure_random">纯随机挑选</string>
+    <string name="settings_summary_widget_format">微件缩略图 (%1$s) · 桌面快捷方式与磁贴</string>
+    <string name="settings_summary_storage_format">缓存 %1$s / %2$s · 收藏 %3$d 张</string>
+    <string name="settings_summary_battery_ready">电池无限制已就绪</string>
+    <string name="settings_summary_battery_needed">电池需配置</string>
+    <string name="settings_summary_about_format">v1.0.0 · %s · 诊断日志</string>
+
+    <!-- Display Settings SubPage -->
+    <string name="display_target_card_title">更换应用目标</string>
+    <string name="display_target_legacy_notice">当前设备运行 Android 6.0，系统规范限制将同时更新桌面与锁屏</string>
+    <string name="display_crop_card_title">壁纸裁切与构图</string>
+    <string name="display_scroll_card_title">桌面视差随动</string>
+    <string name="display_scroll_tip">提示：部分定制系统（如 HyperOS/MIUI 或已关闭壁纸随动的桌面）不支持壁纸平移。若滑动桌面时壁纸静止，建议选择「锁定居中」以单屏最清晰画质呈现。</string>
+    <string name="display_reapply_on_change_title">修改设置时重设当前壁纸</string>
+    <string name="display_reapply_on_change_desc">更改裁切或滚动设置时，立即按新模式重新渲染并应用当前壁纸</string>
+    <string name="display_btn_reapply_now">按当前设置重设正在使用的壁纸</string>
+
+    <!-- Scheduling Settings SubPage -->
+    <string name="sched_master_switch_title">自动更换总开关</string>
+    <string name="sched_master_switch_active">自动轮换中，下方启用的触发方式将并行生效</string>
+    <string name="sched_master_switch_stopped">自动更换已停止</string>
+    <string name="sched_engine_mode_title">调度引擎模式</string>
+    <string name="sched_engine_mode_composite">主从复合模式</string>
+    <string name="sched_engine_mode_rules">独立规则日程表 (Rule Engine)</string>
+    <string name="sched_rules_desc">规则日程表：根据多条独立规则在指定时段或时刻切换专属图源与目标屏幕</string>
+    <string name="sched_rules_empty_title">当前暂无调度规则</string>
+    <string name="sched_rules_btn_add">添加新规则</string>
+    <string name="sched_rules_btn_load_default">载入默认预设</string>
+    <string name="sched_rule_trigger_daily_format">每日 %s 定点打卡</string>
+    <string name="sched_rule_trigger_window_format">%1$s ~ %2$s (每 %3$d 分钟)</string>
+    <string name="sched_rule_trigger_screen_off_format">锁屏熄屏切换 (延迟 %d 秒)</string>
+    <string name="sched_rule_binding_dedicated_prefix">专属: %s</string>
+    <string name="sched_rule_binding_favorites">专属: 我的收藏</string>
+    <string name="sched_rule_binding_specified_fallback">指定图源</string>
+    <string name="sched_rule_btn_edit">编辑</string>
+    <string name="sched_rules_btn_reset_defaults">重置默认预设</string>
+    <string name="sched_composite_section_title">可组合触发方式 (支持多选组合生效)</string>
+    <string name="sched_trigger_interval_title">周期轮换 (固定时间间隔)</string>
+    <string name="sched_trigger_interval_desc">每隔指定时间自动抽取并应用新壁纸</string>
+    <string name="sched_interval_every_day">每天</string>
+    <string name="sched_trigger_daily_title">每日定点打卡</string>
+    <string name="sched_trigger_daily_desc">在每天指定的固定时刻准点打卡换新（可添加多个时刻）</string>
+    <string name="sched_daily_btn_add_time">添加时刻</string>
+    <string name="sched_daily_btn_delete_tooltip">删除时刻</string>
+    <string name="sched_trigger_screen_off_title">锁屏熄屏后切换</string>
+    <string name="sched_trigger_screen_off_desc">手机锁屏熄屏后延迟数秒悄悄换好壁纸，再次亮屏解锁即见新图</string>
+    <string name="sched_exact_timer_title">精细定时器 (AlarmManager 高精度)</string>
+    <string name="sched_exact_timer_active_desc">已启用高精度时钟，规避系统批处理延迟与随机漂移</string>
+    <string name="sched_exact_timer_inactive_desc">关闭时采用系统节能 WorkManager 调度，功耗更低但存在数分钟漂移</string>
+
+    <!-- Safeguards Settings SubPage -->
+    <string name="safeguard_quiet_hours_title">夜间免打扰时段 (Quiet Hours)</string>
+    <string name="safeguard_quiet_hours_desc">在睡眠时段内静默暂停自动更换，避免夜间唤醒与屏幕耗电</string>
+    <string name="safeguard_quiet_hours_period">休眠时段：</string>
+    <string name="safeguard_quiet_hours_from">从 %s</string>
+    <string name="safeguard_quiet_hours_to_label">至</string>
+    <string name="safeguard_quiet_hours_to">到 %s</string>
+    <string name="safeguard_cooldown_title">防碰撞冷却抑制 (Cooldown)</string>
+    <string name="safeguard_cooldown_desc">距上次更换不足指定时间时拦截自动任务，避免与定点时刻或手动更换重叠</string>
+    <string name="safeguard_cooldown_mins">%d分钟</string>
+    <string name="safeguard_defer_title">使用手机时推迟更换</string>
+    <string name="safeguard_defer_desc">检测到亮屏或正在使用手机时暂缓更换壁纸，防止游戏、观影或打字时发生掉帧卡顿</string>
+    <string name="safeguard_fair_shuffle_title">智能洗牌防重复 (Fair Shuffle)</string>
+    <string name="safeguard_fair_shuffle_desc">记忆最近已用壁纸，在一整轮展示完之前避免高频抽取相同图片</string>
+    <string name="safeguard_fair_shuffle_capacity_label">记忆窗口深度：</string>
+    <string name="safeguard_fair_shuffle_capacity_items">%d 张</string>
+    <string name="safeguard_fair_shuffle_status">当前牌堆记忆: %1$d / %2$d 张</string>
+    <string name="safeguard_fair_shuffle_reset">重置洗牌牌堆</string>
+
+    <!-- Widgets Settings SubPage -->
+    <string name="widget_shortcuts_title">桌面快捷方式 (Pin Shortcuts)</string>
+    <string name="widget_shortcuts_desc">支持长按桌面应用图标快捷调起，也可直接将独立图标固定到桌面。点击后静默在后台完成操作并弹出提示，无需打开应用主界面。</string>
+    <string name="widget_shortcuts_pin_next">添加「换壁纸」到桌面</string>
+    <string name="widget_shortcuts_pin_next_hint">可长按桌面应用图标，将「立即换壁纸」拖拽至桌面</string>
+    <string name="widget_shortcuts_pin_view">添加「看原图」到桌面</string>
+    <string name="widget_shortcuts_pin_view_hint">可长按桌面应用图标，将「查看壁纸」拖拽至桌面</string>
+    <string name="widget_appwidget_title">桌面微件：当前壁纸缩略图</string>
+    <string name="widget_appwidget_desc">在启动器添加「当前壁纸」微件，点击主体可查看大图，右上角按钮可立即换壁纸。请选择微件内的缩略图裁切模式：</string>
+    <string name="widget_qs_tiles_title">控制中心快捷磁贴 (Quick Settings)</string>
+    <string name="widget_qs_tiles_desc">支持将快捷开关加入 Android 顶部下拉控制中心：\n•「下一张壁纸」：点击即在后台静默换壁纸并发送小浮条提醒；\n•「自动更换开关」：高亮显示当前调度状态，点击可直接启停轮播。</string>
+    <string name="widget_qs_tiles_hint">使用提示：从屏幕顶部下拉展开控制中心，点击「编辑 (铅笔)」图标，即可将「下一张壁纸」和「自动轮播」拖动至常用磁贴区域。</string>
+
+    <!-- Storage Settings SubPage -->
+    <string name="storage_overview_title">存储与缓存概览</string>
+    <string name="storage_favorites_title">已收藏壁纸 (私有持久化)</string>
+    <string name="storage_favorites_desc">存放在内部专属目录，断网永久可用，绝不受系统或缓存清理影响</string>
+    <string name="storage_favorites_summary">%1$d 张 · %2$s</string>
+    <string name="storage_cache_title">临时网络缓存 (LRU 缓存池)</string>
+    <string name="storage_cache_desc">网络图源下载的临时图片，用于离线降级复用。超出容量上限后按最久未展示 (LRU) 顺序自动淘汰，已收藏壁纸受离线保护永不删除</string>
+    <string name="storage_tier_title">自动清理与缓存容量上限</string>
+    <string name="storage_tier_desc">配置网络缓存池的最大淘汰容量；达到上限后自动淘汰最旧图片：</string>
+    <string name="storage_export_favorites">导出全部收藏</string>
+    <string name="storage_exporting_favorites">正在导出…</string>
+    <string name="storage_btn_manage_space">管理存储空间与清理缓存…</string>
+
+    <!-- About Settings SubPage &amp; About Activity -->
+    <string name="about_battery_unrestricted_title">开启电池无限制以保障准时更换</string>
+    <string name="about_battery_unrestricted_desc">低电耗 (Doze) 模式与系统省电策略可能会延迟休眠期间的定时换壁纸。建议在系统设置中将本应用设为「无限制」或移入白名单。</string>
+    <string name="about_battery_btn_app_details">应用详情设置</string>
+    <string name="about_battery_btn_whitelist">系统白名单</string>
+    <string name="about_battery_btn_dontkillmyapp">OEM 定制系统保活指南 (DontKillMyApp)</string>
+    <string name="about_battery_ready_title">电池优化白名单：已就绪</string>
+    <string name="about_battery_ready_desc">本应用已豁免系统低电耗限制，后台调度与定时器唤醒将准时执行。</string>
+    <string name="about_battery_btn_view_vendor_guide">查看 OEM 厂商定制系统保活指南</string>
+    <string name="about_card_title">关于与开源许可</string>
+    <string name="about_card_desc">Wallpaper Picker (壁纸随心换) v1.0.0\n轻量、极低功耗、跨代兼容 Android 6.0 ~ 16 的多源壁纸轮换工具。遵循 GPL-3.0 协议开源。</string>
+    <string name="about_card_btn_details">查看应用关于、诊断与第三方许可…</string>
+    <string name="about_card_btn_logs">查看与导出运行诊断日志…</string>
+    <string name="about_screen_app_desc">一款轻量、极低功耗、跨代兼容 Android 6.0 (API 23) 至 Android 16 (API 36+) 的多源壁纸轮换工具。坚持单分支架构与纯原生零 GMS 依赖。</string>
+    <string name="about_btn_repo">开源仓库</string>
+    <string name="about_btn_copy_link">复制链接</string>
+    <string name="about_copied_repo_snackbar">已复制 GitHub 仓库地址至剪贴板</string>
+    <string name="about_btn_view_gpl">查看本应用 GPL-3.0 许可证条款</string>
+    <string name="about_diag_title">运行环境诊断</string>
+    <string name="about_diag_os_version">系统版本</string>
+    <string name="about_diag_device_model">设备型号</string>
+    <string name="about_diag_abis">支持架构</string>
+    <string name="about_diag_abi_universal">通用</string>
+    <string name="about_diag_target_sdk">目标 SDK</string>
+    <string name="about_diag_min_sdk">最低兼容</string>
+    <string name="about_logs_card_title">运行诊断与日志</string>
+    <string name="about_logs_count_chip">%d 条日志</string>
+    <string name="about_logs_card_desc">实时记录应用后台调度、图源解析与壁纸切换事件。支持敏感凭据与私网地址自动脱敏，方便排查异常问题。</string>
+    <string name="about_logs_last_status">上次执行状态</string>
+    <string name="about_logs_status_not_run">尚未执行</string>
+    <string name="about_logs_last_error">上次异常报错</string>
+    <string name="about_logs_error_none">无异常</string>
+    <string name="about_logs_btn_view">查看日志</string>
+    <string name="about_logs_btn_export">导出报告</string>
+    <string name="about_third_party_title">第三方开源库致谢</string>
+    <string name="about_third_party_desc">Wallpaper Picker 的构建离不开以下优秀的开源项目，我们谨遵各自许可证条款向其创作者深表谢意：</string>
+    <string name="about_lib_website">官网/项目</string>
+    <string name="about_lib_view_license">查看许可证</string>
+    <string name="about_dialog_license_title">许可证</string>
+    <string name="about_log_dialog_title">运行与诊断日志</string>
+    <string name="about_log_dialog_sanitize">脱敏保护</string>
+    <string name="about_log_copied_snackbar">已复制日志至剪贴板</string>
+    <string name="about_log_cleared_snackbar">日志已清空</string>
+    <string name="about_log_warning_unsanitized">已关闭脱敏保护。当前日志包含 API Key、认证凭据或内网 IP 等私密信息，导出或分享时请小心使用，避免隐私泄露！</string>
+    <string name="about_browser_open_failed">未能打开浏览器，已将链接复制到剪贴板</string>
 </resources>

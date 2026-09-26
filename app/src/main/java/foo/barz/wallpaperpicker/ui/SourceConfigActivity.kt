@@ -84,8 +84,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.R
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -187,7 +189,7 @@ private fun SourceConfigScreen(
 
     // MediaStore state
     var mediaStoreAlbumIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var mediaStoreAlbumNames by remember { mutableStateOf("全部照片 (全库随机)") }
+    var mediaStoreAlbumNames by remember { mutableStateOf(context.getString(R.string.source_config_media_all_photos)) }
     var mediaStoreAlbums by remember { mutableStateOf<List<MediaStoreAlbum>>(emptyList()) }
     var isLoadingMediaStoreAlbums by remember { mutableStateOf(false) }
     var showMediaStorePicker by remember { mutableStateOf(false) }
@@ -196,7 +198,7 @@ private fun SourceConfigScreen(
     var immichServerUrl by remember { mutableStateOf("") }
     var immichApiKey by remember { mutableStateOf("") }
     var immichAlbumIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var immichAlbumNames by remember { mutableStateOf("全部相册 (全库随机)") }
+    var immichAlbumNames by remember { mutableStateOf(context.getString(R.string.source_config_immich_all_albums)) }
     var immichAlbums by remember { mutableStateOf<List<ImmichAlbum>>(emptyList()) }
     var immichQuality by remember { mutableStateOf(ImmichQuality.PREVIEW) }
     var immichIgnoreSsl by remember { mutableStateOf(false) }
@@ -262,15 +264,7 @@ private fun SourceConfigScreen(
             }
         } else {
             // Default title for Add mode
-            title = when (selectedType) {
-                WallpaperSourceType.CUSTOM_PHOTOS -> "自选照片集"
-                WallpaperSourceType.LOCAL_FOLDER -> "本地文件夹"
-                WallpaperSourceType.MEDIA_STORE -> "系统相册"
-                WallpaperSourceType.IMMICH -> "Immich 相册"
-                WallpaperSourceType.HTTP_API -> "Bing 每日壁纸"
-                WallpaperSourceType.FAVORITES -> "我的收藏"
-                WallpaperSourceType.COMPOSITE -> "混合轮播"
-            }
+            title = context.getString(selectedType.displayNameRes)
         }
 
         // Query favorites count
@@ -333,8 +327,8 @@ private fun SourceConfigScreen(
 
             folderUriStr = uri.toString()
             val docFile = DocumentFile.fromTreeUri(context, uri)
-            folderName = docFile?.name ?: "自定义文件夹"
-            if (title.isBlank() || title == "本地文件夹") {
+            folderName = docFile?.name ?: context.getString(R.string.source_type_local_folder)
+            if (title.isBlank() || title == "本地文件夹" || title == context.getString(WallpaperSourceType.LOCAL_FOLDER.displayNameRes)) {
                 title = folderName
             }
             coroutineScope.launch {
@@ -384,16 +378,16 @@ private fun SourceConfigScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditMode) "编辑壁纸图源" else "添加壁纸图源") },
+                title = { Text(if (isEditMode) stringResource(R.string.source_config_edit_title) else stringResource(R.string.source_config_add_title)) },
                 navigationIcon = {
                     IconButton(onClick = handleCancel) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     if (isEditMode) {
                         IconButton(onClick = { showDeleteConfirmDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "删除图源", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.source_config_delete_tooltip), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 },
@@ -412,41 +406,41 @@ private fun SourceConfigScreen(
                 Box(modifier = Modifier.padding(16.dp)) {
                     Button(
                         onClick = {
-                            val trimmedTitle = title.trim().ifBlank { selectedType.displayName }
+                            val trimmedTitle = title.trim().ifBlank { context.getString(selectedType.displayNameRes) }
 
                             // Validation based on type
                             when (selectedType) {
                                 WallpaperSourceType.CUSTOM_PHOTOS -> {
                                     if (customPhotosList.isEmpty()) {
-                                        coroutineScope.launch { snackbarHostState.showSnackbar("请至少挑选一张照片加入自选集") }
+                                        coroutineScope.launch { snackbarHostState.showSnackbar(context.getString(R.string.source_config_err_photos_empty)) }
                                         return@Button
                                     }
                                 }
                                 WallpaperSourceType.LOCAL_FOLDER -> {
                                     if (folderUriStr.isBlank()) {
-                                        coroutineScope.launch { snackbarHostState.showSnackbar("请先选择壁纸文件夹") }
+                                        coroutineScope.launch { snackbarHostState.showSnackbar(context.getString(R.string.source_config_err_folder_empty)) }
                                         return@Button
                                     }
                                 }
                                 WallpaperSourceType.HTTP_API -> {
                                     if (httpPreset == HttpPresetType.CUSTOM && httpCustomUrl.isBlank()) {
-                                        coroutineScope.launch { snackbarHostState.showSnackbar("请填写自定义 HTTP 网址") }
+                                        coroutineScope.launch { snackbarHostState.showSnackbar(context.getString(R.string.source_config_err_http_empty)) }
                                         return@Button
                                     }
                                 }
                                 WallpaperSourceType.IMMICH -> {
                                     if (immichServerUrl.isBlank() || immichApiKey.isBlank()) {
-                                        coroutineScope.launch { snackbarHostState.showSnackbar("请填写 Immich 服务器地址与 API Key") }
+                                        coroutineScope.launch { snackbarHostState.showSnackbar(context.getString(R.string.source_config_err_immich_empty)) }
                                         return@Button
                                     }
                                 }
                                 WallpaperSourceType.MEDIA_STORE -> {
                                     if (!hasAnyMediaPermission) {
-                                        coroutineScope.launch { snackbarHostState.showSnackbar("请先授予相册访问权限或挑选照片") }
+                                        coroutineScope.launch { snackbarHostState.showSnackbar(context.getString(R.string.source_config_err_media_permission)) }
                                         return@Button
                                     }
                                     if (hasPartialMediaPermission && (mediaStoreAlbums.firstOrNull()?.count ?: 0) == 0) {
-                                        coroutineScope.launch { snackbarHostState.showSnackbar("尚未挑选任何照片，请先点击挑选照片") }
+                                        coroutineScope.launch { snackbarHostState.showSnackbar(context.getString(R.string.source_config_err_media_empty)) }
                                         return@Button
                                     }
                                 }
@@ -466,7 +460,7 @@ private fun SourceConfigScreen(
                                 WallpaperSourceType.MEDIA_STORE -> {
                                     val concreteAlbumNames = if (hasPartialMediaPermission) {
                                         val count = mediaStoreAlbums.firstOrNull()?.count ?: 0
-                                        if (count > 0) "已选 $count 张照片" else "系统相册"
+                                        if (count > 0) context.getString(R.string.source_config_media_selected_count_format, count) else context.getString(R.string.source_type_media_store)
                                     } else {
                                         mediaStoreAlbumNames
                                     }
@@ -516,7 +510,7 @@ private fun SourceConfigScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (isEditMode) "保存更改" else "保存并启用")
+                        Text(if (isEditMode) stringResource(R.string.source_config_btn_save_changes) else stringResource(R.string.source_config_btn_save_and_enable))
                     }
                 }
             }
@@ -536,7 +530,7 @@ private fun SourceConfigScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = if (isEditMode) "图源类型" else "1. 选择图源类型",
+                        text = if (isEditMode) stringResource(R.string.source_config_step1_edit) else stringResource(R.string.source_config_step1_add),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -564,18 +558,14 @@ private fun SourceConfigScreen(
                                     if (!isEditMode) {
                                         selectedType = type
                                         title = when (type) {
-                                            WallpaperSourceType.CUSTOM_PHOTOS -> "自选照片集"
-                                            WallpaperSourceType.LOCAL_FOLDER -> if (folderName.isNotBlank()) folderName else "本地文件夹"
-                                            WallpaperSourceType.MEDIA_STORE -> "系统相册"
-                                            WallpaperSourceType.IMMICH -> "Immich 相册"
-                                            WallpaperSourceType.HTTP_API -> httpPreset.label
-                                            WallpaperSourceType.FAVORITES -> "我的收藏"
-                                            WallpaperSourceType.COMPOSITE -> "混合轮播"
+                                            WallpaperSourceType.LOCAL_FOLDER -> if (folderName.isNotBlank()) folderName else context.getString(type.displayNameRes)
+                                            WallpaperSourceType.HTTP_API -> context.getString(httpPreset.labelRes)
+                                            else -> context.getString(type.displayNameRes)
                                         }
                                     }
                                 },
                                 enabled = !isEditMode,
-                                label = { Text(type.displayName) }
+                                label = { Text(stringResource(type.displayNameRes)) }
                             )
                         }
                     }
@@ -586,7 +576,7 @@ private fun SourceConfigScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "图源名称",
+                        text = stringResource(R.string.source_config_name_section),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -594,8 +584,8 @@ private fun SourceConfigScreen(
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("自定义标题") },
-                        placeholder = { Text("例如：相机精选壁纸") },
+                        label = { Text(stringResource(R.string.source_config_name_label)) },
+                        placeholder = { Text(stringResource(R.string.source_config_name_hint)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -606,7 +596,7 @@ private fun SourceConfigScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "图源详细配置",
+                        text = stringResource(R.string.source_config_detail_section),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -615,7 +605,7 @@ private fun SourceConfigScreen(
                     when (selectedType) {
                         WallpaperSourceType.CUSTOM_PHOTOS -> {
                             Text(
-                                text = "从系统照片选择器挑选照片。所选照片将复制到应用私有存储中，不受系统相册权限变动或清理缓存影响。",
+                                text = stringResource(R.string.source_config_photos_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -623,7 +613,7 @@ private fun SourceConfigScreen(
 
                             if (customPhotosList.isEmpty()) {
                                 Text(
-                                    text = "尚未选择任何照片",
+                                    text = stringResource(R.string.source_config_photos_none),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.error
                                 )
@@ -644,14 +634,14 @@ private fun SourceConfigScreen(
                                             color = MaterialTheme.colorScheme.onPrimary
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("正在导入照片…")
+                                        Text(stringResource(R.string.source_config_photos_importing))
                                     } else {
-                                        Text("从相册挑选照片")
+                                        Text(stringResource(R.string.source_config_photos_btn_pick))
                                     }
                                 }
                             } else {
                                 Text(
-                                    text = "已选 ${customPhotosList.size} 张照片",
+                                    text = stringResource(R.string.source_config_photos_count_format, customPhotosList.size),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary
@@ -689,7 +679,7 @@ private fun SourceConfigScreen(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Close,
-                                                    contentDescription = "删除",
+                                                    contentDescription = stringResource(R.string.action_delete),
                                                     modifier = Modifier.size(16.dp),
                                                     tint = MaterialTheme.colorScheme.error
                                                 )
@@ -720,9 +710,9 @@ private fun SourceConfigScreen(
                                                 color = MaterialTheme.colorScheme.onPrimary
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Text("导入中…")
+                                            Text(stringResource(R.string.source_config_photos_importing))
                                         } else {
-                                            Text("追加照片")
+                                            Text(stringResource(R.string.source_config_photos_btn_append))
                                         }
                                     }
                                     OutlinedButton(
@@ -733,7 +723,7 @@ private fun SourceConfigScreen(
                                         enabled = !isImportingPhotos,
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Text("清空照片")
+                                        Text(stringResource(R.string.source_config_photos_btn_clear))
                                     }
                                 }
                             }
@@ -741,14 +731,14 @@ private fun SourceConfigScreen(
 
                         WallpaperSourceType.LOCAL_FOLDER -> {
                             Text(
-                                text = if (folderUriStr.isNotBlank()) "已选目录: $folderName" else "尚未选择文件夹",
+                                text = if (folderUriStr.isNotBlank()) stringResource(R.string.source_config_folder_selected_format, folderName) else stringResource(R.string.source_config_folder_none),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = if (folderUriStr.isNotBlank()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
                             )
                             if (folderUriStr.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = if (isScanningFolder) "正在扫描图片…" else "检索到 $indexedImageCount 张图片",
+                                    text = if (isScanningFolder) stringResource(R.string.source_config_folder_scanning) else stringResource(R.string.source_config_folder_count_format, indexedImageCount),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -758,14 +748,14 @@ private fun SourceConfigScreen(
                                 onClick = { folderPickerLauncher.launch(null) },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(if (folderUriStr.isNotBlank()) "更换文件夹" else "选择文件夹")
+                                Text(if (folderUriStr.isNotBlank()) stringResource(R.string.source_config_folder_btn_change) else stringResource(R.string.source_config_folder_btn_select))
                             }
                         }
 
                         WallpaperSourceType.MEDIA_STORE -> {
                             if (!hasAnyMediaPermission) {
                                 Text(
-                                    text = "尚未授权相册访问",
+                                    text = stringResource(R.string.source_config_media_unauthorized),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -774,12 +764,12 @@ private fun SourceConfigScreen(
                                     onClick = { mediaPermissionLauncher.launch(MediaStoreSource.getRequiredPermissions()) },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("选择相册或挑选照片")
+                                    Text(stringResource(R.string.source_config_media_btn_grant))
                                 }
                             } else if (hasPartialMediaPermission) {
                                 val selectedCount = mediaStoreAlbums.firstOrNull()?.count ?: 0
                                 Text(
-                                    text = if (selectedCount > 0) "系统相册 (已选 $selectedCount 张)" else "尚未选择照片",
+                                    text = if (selectedCount > 0) stringResource(R.string.source_config_media_partial_format, selectedCount) else stringResource(R.string.source_config_photos_none),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -788,11 +778,11 @@ private fun SourceConfigScreen(
                                     onClick = { mediaPermissionLauncher.launch(MediaStoreSource.getRequiredPermissions()) },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text(if (selectedCount > 0) "管理所选照片" else "挑选照片")
+                                    Text(if (selectedCount > 0) stringResource(R.string.source_config_media_btn_manage) else stringResource(R.string.source_config_media_btn_pick))
                                 }
                             } else {
                                 Text(
-                                    text = "当前选择: $mediaStoreAlbumNames",
+                                    text = stringResource(R.string.source_config_media_selected_format, mediaStoreAlbumNames),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -815,7 +805,7 @@ private fun SourceConfigScreen(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                     }
-                                    Text("选择相册组合")
+                                    Text(stringResource(R.string.source_config_media_btn_pick_combo))
                                 }
                             }
                         }
@@ -824,7 +814,7 @@ private fun SourceConfigScreen(
                             OutlinedTextField(
                                 value = immichServerUrl,
                                 onValueChange = { immichServerUrl = it },
-                                label = { Text("服务器地址 (Server URL)") },
+                                label = { Text(stringResource(R.string.source_config_immich_server_url)) },
                                 placeholder = { Text("https://192.168.1.100:2283") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
@@ -833,14 +823,14 @@ private fun SourceConfigScreen(
                             OutlinedTextField(
                                 value = immichApiKey,
                                 onValueChange = { immichApiKey = it },
-                                label = { Text("API Key") },
+                                label = { Text(stringResource(R.string.source_config_immich_api_key)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(12.dp))
 
                             Text(
-                                text = "相册筛选: $immichAlbumNames",
+                                text = stringResource(R.string.source_config_immich_album_filter_format, immichAlbumNames),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -848,7 +838,7 @@ private fun SourceConfigScreen(
                             Button(
                                 onClick = {
                                     if (immichServerUrl.isBlank() || immichApiKey.isBlank()) {
-                                        coroutineScope.launch { snackbarHostState.showSnackbar("请先填写服务器地址与 API Key") }
+                                        coroutineScope.launch { snackbarHostState.showSnackbar(context.getString(R.string.source_config_err_immich_empty)) }
                                         return@Button
                                     }
                                     coroutineScope.launch {
@@ -859,7 +849,7 @@ private fun SourceConfigScreen(
                                             immichAlbums = it
                                             showImmichPicker = true
                                         }.onFailure {
-                                            snackbarHostState.showSnackbar("获取相册失败: ${it.message}")
+                                            snackbarHostState.showSnackbar(context.getString(R.string.source_config_err_fetch_albums_failed, it.message ?: ""))
                                         }
                                     }
                                 },
@@ -872,16 +862,16 @@ private fun SourceConfigScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                 }
-                                Text("选择相册组合")
+                                Text(stringResource(R.string.source_config_media_btn_pick_combo))
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("下载画质", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.source_config_immich_quality), style = MaterialTheme.typography.bodyMedium)
                             Spacer(modifier = Modifier.height(6.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf(
-                                    ImmichQuality.PREVIEW to "高清预览 (省流)",
-                                    ImmichQuality.ORIGINAL to "原始全尺寸"
+                                    ImmichQuality.PREVIEW to stringResource(R.string.source_config_immich_quality_preview),
+                                    ImmichQuality.ORIGINAL to stringResource(R.string.source_config_immich_quality_original)
                                 ).forEach { (quality, label) ->
                                     FilterChip(
                                         selected = immichQuality == quality,
@@ -898,8 +888,8 @@ private fun SourceConfigScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("忽略自签名证书", style = MaterialTheme.typography.bodyMedium)
-                                    Text("局域网自签名 HTTPS 建议开启", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    Text(stringResource(R.string.source_config_immich_ignore_ssl), style = MaterialTheme.typography.bodyMedium)
+                                    Text(stringResource(R.string.source_config_immich_ignore_ssl_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                                 }
                                 Switch(checked = immichIgnoreSsl, onCheckedChange = { immichIgnoreSsl = it })
                             }
@@ -911,8 +901,8 @@ private fun SourceConfigScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("仅在 Wi-Fi 下下载", style = MaterialTheme.typography.bodyMedium)
-                                    Text("移动蜂窝网络下复用缓存或跳过", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    Text(stringResource(R.string.source_config_wifi_only), style = MaterialTheme.typography.bodyMedium)
+                                    Text(stringResource(R.string.source_config_immich_wifi_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                                 }
                                 Switch(checked = immichWifiOnly, onCheckedChange = { immichWifiOnly = it })
                             }
@@ -925,11 +915,11 @@ private fun SourceConfigScreen(
                                         selected = httpPreset == preset,
                                         onClick = {
                                             httpPreset = preset
-                                            if (title.isBlank() || HttpPresetType.values().any { it.label == title }) {
-                                                title = preset.label
+                                            if (title.isBlank() || HttpPresetType.values().any { it.label == title || context.getString(it.labelRes) == title }) {
+                                                title = context.getString(preset.labelRes)
                                             }
                                         },
-                                        label = { Text(preset.label) }
+                                        label = { Text(stringResource(preset.labelRes)) }
                                     )
                                 }
                             }
@@ -939,7 +929,7 @@ private fun SourceConfigScreen(
                                 OutlinedTextField(
                                     value = httpCustomUrl,
                                     onValueChange = { httpCustomUrl = it },
-                                    label = { Text("API 网址 (URL)") },
+                                    label = { Text(stringResource(R.string.source_config_http_url)) },
                                     placeholder = { Text("https://api.example.com/wallpaper") },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
@@ -948,8 +938,8 @@ private fun SourceConfigScreen(
                                 OutlinedTextField(
                                     value = httpCustomJsonPath,
                                     onValueChange = { httpCustomJsonPath = it },
-                                    label = { Text("图片字段路径 (可选 JSONPath)") },
-                                    placeholder = { Text("例如 images[0].url") },
+                                    label = { Text(stringResource(R.string.source_config_http_json_path)) },
+                                    placeholder = { Text(stringResource(R.string.source_config_http_json_path_hint)) },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -962,8 +952,8 @@ private fun SourceConfigScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("仅在 Wi-Fi 下下载", style = MaterialTheme.typography.bodyMedium)
-                                    Text("避免在移动网络下消耗流量", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    Text(stringResource(R.string.source_config_wifi_only), style = MaterialTheme.typography.bodyMedium)
+                                    Text(stringResource(R.string.source_config_http_wifi_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                                 }
                                 Switch(checked = httpWifiOnly, onCheckedChange = { httpWifiOnly = it })
                             }
@@ -971,12 +961,12 @@ private fun SourceConfigScreen(
 
                         WallpaperSourceType.FAVORITES -> {
                             Text(
-                                text = "离线收藏图源仅从您收藏的历史壁纸中随机挑选。高可靠性、完全离线可用。",
+                                text = stringResource(R.string.source_config_fav_desc),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "当前已收藏壁纸数量: $favoritesCount 张",
+                                text = stringResource(R.string.source_config_fav_count_format, favoritesCount),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (favoritesCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                             )
@@ -993,7 +983,8 @@ private fun SourceConfigScreen(
 
     // MediaStore Album Picker Sheet
     if (showMediaStorePicker) {
-        val pickerItems = remember(mediaStoreAlbums) {
+        val allPhotosText = stringResource(R.string.source_config_media_all_photos)
+        val pickerItems = remember(mediaStoreAlbums, allPhotosText) {
             val list = mutableListOf<PickerAlbumItem>()
             val allPhotosCount = mediaStoreAlbums.firstOrNull { it.id == null }?.count
                 ?: mediaStoreAlbums.sumOf { it.count }
@@ -1001,7 +992,7 @@ private fun SourceConfigScreen(
             list.add(
                 PickerAlbumItem(
                     id = null,
-                    name = "全部照片 (全库随机)",
+                    name = allPhotosText,
                     count = allPhotosCount,
                     coverUri = firstCover
                 )
@@ -1019,16 +1010,17 @@ private fun SourceConfigScreen(
             list
         }
 
+        val defaultAlbumText = stringResource(R.string.source_type_media_store)
         AlbumPickerSheet(
-            title = "选择系统相册组合",
+            title = stringResource(R.string.source_config_media_picker_title),
             albums = pickerItems,
             selectedIds = mediaStoreAlbumIds,
             onSelectionConfirmed = { selectedIds ->
                 mediaStoreAlbumIds = selectedIds
                 mediaStoreAlbumNames = when {
-                    selectedIds.isEmpty() -> "全部照片 (全库随机)"
-                    selectedIds.size == 1 -> mediaStoreAlbums.find { it.id == selectedIds.first() }?.name ?: "相册"
-                    else -> "已选 ${selectedIds.size} 个相册"
+                    selectedIds.isEmpty() -> context.getString(R.string.source_config_media_all_photos)
+                    selectedIds.size == 1 -> mediaStoreAlbums.find { it.id == selectedIds.first() }?.name ?: defaultAlbumText
+                    else -> context.getString(R.string.source_config_media_selected_albums_format, selectedIds.size)
                 }
                 showMediaStorePicker = false
             },
@@ -1038,7 +1030,8 @@ private fun SourceConfigScreen(
 
     // Immich Album Picker Sheet
     if (showImmichPicker) {
-        val pickerItems = remember(immichAlbums, immichServerUrl, immichApiKey) {
+        val allAlbumsText = stringResource(R.string.source_config_immich_all_albums)
+        val pickerItems = remember(immichAlbums, immichServerUrl, immichApiKey, allAlbumsText) {
             val list = mutableListOf<PickerAlbumItem>()
             val baseUrl = immichServerUrl.trimEnd('/')
             val totalAssets = immichAlbums.sumOf { it.assetCount }
@@ -1046,7 +1039,7 @@ private fun SourceConfigScreen(
             list.add(
                 PickerAlbumItem(
                     id = null,
-                    name = "全部相册 (全库随机)",
+                    name = allAlbumsText,
                     count = totalAssets,
                     coverUrl = firstThumbnailId?.let { "$baseUrl/api/assets/$it/thumbnail" },
                     apiKey = immichApiKey
@@ -1066,16 +1059,17 @@ private fun SourceConfigScreen(
             list
         }
 
+        val defaultAlbumText = stringResource(R.string.source_type_immich)
         AlbumPickerSheet(
-            title = "选择 Immich 相册组合",
+            title = stringResource(R.string.source_config_immich_picker_title),
             albums = pickerItems,
             selectedIds = immichAlbumIds,
             onSelectionConfirmed = { selectedIds ->
                 immichAlbumIds = selectedIds
                 immichAlbumNames = when {
-                    selectedIds.isEmpty() -> "全部相册 (全库随机)"
-                    selectedIds.size == 1 -> immichAlbums.find { it.id == selectedIds.first() }?.name ?: "相册"
-                    else -> "已选 ${selectedIds.size} 个相册"
+                    selectedIds.isEmpty() -> context.getString(R.string.source_config_immich_all_albums)
+                    selectedIds.size == 1 -> immichAlbums.find { it.id == selectedIds.first() }?.name ?: defaultAlbumText
+                    else -> context.getString(R.string.source_config_media_selected_albums_format, selectedIds.size)
                 }
                 showImmichPicker = false
             },
@@ -1087,8 +1081,11 @@ private fun SourceConfigScreen(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("确认删除图源") },
-            text = { Text("确定要删除「${title.ifBlank { "此图源" }}」吗？删除后此图源将不再参与轮播。") },
+            title = { Text(stringResource(R.string.source_config_delete_dialog_title)) },
+            text = {
+                val displayName = title.ifBlank { stringResource(R.string.source_config_this_source) }
+                Text(stringResource(R.string.source_config_delete_dialog_msg, displayName))
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1099,12 +1096,12 @@ private fun SourceConfigScreen(
                         onFinish()
                     }
                 ) {
-                    Text("确认删除", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.source_config_btn_confirm_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )

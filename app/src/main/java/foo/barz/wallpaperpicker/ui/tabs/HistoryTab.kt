@@ -70,10 +70,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
@@ -155,12 +157,12 @@ fun HistoryTab(
                 FilterChip(
                     selected = subTab == HistorySubTab.HISTORY,
                     onClick = { subTab = HistorySubTab.HISTORY },
-                    label = { Text("全部历史 (${state.historyList.size})") }
+                    label = { Text(stringResource(R.string.hist_subtab_all_format, state.historyList.size)) }
                 )
                 FilterChip(
                     selected = subTab == HistorySubTab.FAVORITES,
                     onClick = { subTab = HistorySubTab.FAVORITES },
-                    label = { Text("我的收藏 (${state.favoritesList.size})") }
+                    label = { Text(stringResource(R.string.hist_subtab_favorites_format, state.favoritesList.size)) }
                 )
             }
 
@@ -172,7 +174,7 @@ fun HistoryTab(
                     ) {
                         Icon(
                             Icons.Default.DeleteSweep,
-                            contentDescription = "历史清理选项",
+                            contentDescription = stringResource(R.string.hist_clean_options),
                             tint = MaterialTheme.colorScheme.outline
                         )
                     }
@@ -184,9 +186,9 @@ fun HistoryTab(
                         DropdownMenuItem(
                             text = {
                                 Column {
-                                    Text("一键清理失效记录", style = MaterialTheme.typography.bodyMedium)
+                                    Text(stringResource(R.string.hist_menu_clean_invalid), style = MaterialTheme.typography.bodyMedium)
                                     Text(
-                                        text = "仅移除原图已丢失的非收藏条目",
+                                        text = stringResource(R.string.hist_menu_clean_invalid_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.outline
                                     )
@@ -209,12 +211,12 @@ fun HistoryTab(
                             text = {
                                 Column {
                                     Text(
-                                        text = "清空全部非收藏历史",
+                                        text = stringResource(R.string.hist_menu_clear_all),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.error
                                     )
                                     Text(
-                                        text = "删除所有未加星标的历史记录",
+                                        text = stringResource(R.string.hist_menu_clear_all_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.outline
                                     )
@@ -262,16 +264,20 @@ fun HistoryTab(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = if (subTab == HistorySubTab.FAVORITES) "暂无收藏壁纸" else "暂无历史壁纸记录",
+                        text = if (subTab == HistorySubTab.FAVORITES) {
+                            stringResource(R.string.hist_empty_fav_title)
+                        } else {
+                            stringResource(R.string.hist_empty_all_title)
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = if (subTab == HistorySubTab.FAVORITES) {
-                            "在历史壁纸或控制台中点击爱心，即可永久收藏并支持离线使用"
+                            stringResource(R.string.hist_empty_fav_desc)
                         } else {
-                            "每次成功更换壁纸后，均会自动记录在此处"
+                            stringResource(R.string.hist_empty_all_desc)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
@@ -375,12 +381,13 @@ fun HistoryTab(
                     tint = MaterialTheme.colorScheme.error
                 )
             },
-            title = { Text("删除历史记录") },
+            title = { Text(stringResource(R.string.hist_dialog_delete_title)) },
             text = {
+                val wallpaperName = targetItem.title ?: stringResource(R.string.hist_item_this_wallpaper)
                 val detailText = if (targetItem.isFavorite) {
-                    "确定要删除「${targetItem.title ?: "此壁纸"}」吗？该壁纸已被收藏，删除历史记录将一并移除收藏状态及离线保护副本。"
+                    stringResource(R.string.hist_dialog_delete_fav_msg, wallpaperName)
                 } else {
-                    "确定要从历史记录中删除「${targetItem.title ?: "此壁纸"}」吗？此操作不可撤销。"
+                    stringResource(R.string.hist_dialog_delete_msg, wallpaperName)
                 }
                 Text(detailText)
             },
@@ -397,12 +404,12 @@ fun HistoryTab(
                         contentColor = MaterialTheme.colorScheme.onError
                     )
                 ) {
-                    Text("删除")
+                    Text(stringResource(R.string.action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { itemToDelete = null }) {
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -419,9 +426,9 @@ fun HistoryTab(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            title = { Text("清理失效历史记录") },
+            title = { Text(stringResource(R.string.hist_dialog_clear_invalid_title)) },
             text = {
-                Text("将扫描并移除所有本地原图已丢失、且未加入收藏的历史记录条目。已收藏的壁纸受离线持久保护，不受影响。是否继续？")
+                Text(stringResource(R.string.hist_dialog_clear_invalid_msg))
             },
             confirmButton = {
                 Button(
@@ -430,12 +437,12 @@ fun HistoryTab(
                         onClearInvalidHistory()
                     }
                 ) {
-                    Text("立即清理")
+                    Text(stringResource(R.string.hist_dialog_clear_invalid_btn))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearInvalidConfirmDialog = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -452,9 +459,9 @@ fun HistoryTab(
                     tint = MaterialTheme.colorScheme.error
                 )
             },
-            title = { Text("清空历史记录") },
+            title = { Text(stringResource(R.string.hist_dialog_clear_all_title)) },
             text = {
-                Text("确定要清空所有未收藏的历史壁纸记录吗？已加入收藏的壁纸将完整保留。此操作不可恢复。")
+                Text(stringResource(R.string.hist_dialog_clear_all_msg))
             },
             confirmButton = {
                 Button(
@@ -467,12 +474,12 @@ fun HistoryTab(
                         contentColor = MaterialTheme.colorScheme.onError
                     )
                 ) {
-                    Text("清空全部")
+                    Text(stringResource(R.string.hist_dialog_clear_all_btn))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllConfirmDialog = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -525,7 +532,11 @@ private fun WallpaperGridCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (item.canRedownload) "原图失效 · 可重下" else "原图已失效",
+                        text = if (item.canRedownload) {
+                            stringResource(R.string.hist_badge_inaccessible_redownloadable)
+                        } else {
+                            stringResource(R.string.hist_badge_inaccessible)
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White,
                         modifier = Modifier
@@ -571,7 +582,7 @@ private fun WallpaperGridCard(
                 ) {
                     Icon(
                         imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "收藏",
+                        contentDescription = stringResource(R.string.hist_action_favorite),
                         tint = if (item.isFavorite) Color.Red else Color.White,
                         modifier = Modifier.size(18.dp)
                     )
@@ -592,7 +603,7 @@ private fun WallpaperGridCard(
             ) {
                 Column {
                     Text(
-                        text = item.title ?: "未知壁纸",
+                        text = item.title ?: stringResource(R.string.hist_unknown_wallpaper),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White,
                         maxLines = 1,
@@ -654,21 +665,25 @@ private fun WallpaperDetailSheet(
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.title ?: "未知壁纸",
+                    text = item.title ?: stringResource(R.string.hist_unknown_wallpaper),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "来源: ${item.displaySourceDetail} · 更换于 ${formatDateTime(item.appliedTimestamp)}",
+                    text = stringResource(
+                        R.string.hist_detail_source_format,
+                        item.displaySourceDetail,
+                        formatDateTime(item.appliedTimestamp)
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
                 if (item.isFavorite) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "已加入收藏 (离线永久保留)",
+                        text = stringResource(R.string.hist_detail_favorited_badge),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -701,16 +716,16 @@ private fun WallpaperDetailSheet(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "原图已被清理或无法访问",
+                                text = stringResource(R.string.hist_detail_missing_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = if (item.canRedownload) {
-                                    "本地缓存已丢失，但检测到远端下载源，可点击下方重新下载以恢复原图并设为壁纸。"
+                                    stringResource(R.string.hist_detail_missing_redownload_desc)
                                 } else {
-                                    "该原图在本地相册中已失效或未包含远端地址，无法直接恢复。您可以删除此记录以清理列表。"
+                                    stringResource(R.string.hist_detail_missing_desc)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
@@ -736,7 +751,7 @@ private fun WallpaperDetailSheet(
                                     strokeWidth = 2.dp
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("正在重新下载…")
+                                Text(stringResource(R.string.hist_action_redownloading))
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.CloudDownload,
@@ -744,7 +759,7 @@ private fun WallpaperDetailSheet(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("从网络重新下载原图")
+                                Text(stringResource(R.string.hist_action_redownload))
                             }
                         }
                     }
@@ -767,15 +782,15 @@ private fun WallpaperDetailSheet(
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("正在应用壁纸…")
+                Text(stringResource(R.string.hist_action_applying))
             } else if (!isAccessible) {
                 Icon(Icons.Default.Warning, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("原图已失效无法应用")
+                Text(stringResource(R.string.hist_action_cannot_apply))
             } else {
                 Icon(Icons.Default.Wallpaper, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("设为当前壁纸")
+                Text(stringResource(R.string.hist_action_set_current))
             }
         }
 
@@ -803,7 +818,11 @@ private fun WallpaperDetailSheet(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(if (item.isFavorite) "已收藏" else "设为收藏", maxLines = 1)
+                    Text(
+                        if (item.isFavorite) stringResource(R.string.hist_action_favorited)
+                        else stringResource(R.string.hist_action_favorite),
+                        maxLines = 1
+                    )
                 }
 
                 OutlinedButton(
@@ -814,7 +833,7 @@ private fun WallpaperDetailSheet(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("图库打开", maxLines = 1)
+                    Text(stringResource(R.string.hist_action_gallery), maxLines = 1)
                 }
             }
 
@@ -830,7 +849,7 @@ private fun WallpaperDetailSheet(
                 ) {
                     Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("保存相册", maxLines = 1)
+                    Text(stringResource(R.string.hist_action_save), maxLines = 1)
                 }
 
                 OutlinedButton(
@@ -841,7 +860,7 @@ private fun WallpaperDetailSheet(
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("系统分享", maxLines = 1)
+                    Text(stringResource(R.string.action_share), maxLines = 1)
                 }
             }
         }
@@ -860,8 +879,8 @@ private fun WallpaperDetailSheet(
                 (item.cropFocusX != null && item.cropFocusX != 0.5f) ||
                 (item.cropFocusY != null && item.cropFocusY != 0.5f) ||
                 item.flipHorizontal
-            ) " (已个性化)" else ""
-            Text("微调构图与滚动$customBadge", maxLines = 1)
+            ) stringResource(R.string.hist_badge_customized) else ""
+            Text("${stringResource(R.string.hist_action_tune)}$customBadge", maxLines = 1)
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -874,7 +893,7 @@ private fun WallpaperDetailSheet(
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("删除此记录", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.hist_action_delete_record), color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -886,16 +905,17 @@ private fun formatDateTime(timestamp: Long): String {
     return sdf.format(Date(timestamp))
 }
 
+@Composable
 private fun formatTimeAgo(timestamp: Long): String {
     val diff = System.currentTimeMillis() - timestamp
     val minutes = diff / (60 * 1000)
     val hours = diff / (60 * 60 * 1000)
     val days = diff / (24 * 60 * 60 * 1000)
     return when {
-        minutes < 1 -> "刚刚"
-        minutes < 60 -> "${minutes}分钟前"
-        hours < 24 -> "${hours}小时前"
-        days < 7 -> "${days}天前"
+        minutes < 1 -> stringResource(R.string.time_just_now)
+        minutes < 60 -> stringResource(R.string.time_minutes_ago, minutes.toInt())
+        hours < 24 -> stringResource(R.string.time_hours_ago, hours.toInt())
+        days < 7 -> stringResource(R.string.time_days_ago, days.toInt())
         else -> {
             val sdf = SimpleDateFormat("MM-dd", Locale.getDefault())
             sdf.format(Date(timestamp))

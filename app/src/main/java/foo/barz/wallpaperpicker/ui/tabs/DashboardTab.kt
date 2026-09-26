@@ -54,11 +54,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
@@ -120,16 +122,18 @@ fun DashboardTab(
     val canChange = !state.isChanging && (enabledSources.isNotEmpty() || state.folderUri != null)
 
     val activeSourceLabel = when {
-        enabledSources.isEmpty() -> state.folderName?.let { "本地文件夹 ($it)" } ?: "未启用任何图源"
+        enabledSources.isEmpty() -> state.folderName?.let { stringResource(R.string.dash_local_folder_format, it) }
+            ?: stringResource(R.string.dash_no_sources_enabled)
         enabledSources.size == 1 -> enabledSources.first().title
-        else -> "多源混合 (${enabledSources.size} 个启用图源)"
+        else -> stringResource(R.string.dash_multiple_sources_format, enabledSources.size)
     }
 
     val sourceBadge = state.currentWallpaperItem?.sourceType?.displayName
         ?: when {
-            enabledSources.isEmpty() -> state.folderName?.let { "本地文件夹 ($it)" } ?: "当前壁纸"
+            enabledSources.isEmpty() -> state.folderName?.let { stringResource(R.string.dash_local_folder_format, it) }
+                ?: stringResource(R.string.dash_current_wallpaper)
             enabledSources.size == 1 -> enabledSources.first().title
-            else -> "多源混合"
+            else -> stringResource(R.string.dash_multiple_sources_badge)
         }
 
     Column(
@@ -155,7 +159,7 @@ fun DashboardTab(
                     // Full-bleed wallpaper preview
                     AsyncImage(
                         model = state.lastWallpaperUri,
-                        contentDescription = state.lastWallpaperTitle ?: "当前壁纸预览",
+                        contentDescription = state.lastWallpaperTitle ?: stringResource(R.string.dash_preview_content_desc),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -218,7 +222,11 @@ fun DashboardTab(
                         ) {
                             Icon(
                                 imageVector = if (state.isCurrentFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = if (state.isCurrentFavorite) "已收藏" else "设为收藏",
+                                contentDescription = if (state.isCurrentFavorite) {
+                                    stringResource(R.string.dash_action_favorited)
+                                } else {
+                                    stringResource(R.string.dash_action_favorite)
+                                },
                                 tint = if (state.isCurrentFavorite) Color.Red else Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -240,7 +248,7 @@ fun DashboardTab(
                                 .padding(end = 8.dp)
                         ) {
                             Text(
-                                text = state.lastWallpaperTitle ?: "当前正在使用的壁纸",
+                                text = state.lastWallpaperTitle ?: stringResource(R.string.dash_current_in_use),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = Color.White,
                                 fontWeight = FontWeight.SemiBold,
@@ -252,9 +260,9 @@ fun DashboardTab(
                                 (state.currentWallpaperItem?.cropFocusX != null && state.currentWallpaperItem?.cropFocusX != 0.5f) ||
                                 (state.currentWallpaperItem?.cropFocusY != null && state.currentWallpaperItem?.cropFocusY != 0.5f) ||
                                 state.currentWallpaperItem?.flipHorizontal == true
-                            ) "已个性化构图 · " else ""
+                            ) stringResource(R.string.dash_customized_composition) else ""
                             Text(
-                                text = "${customBadge}点击全屏手势查看与缩放",
+                                text = "$customBadge${stringResource(R.string.dash_tap_fullscreen_hint)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.85f),
                                 maxLines = 1,
@@ -273,13 +281,13 @@ fun DashboardTab(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Fullscreen,
-                                    contentDescription = "全屏查看",
+                                    contentDescription = stringResource(R.string.dash_fullscreen_btn),
                                     tint = Color.White,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "全屏",
+                                    text = stringResource(R.string.dash_fullscreen_btn),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White
                                 )
@@ -302,7 +310,7 @@ fun DashboardTab(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("微调构图", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        Text(stringResource(R.string.dash_action_tune), style = MaterialTheme.typography.labelSmall, maxLines = 1)
                     }
                 }
 
@@ -319,7 +327,7 @@ fun DashboardTab(
                             Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(20.dp))
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("保存相册", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        Text(stringResource(R.string.dash_action_save), style = MaterialTheme.typography.labelSmall, maxLines = 1)
                     }
                 }
 
@@ -331,7 +339,7 @@ fun DashboardTab(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("系统分享", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        Text(stringResource(R.string.dash_action_share), style = MaterialTheme.typography.labelSmall, maxLines = 1)
                     }
                 }
 
@@ -343,7 +351,7 @@ fun DashboardTab(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("图库打开", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        Text(stringResource(R.string.dash_action_open_gallery), style = MaterialTheme.typography.labelSmall, maxLines = 1)
                     }
                 }
             }
@@ -370,12 +378,12 @@ fun DashboardTab(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "尚未更换过壁纸",
+                            text = stringResource(R.string.dash_empty_title),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "配置图源后点击下方按钮即可立即更换第一张壁纸",
+                            text = stringResource(R.string.dash_empty_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -387,33 +395,37 @@ fun DashboardTab(
         // 2. Status Diagnostics Card
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("当前状态", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.dash_status_title), style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "激活来源: $activeSourceLabel",
+                    text = stringResource(R.string.dash_active_source, activeSourceLabel),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "上次更换: ${state.lastChangedText}",
+                    text = stringResource(R.string.dash_last_changed, state.lastChangedText),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = if (state.isScheduled) "定时调度: 已开启 (每 ${state.intervalMinutes} 分钟)" else "定时调度: 未开启",
+                    text = if (state.isScheduled) {
+                        stringResource(R.string.dash_schedule_on_format, state.intervalMinutes)
+                    } else {
+                        stringResource(R.string.dash_schedule_off)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (state.isScheduled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                 )
                 if (state.lastErrorMessage != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "最近执行异常: ${state.lastErrorMessage}",
+                        text = stringResource(R.string.dash_last_error, state.lastErrorMessage),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
                 } else if (state.lastExecutionStatus != null && state.lastExecutionStatus != "成功") {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "最近执行状态: ${state.lastExecutionStatus}",
+                        text = stringResource(R.string.dash_last_status, state.lastExecutionStatus),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -436,11 +448,11 @@ fun DashboardTab(
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("正在处理并更换壁纸…")
+                Text(stringResource(R.string.dash_changing))
             } else {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("立即更换壁纸")
+                Text(stringResource(R.string.dash_change_now))
             }
         }
 

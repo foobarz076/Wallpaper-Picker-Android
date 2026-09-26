@@ -40,4 +40,518 @@
     <string name="action_close">Close</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_share">Share</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_clear">Clear</string>
+
+    <!-- Dashboard Tab -->
+    <string name="dash_no_sources_enabled">No sources enabled</string>
+    <string name="dash_local_folder_format">Local Folder (%s)</string>
+    <string name="dash_multiple_sources_format">Multiple Sources (%d enabled)</string>
+    <string name="dash_multiple_sources_badge">Multiple Sources</string>
+    <string name="dash_current_wallpaper">Current Wallpaper</string>
+    <string name="dash_preview_content_desc">Current wallpaper preview</string>
+    <string name="dash_action_favorite">Favorite</string>
+    <string name="dash_action_favorited">Favorited</string>
+    <string name="dash_current_in_use">Current Wallpaper</string>
+    <string name="dash_customized_composition">Customized · </string>
+    <string name="dash_tap_fullscreen_hint">Tap for fullscreen gesture zoom</string>
+    <string name="dash_fullscreen_btn">Fullscreen</string>
+    <string name="dash_action_tune">Tune</string>
+    <string name="dash_action_save">Save</string>
+    <string name="dash_action_share">Share</string>
+    <string name="dash_action_open_gallery">Gallery</string>
+    <string name="dash_empty_title">No wallpaper changed yet</string>
+    <string name="dash_empty_desc">Configure sources and tap below to change your first wallpaper</string>
+    <string name="dash_status_title">Current Status</string>
+    <string name="dash_active_source">Active Source: %s</string>
+    <string name="dash_last_changed">Last Changed: %s</string>
+    <string name="dash_schedule_on_format">Schedule: ON (Every %d min)</string>
+    <string name="dash_schedule_off">Schedule: OFF</string>
+    <string name="dash_last_error">Last Error: %s</string>
+    <string name="dash_last_status">Last Status: %s</string>
+    <string name="dash_changing">Processing &amp; changing wallpaper…</string>
+    <string name="dash_change_now">Change Wallpaper Now</string>
+
+    <!-- Wallpaper Adjustment Sheet -->
+    <string name="adjust_title">Image Tuning &amp; Framing</string>
+    <string name="adjust_preview_title">Real-Time Framing Simulation</string>
+    <string name="adjust_preview_desc">Framing preview</string>
+    <string name="adjust_current_focus">Focal point: (%1$d%%, %2$d%%)</string>
+    <string name="adjust_mirrored_badge"> · Mirrored</string>
+    <string name="adjust_flip_title">Horizontal Flip</string>
+    <string name="adjust_flip_desc">Mirror left-to-right to avoid icons or improve gaze direction</string>
+    <string name="adjust_crop_focus_title">Focal Point Tuning</string>
+    <string name="adjust_focus_x_label">Horizontal (X):</string>
+    <string name="adjust_focus_x_left">Left (%d%%)</string>
+    <string name="adjust_focus_x_right">Right (%d%%)</string>
+    <string name="adjust_focus_x_center">Center (%d%%)</string>
+    <string name="adjust_focus_y_label">Vertical (Y):</string>
+    <string name="adjust_focus_y_top">Top/Head (%d%%)</string>
+    <string name="adjust_focus_y_bottom">Bottom (%d%%)</string>
+    <string name="adjust_focus_y_center">Center (%d%%)</string>
+    <string name="adjust_preset_head">Head First</string>
+    <string name="adjust_preset_center">Standard Center</string>
+    <string name="adjust_preset_bottom">Bottom First</string>
+    <string name="adjust_scroll_title">Parallax Scroll Strategy</string>
+    <string name="adjust_scroll_desc">Override scroll mode for this wallpaper, defaults to global</string>
+    <string name="adjust_scroll_follow_global">Follow Global</string>
+    <string name="adjust_scroll_auto">Auto</string>
+    <string name="adjust_scroll_always">Scroll</string>
+    <string name="adjust_scroll_never">Fixed</string>
+    <string name="adjust_scroll_global_format">Following global setting: %s</string>
+    <string name="adjust_scroll_auto_desc">AUTO: Parallax scroll wide images, lock portrait to single screen</string>
+    <string name="adjust_scroll_always_desc">ALWAYS: Force double-width canvas scrolling with launcher</string>
+    <string name="adjust_scroll_never_desc">NEVER: Strictly lock to single screen, no panning</string>
+    <string name="adjust_reset_global">Reset to Global Default</string>
+    <string name="adjust_save_memory_only">Save Preference Only</string>
+    <string name="adjust_save_and_apply">Save &amp; Apply</string>
+
+    <!-- Lightbox Viewer & Activity -->
+    <string name="lightbox_full_image">Full wallpaper</string>
+    <string name="lightbox_original_image">Original Wallpaper</string>
+    <string name="lightbox_open_in_gallery">Open in External Gallery</string>
+    <string name="lightbox_saved_to_gallery">Wallpaper saved to gallery</string>
+    <string name="lightbox_save_failed">Failed to save: %s</string>
+    <string name="lightbox_added_favorite">Added to favorites</string>
+    <string name="lightbox_removed_favorite">Removed from favorites</string>
+    <string name="lightbox_cannot_open_gallery">Cannot open external gallery</string>
+    <string name="lightbox_share_failed">Failed to share wallpaper</string>
+    <string name="lightbox_composition_saved">Composition preferences saved</string>
+    <string name="action_back">Back</string>
+
+    <!-- Time Formatting -->
+    <string name="time_just_now">Just now</string>
+    <string name="time_minutes_ago">%d min ago</string>
+    <string name="time_hours_ago">%d hours ago</string>
+    <string name="time_days_ago">%d days ago</string>
+
+    <!-- History Tab -->
+    <string name="hist_subtab_all_format">All History (%d)</string>
+    <string name="hist_subtab_favorites_format">Favorites (%d)</string>
+    <string name="hist_clean_options">History cleanup options</string>
+    <string name="hist_menu_clean_invalid">Clean broken entries</string>
+    <string name="hist_menu_clean_invalid_desc">Remove only non-favorited entries with missing images</string>
+    <string name="hist_menu_clear_all">Clear all non-favorited history</string>
+    <string name="hist_menu_clear_all_desc">Delete all history records without favorites</string>
+    <string name="hist_empty_fav_title">No favorite wallpapers yet</string>
+    <string name="hist_empty_fav_desc">Tap the heart icon in history or dashboard to save wallpapers permanently for offline use</string>
+    <string name="hist_empty_all_title">No wallpaper history yet</string>
+    <string name="hist_empty_all_desc">Every successfully applied wallpaper will be automatically recorded here</string>
+    <string name="hist_dialog_delete_title">Delete History Record</string>
+    <string name="hist_dialog_delete_fav_msg">Are you sure you want to delete \"%s\"? This wallpaper is favorited; deleting it will also remove it from favorites and delete the offline copy.</string>
+    <string name="hist_dialog_delete_msg">Are you sure you want to delete \"%s\" from history? This action cannot be undone.</string>
+    <string name="hist_item_this_wallpaper">this wallpaper</string>
+    <string name="hist_dialog_clear_invalid_title">Clean Broken History Records</string>
+    <string name="hist_dialog_clear_invalid_msg">Scan and remove all history entries where local images are missing and not favorited. Favorited wallpapers are safely kept offline. Continue?</string>
+    <string name="hist_dialog_clear_invalid_btn">Clean Now</string>
+    <string name="hist_dialog_clear_all_title">Clear History Records</string>
+    <string name="hist_dialog_clear_all_msg">Are you sure you want to clear all non-favorited wallpaper history records? Favorited wallpapers will be preserved. This cannot be undone.</string>
+    <string name="hist_dialog_clear_all_btn">Clear All</string>
+    <string name="hist_badge_inaccessible_redownloadable">Image missing · Can redownload</string>
+    <string name="hist_badge_inaccessible">Image missing</string>
+    <string name="hist_action_favorite">Favorite</string>
+    <string name="hist_action_favorited">Favorited</string>
+    <string name="hist_unknown_wallpaper">Unknown Wallpaper</string>
+    <string name="hist_detail_source_format">Source: %1$s · Applied at %2$s</string>
+    <string name="hist_detail_favorited_badge">Favorited (Kept offline permanently)</string>
+    <string name="hist_detail_missing_title">Original image cleared or inaccessible</string>
+    <string name="hist_detail_missing_redownload_desc">Local cache is missing, but a remote source was found. Tap below to redownload and restore the wallpaper.</string>
+    <string name="hist_detail_missing_desc">This original image is missing or has no remote URL. You can delete this record to clean up.</string>
+    <string name="hist_action_redownloading">Redownloading…</string>
+    <string name="hist_action_redownload">Redownload from Network</string>
+    <string name="hist_action_applying">Applying wallpaper…</string>
+    <string name="hist_action_cannot_apply">Cannot apply missing image</string>
+    <string name="hist_action_set_current">Set as Current Wallpaper</string>
+    <string name="hist_action_gallery">Gallery</string>
+    <string name="hist_action_save">Save</string>
+    <string name="hist_action_tune">Tune Framing &amp; Scroll</string>
+    <string name="hist_badge_customized"> (Customized)</string>
+    <string name="hist_action_delete_record">Delete this record</string>
+
+    <!-- Manage Space Activity -->
+    <string name="manage_space_cleanable_cache">Cleanable Image Cache</string>
+    <string name="manage_space_calculating">Calculating storage size…</string>
+    <string name="manage_space_image_cache_title">Image Cache Management</string>
+    <string name="manage_space_image_cache_desc">Downloaded wallpapers and thumbnail caches are calculated separately. You can clear only downloaded images while keeping preview thumbnails, or clear all image caches.</string>
+    <string name="manage_space_wp_cache_title">Downloaded Wallpaper Cache</string>
+    <string name="manage_space_wp_cache_desc">Full images downloaded from network sources for offline rotation: %s</string>
+    <string name="manage_space_btn_clear_wp">Clear Wallpapers Only</string>
+    <string name="manage_space_thumb_cache_title">Thumbnails &amp; View Cache</string>
+    <string name="manage_space_thumb_cache_desc">Disk thumbnail cache in history and source lists: %s</string>
+    <string name="manage_space_btn_clearing">Clearing…</string>
+    <string name="manage_space_btn_clear_all_format">Clear All Image Caches (%s)</string>
+    <string name="manage_space_clear_data_title">Clear All Data</string>
+    <string name="manage_space_clear_data_desc">Completely reset the application, deleting all saved source configurations, folder index databases, scheduled tasks, and local caches. The app will close and reset to initial installation.</string>
+    <string name="manage_space_btn_clear_data">Clear All App Data</string>
+    <string name="manage_space_dialog_wp_title">Clear Downloaded Wallpapers Only?</string>
+    <string name="manage_space_dialog_wp_msg">This only frees downloaded full-size wallpaper files (%s).\n\n• Thumbnail cache is retained for smooth browsing.\n• Favorited wallpapers (persistently isolated): Completely unaffected.\n• Non-favorited network wallpapers: Local files will be deleted and marked missing in history (can be redownloaded later).</string>
+    <string name="manage_space_chk_remove_invalid">Also remove non-favorited history entries with missing files</string>
+    <string name="manage_space_btn_confirm_wp">Clear Downloaded Wallpapers</string>
+    <string name="manage_space_dialog_all_cache_title">Clear All Image Caches?</string>
+    <string name="manage_space_dialog_all_cache_msg">This will free all downloaded wallpapers, UI thumbnails, and preload caches (%s).\n\n• Favorited wallpapers (persistently isolated): Completely unaffected.\n• Non-favorited network wallpapers: Local files will be deleted and marked missing in history.\n• Thumbnails will be regenerated on demand when browsing lists again.</string>
+    <string name="manage_space_btn_confirm_all_cache">Clear All Images</string>
+    <string name="manage_space_dialog_reset_title">Clear All Application Data?</string>
+    <string name="manage_space_dialog_reset_msg">This cannot be undone! This will delete all configs, scheduled tasks, local indexes, and image caches. The app will exit immediately.</string>
+    <string name="manage_space_btn_confirm_reset">Reset and Exit</string>
+    <string name="manage_space_status_wp_cleared_with_history">Cleared downloaded wallpaper cache (freed %1$s) and removed %2$d broken history records (thumbnails kept)</string>
+    <string name="manage_space_status_wp_cleared">Cleared downloaded wallpaper cache (freed %s), thumbnails kept</string>
+    <string name="manage_space_status_all_cleared_with_history">All image caches cleared and removed %d broken history records</string>
+    <string name="manage_space_status_all_cleared">All image caches cleared successfully</string>
+
+    <!-- Source Types -->
+    <string name="source_type_local_folder">Local Folder</string>
+    <string name="source_type_media_store">System Album</string>
+    <string name="source_type_custom_photos">Custom Photos</string>
+    <string name="source_type_favorites">My Favorites</string>
+    <string name="source_type_immich">Immich Server</string>
+    <string name="source_type_http_api">Web Wallpaper (HTTP)</string>
+    <string name="source_type_composite">Composite Rotation</string>
+
+    <!-- HTTP Presets -->
+    <string name="http_preset_bing">Bing Daily</string>
+    <string name="http_preset_picsum">Picsum Photos</string>
+    <string name="http_preset_custom">Custom HTTP API</string>
+
+    <!-- Sources Tab -->
+    <string name="source_tab_header_title">Wallpaper Sources</string>
+    <string name="source_tab_status_none">No sources enabled; auto rotation paused</string>
+    <string name="source_tab_status_single">1 source enabled: %s</string>
+    <string name="source_tab_status_multiple">%d sources enabled · Auto composite rotation</string>
+    <string name="source_tab_empty_title">No sources configured yet</string>
+    <string name="source_tab_empty_desc">Add local folders, system albums, Immich, or web sources to enable auto rotation</string>
+    <string name="source_tab_btn_add">Add Source</string>
+    <string name="source_tab_fab_add">Add Source</string>
+    <string name="source_card_custom_photos_format">%d custom photos</string>
+    <string name="source_card_folder_format">%1$s · %2$d images</string>
+    <string name="source_card_folder_empty">No folder selected</string>
+    <string name="source_card_immich_format">%1$s · %2$s</string>
+    <string name="source_card_immich_empty">Server not configured</string>
+    <string name="source_card_favorites_format">Offline favorites · %d favorited</string>
+    <string name="source_card_composite">Composite</string>
+
+    <!-- Album Picker Sheet -->
+    <string name="album_picker_subtitle">Supports multi-album combination; defaults to all photos if none selected</string>
+    <string name="album_picker_search_hint">Search album name…</string>
+    <string name="album_picker_clear_search">Clear search</string>
+    <string name="album_picker_chip_all_random">All Photos Random</string>
+    <string name="album_picker_chip_select_all_format">Select All (%d)</string>
+    <string name="album_picker_chip_clear_selection">Clear Selection</string>
+    <string name="album_picker_all_photos_desc">%d photos · Random selection from all photos</string>
+    <string name="album_picker_photos_count_format">%d photos</string>
+    <string name="album_picker_mode_all">Current Mode: All Photos Random</string>
+    <string name="album_picker_mode_selected_format">Selected %d albums</string>
+
+    <!-- Source Config Activity -->
+    <string name="source_config_edit_title">Edit Wallpaper Source</string>
+    <string name="source_config_add_title">Add Wallpaper Source</string>
+    <string name="source_config_delete_tooltip">Delete Source</string>
+    <string name="source_config_err_photos_empty">Please pick at least one photo for the collection</string>
+    <string name="source_config_err_folder_empty">Please select a wallpaper folder first</string>
+    <string name="source_config_err_http_empty">Please enter a custom HTTP URL</string>
+    <string name="source_config_err_immich_empty">Please enter Immich server URL and API key</string>
+    <string name="source_config_err_media_permission">Please grant media permissions or pick photos</string>
+    <string name="source_config_err_media_empty">No photos selected yet, please pick photos first</string>
+    <string name="source_config_err_fetch_albums_failed">Failed to fetch albums: %s</string>
+    <string name="source_config_btn_save_changes">Save Changes</string>
+    <string name="source_config_btn_save_and_enable">Save &amp; Enable</string>
+    <string name="source_config_step1_edit">Source Type</string>
+    <string name="source_config_step1_add">1. Select Source Type</string>
+    <string name="source_config_name_section">Source Name</string>
+    <string name="source_config_name_label">Custom Title</string>
+    <string name="source_config_name_hint">e.g., Camera Wallpapers</string>
+    <string name="source_config_detail_section">Source Configuration</string>
+    <string name="source_config_photos_desc">Pick photos from the system picker. Selected photos are copied to app private storage, unaffected by permission changes or cache cleaning.</string>
+    <string name="source_config_photos_none">No photos selected yet</string>
+    <string name="source_config_photos_importing">Importing photos…</string>
+    <string name="source_config_photos_btn_pick">Pick Photos from Album</string>
+    <string name="source_config_photos_count_format">Selected %d photos</string>
+    <string name="source_config_photos_btn_append">Add More Photos</string>
+    <string name="source_config_photos_btn_clear">Clear Photos</string>
+    <string name="source_config_folder_selected_format">Selected folder: %s</string>
+    <string name="source_config_folder_none">No folder selected</string>
+    <string name="source_config_folder_scanning">Scanning images…</string>
+    <string name="source_config_folder_count_format">Found %d images</string>
+    <string name="source_config_folder_btn_change">Change Folder</string>
+    <string name="source_config_folder_btn_select">Select Folder</string>
+    <string name="source_config_media_unauthorized">Media access not granted</string>
+    <string name="source_config_media_btn_grant">Select Albums or Pick Photos</string>
+    <string name="source_config_media_partial_format">System Album (%d selected)</string>
+    <string name="source_config_media_btn_manage">Manage Selected Photos</string>
+    <string name="source_config_media_btn_pick">Pick Photos</string>
+    <string name="source_config_media_selected_format">Current Selection: %s</string>
+    <string name="source_config_media_btn_pick_combo">Select Album Combination</string>
+    <string name="source_config_media_all_photos">All Photos (Random from all)</string>
+    <string name="source_config_media_selected_count_format">%d photos selected</string>
+    <string name="source_config_media_selected_albums_format">%d albums selected</string>
+    <string name="source_config_media_picker_title">Select System Album Combination</string>
+    <string name="source_config_immich_picker_title">Select Immich Album Combination</string>
+    <string name="source_config_immich_server_url">Server URL</string>
+    <string name="source_config_immich_api_key">API Key</string>
+    <string name="source_config_immich_album_filter_format">Album Filter: %s</string>
+    <string name="source_config_immich_all_albums">All Albums (Random from all)</string>
+    <string name="source_config_immich_quality">Download Quality</string>
+    <string name="source_config_immich_quality_preview">Preview (Data Saver)</string>
+    <string name="source_config_immich_quality_original">Original Full Size</string>
+    <string name="source_config_immich_ignore_ssl">Ignore Self-Signed Certificates</string>
+    <string name="source_config_immich_ignore_ssl_desc">Recommended for local self-signed HTTPS</string>
+    <string name="source_config_wifi_only">Download on Wi-Fi Only</string>
+    <string name="source_config_immich_wifi_desc">Reuse cache or skip on cellular network</string>
+    <string name="source_config_http_url">API URL</string>
+    <string name="source_config_http_json_path">Image Field Path (Optional JSONPath)</string>
+    <string name="source_config_http_json_path_hint">e.g., images[0].url</string>
+    <string name="source_config_http_wifi_desc">Avoid data usage on cellular network</string>
+    <string name="source_config_fav_desc">Offline favorites source selects exclusively from your favorited history wallpapers. Highly reliable, completely offline.</string>
+    <string name="source_config_fav_count_format">Currently favorited wallpapers: %d</string>
+    <string name="source_config_delete_dialog_title">Confirm Source Deletion</string>
+    <string name="source_config_delete_dialog_msg">Are you sure you want to delete \"%s\"? It will no longer participate in wallpaper rotation.</string>
+    <string name="source_config_this_source">this source</string>
+    <string name="source_config_btn_confirm_delete">Confirm Delete</string>
+
+    <!-- Wallpaper Target -->
+    <string name="target_system">Home Screen Only</string>
+    <string name="target_lock">Lock Screen Only</string>
+    <string name="target_both">Home &amp; Lock Screens</string>
+
+    <!-- Schedule Rule Trigger Types -->
+    <string name="rule_trigger_daily_time">Daily Fixed Time</string>
+    <string name="rule_trigger_time_window">Periodic Time Window</string>
+    <string name="rule_trigger_screen_off">Screen Off Trigger</string>
+
+    <!-- Schedule Rule Source Binding Strategy -->
+    <string name="rule_binding_active_default">Follow Global Active Source</string>
+    <string name="rule_binding_specific_source">Specific Dedicated Source</string>
+    <string name="rule_binding_favorites">My Favorites</string>
+
+    <!-- Schedule Rule Edit Dialog -->
+    <string name="rule_dialog_title_edit">Edit Schedule Rule</string>
+    <string name="rule_dialog_title_create">New Schedule Rule</string>
+    <string name="rule_name_label">Rule Name</string>
+    <string name="rule_name_hint">e.g., Morning Album, Work Hours Rotation</string>
+    <string name="rule_err_name_empty">Please enter a rule name</string>
+    <string name="rule_err_select_source">Please select a dedicated source</string>
+    <string name="rule_trigger_type_section">Trigger Method</string>
+    <string name="rule_daily_time_label">Fixed Time:</string>
+    <string name="rule_window_range_label">Time Range:</string>
+    <string name="rule_window_from_format">From %s</string>
+    <string name="rule_window_to_label">to</string>
+    <string name="rule_window_to_format">to %s</string>
+    <string name="rule_interval_label">Interval:</string>
+    <string name="rule_interval_15m">15 min</string>
+    <string name="rule_interval_30m">30 min</string>
+    <string name="rule_interval_1h">1 hour</string>
+    <string name="rule_interval_2h">2 hours</string>
+    <string name="rule_interval_4h">4 hours</string>
+    <string name="rule_interval_6h">6 hours</string>
+    <string name="rule_screen_off_delay_label">Screen-off Debounce Delay:</string>
+    <string name="rule_delay_seconds_format">%d sec</string>
+    <string name="rule_binding_section">Dedicated Source Binding</string>
+    <string name="rule_binding_select_label">Select Bound Source Instance:</string>
+    <string name="rule_binding_no_sources">No sources configured in Source Management yet. Please add a source first.</string>
+    <string name="rule_target_section">Target Screen</string>
+
+    <!-- Settings SubPage Category Definitions -->
+    <string name="subpage_display_title">Display &amp; Crop</string>
+    <string name="subpage_display_desc">Target screen, crop composition, parallax scrolling and live preview</string>
+    <string name="subpage_scheduling_title">Auto Rotation Schedule</string>
+    <string name="subpage_scheduling_desc">Periodic rotation, rule scheduler, fixed time and precision timer</string>
+    <string name="subpage_safeguards_title">Safeguards &amp; Policies</string>
+    <string name="subpage_safeguards_desc">Quiet hours, cooldown period, avoid in-use and smart shuffle</string>
+    <string name="subpage_widgets_title">Widgets &amp; Shortcuts</string>
+    <string name="subpage_widgets_desc">Home shortcuts, widget thumbnail scaling and QS tiles</string>
+    <string name="subpage_storage_title">Storage &amp; Cache</string>
+    <string name="subpage_storage_desc">Cache limit, favorited wallpapers, export backup and deep cleaning</string>
+    <string name="subpage_about_title">About &amp; Keep-Alive</string>
+    <string name="subpage_about_desc">Battery optimization check, vendor keep-alive guide, diagnostics log and license</string>
+
+    <!-- Wallpaper Crop Mode -->
+    <string name="crop_fit_height_label">Fit Height (Protect Head)</string>
+    <string name="crop_fit_height_desc">Fill screen based on height, 100% preserves vertical content and portraits</string>
+    <string name="crop_center_crop_label">Center Crop</string>
+    <string name="crop_center_crop_desc">Uniform scale to completely fill screen with no black bars, ideal for landscapes</string>
+    <string name="crop_fit_center_label">Fit Center</string>
+    <string name="crop_fit_center_desc">Uniform scale with entire image visible and black padding on edges</string>
+
+    <!-- Wallpaper Scroll Mode -->
+    <string name="scroll_auto_label">Smart Adaptive</string>
+    <string name="scroll_auto_desc">Wide images pan with launcher; portrait images locked to single screen</string>
+    <string name="scroll_never_label">Locked Center</string>
+    <string name="scroll_never_desc">Strictly single screen with no scrolling, recommended for launchers without parallax support</string>
+    <string name="scroll_always_label">Force Parallax</string>
+    <string name="scroll_always_desc">Generates super wide canvas, suitable for launchers like Pixel/AOSP</string>
+
+    <!-- Widget Scale Type -->
+    <string name="widget_scale_crop_label">Fill &amp; Crop</string>
+    <string name="widget_scale_crop_desc">Center crop to fill widget with no whitespace</string>
+    <string name="widget_scale_fit_label">Fit Inside</string>
+    <string name="widget_scale_fit_desc">Keep original aspect ratio visible with adaptive margins</string>
+
+    <!-- Cache Size Tier -->
+    <string name="cache_tier_small_label">Small (20MB / 10)</string>
+    <string name="cache_tier_small_desc">Suitable for low storage or budget devices, minimal disk usage</string>
+    <string name="cache_tier_standard_label">Standard (50MB / 25)</string>
+    <string name="cache_tier_standard_desc">Recommended setting balancing offline rotation resilience and disk space</string>
+    <string name="cache_tier_large_label">Large (100MB / 50)</string>
+    <string name="cache_tier_large_desc">Suitable for long-term offline or multi-source rotation</string>
+    <string name="cache_tier_disabled_label">Unlimited (No Limit)</string>
+    <string name="cache_tier_disabled_desc">Never automatically clean cached wallpapers; clean manually when needed</string>
+
+    <!-- Battery Optimization Dialog -->
+    <string name="battery_dialog_title">Enabling precision timer requires ignoring battery optimization</string>
+    <string name="battery_dialog_msg">Android Doze mode freezes background alarms during screen-off sleep, preventing timely wallpaper changes.\n\nIt is recommended to set this app to Unrestricted or add it to the battery optimization whitelist.</string>
+    <string name="battery_dialog_btn_settings">Go to Settings</string>
+    <string name="battery_dialog_btn_enable_anyway">Enable Anyway</string>
+
+    <!-- Settings Root Content Dynamic Summaries -->
+    <string name="settings_battery_banner_title">Enable unrestricted battery to ensure timely rotation</string>
+    <string name="settings_battery_banner_desc">Tap to configure system whitelist and vendor keep-alive guide</string>
+    <string name="settings_summary_scheduling_stopped">Auto rotation stopped</string>
+    <string name="settings_summary_scheduling_rules_format">Rule engine active (%d rules enabled)</string>
+    <string name="settings_summary_trigger_interval_format">Interval %dm</string>
+    <string name="settings_summary_trigger_anchors_format">Fixed time (%d)</string>
+    <string name="settings_summary_trigger_screen_off">Screen-off rotation</string>
+    <string name="settings_summary_scheduling_standby">Enabled · Awaiting trigger activation</string>
+    <string name="settings_summary_scheduling_active_format">Enabled · %s</string>
+    <string name="settings_summary_quiet_active">Quiet hours active</string>
+    <string name="settings_summary_quiet_inactive">Quiet hours off</string>
+    <string name="settings_summary_smart_shuffle_format">Smart shuffle (%d items)</string>
+    <string name="settings_summary_pure_random">Pure random</string>
+    <string name="settings_summary_widget_format">Widget thumbnail (%1$s) · Desktop shortcuts &amp; tiles</string>
+    <string name="settings_summary_storage_format">Cache %1$s / %2$s · Favorited %3$d</string>
+    <string name="settings_summary_battery_ready">Unrestricted battery ready</string>
+    <string name="settings_summary_battery_needed">Battery setup required</string>
+    <string name="settings_summary_about_format">v1.0.0 · %s · Diagnostics Log</string>
+
+    <!-- Display Settings SubPage -->
+    <string name="display_target_card_title">Target Screen</string>
+    <string name="display_target_legacy_notice">Running on Android 6.0; system limits update home and lock screen simultaneously</string>
+    <string name="display_crop_card_title">Wallpaper Crop &amp; Composition</string>
+    <string name="display_scroll_card_title">Desktop Parallax Scrolling</string>
+    <string name="display_scroll_tip">Tip: Some custom ROMs (such as HyperOS/MIUI or launchers with parallax disabled) do not support wallpaper panning. If wallpaper stays static when sliding pages, Locked Center is recommended for best sharpness.</string>
+    <string name="display_reapply_on_change_title">Reapply Current Wallpaper on Change</string>
+    <string name="display_reapply_on_change_desc">When changing crop or scroll settings, immediately re-render and reapply the active wallpaper</string>
+    <string name="display_btn_reapply_now">Reapply Active Wallpaper with Current Settings</string>
+
+    <!-- Scheduling Settings SubPage -->
+    <string name="sched_master_switch_title">Auto Rotation Master Switch</string>
+    <string name="sched_master_switch_active">Auto rotating; enabled trigger methods below will execute in parallel</string>
+    <string name="sched_master_switch_stopped">Auto rotation stopped</string>
+    <string name="sched_engine_mode_title">Scheduling Engine Mode</string>
+    <string name="sched_engine_mode_composite">Master-Slave Composite Mode</string>
+    <string name="sched_engine_mode_rules">Independent Rule Engine</string>
+    <string name="sched_rules_desc">Rule Schedule: Switch dedicated sources and target screens across independent time rules or windows</string>
+    <string name="sched_rules_empty_title">No schedule rules yet</string>
+    <string name="sched_rules_btn_add">Add New Rule</string>
+    <string name="sched_rules_btn_load_default">Load Default Presets</string>
+    <string name="sched_rule_trigger_daily_format">Daily %s Fixed Time</string>
+    <string name="sched_rule_trigger_window_format">%1$s ~ %2$s (Every %3$d min)</string>
+    <string name="sched_rule_trigger_screen_off_format">Screen Off Change (Delay %d sec)</string>
+    <string name="sched_rule_binding_dedicated_prefix">Dedicated: %s</string>
+    <string name="sched_rule_binding_favorites">Dedicated: My Favorites</string>
+    <string name="sched_rule_binding_specified_fallback">Specified Source</string>
+    <string name="sched_rule_btn_edit">Edit</string>
+    <string name="sched_rules_btn_reset_defaults">Reset Default Presets</string>
+    <string name="sched_composite_section_title">Composable Trigger Methods (Multiple active simultaneously)</string>
+    <string name="sched_trigger_interval_title">Periodic Rotation (Fixed Interval)</string>
+    <string name="sched_trigger_interval_desc">Automatically pick and apply a new wallpaper at specified intervals</string>
+    <string name="sched_interval_every_day">Every day</string>
+    <string name="sched_trigger_daily_title">Daily Fixed Time</string>
+    <string name="sched_trigger_daily_desc">Change wallpaper at designated times every day (multiple times supported)</string>
+    <string name="sched_daily_btn_add_time">Add Time</string>
+    <string name="sched_daily_btn_delete_tooltip">Delete Time</string>
+    <string name="sched_trigger_screen_off_title">Change upon Screen Off</string>
+    <string name="sched_trigger_screen_off_desc">Changes wallpaper quietly after device screen turns off; unlock to see the new wallpaper</string>
+    <string name="sched_exact_timer_title">Precision Timer (AlarmManager High Accuracy)</string>
+    <string name="sched_exact_timer_active_desc">High-precision clock enabled, preventing batching delays and random drifts</string>
+    <string name="sched_exact_timer_inactive_desc">Energy-saving WorkManager used when disabled, lower battery consumption with a few minutes drift</string>
+
+    <!-- Safeguards Settings SubPage -->
+    <string name="safeguard_quiet_hours_title">Quiet Hours</string>
+    <string name="safeguard_quiet_hours_desc">Silently suspend auto rotation during sleep to prevent nighttime wakeups and screen power consumption</string>
+    <string name="safeguard_quiet_hours_period">Quiet period:</string>
+    <string name="safeguard_quiet_hours_from">From %s</string>
+    <string name="safeguard_quiet_hours_to_label">to</string>
+    <string name="safeguard_quiet_hours_to">To %s</string>
+    <string name="safeguard_cooldown_title">Collision Cooldown Suppression</string>
+    <string name="safeguard_cooldown_desc">Intercept auto tasks if the last wallpaper change was within the specified time, avoiding overlap with fixed times or manual changes</string>
+    <string name="safeguard_cooldown_mins">%d min</string>
+    <string name="safeguard_defer_title">Defer Wallpaper Change During Use</string>
+    <string name="safeguard_defer_desc">Delay changing wallpaper when the screen is on or actively in use, avoiding frame drops during gaming, videos, or typing</string>
+    <string name="safeguard_fair_shuffle_title">Fair Shuffle (Anti-repetition)</string>
+    <string name="safeguard_fair_shuffle_desc">Remember recently shown wallpapers to avoid repeatedly drawing the same image before completing a cycle</string>
+    <string name="safeguard_fair_shuffle_capacity_label">Memory window depth:</string>
+    <string name="safeguard_fair_shuffle_capacity_items">%d items</string>
+    <string name="safeguard_fair_shuffle_status">Deck memory: %1$d / %2$d items</string>
+    <string name="safeguard_fair_shuffle_reset">Reset Shuffle Deck</string>
+
+    <!-- Widgets Settings SubPage -->
+    <string name="widget_shortcuts_title">Desktop Shortcuts (Pin Shortcuts)</string>
+    <string name="widget_shortcuts_desc">Supports long-pressing the app icon or pinning standalone shortcut icons directly to your home screen. Tapping performs background operations with a toast without opening the main UI.</string>
+    <string name="widget_shortcuts_pin_next">Add \"Next\" to Home</string>
+    <string name="widget_shortcuts_pin_next_hint">Long-press the app icon on your home screen and drag \"Next Wallpaper\" to your desktop</string>
+    <string name="widget_shortcuts_pin_view">Add \"View\" to Home</string>
+    <string name="widget_shortcuts_pin_view_hint">Long-press the app icon on your home screen and drag \"View Wallpaper\" to your desktop</string>
+    <string name="widget_appwidget_title">Home Widget: Current Wallpaper</string>
+    <string name="widget_appwidget_desc">Add the \"Current Wallpaper\" widget to your home screen. Tap the card to view the full image or tap the top-right button to rotate. Select the thumbnail cropping mode:</string>
+    <string name="widget_qs_tiles_title">Quick Settings Tiles</string>
+    <string name="widget_qs_tiles_desc">Add quick toggle tiles to Android\'s Quick Settings notification shade:\n• \"Next Wallpaper\": Rotates wallpaper silently in the background with a notification toast;\n• \"Toggle Schedule\": Displays current schedule status and toggles auto-rotation.</string>
+    <string name="widget_qs_tiles_hint">Tip: Swipe down from the top to expand Quick Settings, tap the \"Edit (pencil)\" icon, and drag \"Next Wallpaper\" and \"Auto Rotation\" into your active tiles.</string>
+
+    <!-- Storage Settings SubPage -->
+    <string name="storage_overview_title">Storage &amp; Cache Overview</string>
+    <string name="storage_favorites_title">Favorites Storage (Private Persistent)</string>
+    <string name="storage_favorites_desc">Stored in an internal private directory, permanently available offline, and never purged by system or cache cleaning</string>
+    <string name="storage_favorites_summary">%1$d items · %2$s</string>
+    <string name="storage_cache_title">Transient Network Cache (LRU Pool)</string>
+    <string name="storage_cache_desc">Temporary images downloaded from online sources for offline fallback reuse. When the limit is exceeded, older entries are purged by least recently used (LRU) order. Favorites are protected and never deleted.</string>
+    <string name="storage_tier_title">Auto-Prune &amp; Cache Limit</string>
+    <string name="storage_tier_desc">Configure maximum capacity for the network cache pool; oldest images will be pruned when exceeded:</string>
+    <string name="storage_export_favorites">Export All Favorites</string>
+    <string name="storage_exporting_favorites">Exporting…</string>
+    <string name="storage_btn_manage_space">Manage Storage &amp; Clear Cache…</string>
+
+    <!-- About Settings SubPage &amp; About Activity -->
+    <string name="about_battery_unrestricted_title">Enable Unrestricted Battery for On-Time Rotation</string>
+    <string name="about_battery_unrestricted_desc">Doze mode and aggressive system power saving may delay wallpaper rotation during standby. We recommend setting this app to \"Unrestricted\" or adding it to the battery whitelist.</string>
+    <string name="about_battery_btn_app_details">App Info Details</string>
+    <string name="about_battery_btn_whitelist">System Whitelist</string>
+    <string name="about_battery_btn_dontkillmyapp">Vendor Background Guide (DontKillMyApp)</string>
+    <string name="about_battery_ready_title">Battery Optimization Whitelist: Active</string>
+    <string name="about_battery_ready_desc">This app is exempt from system Doze restrictions; background scheduling and alarms will trigger on time.</string>
+    <string name="about_battery_btn_view_vendor_guide">View Vendor Background Guide</string>
+    <string name="about_card_title">About &amp; Open Source License</string>
+    <string name="about_card_desc">Wallpaper Picker v1.0.0\nA lightweight, power-efficient wallpaper rotation tool compatible across Android 6.0 to 16+. Open sourced under the GPL-3.0 license.</string>
+    <string name="about_card_btn_details">View App Info, Diagnostics &amp; Licenses…</string>
+    <string name="about_card_btn_logs">View &amp; Export Diagnostic Logs…</string>
+    <string name="about_screen_app_desc">A lightweight, power-efficient wallpaper rotation utility compatible across Android 6.0 (API 23) to Android 16 (API 36+). Built on a single-branch architecture with zero GMS dependencies.</string>
+    <string name="about_btn_repo">Repository</string>
+    <string name="about_btn_copy_link">Copy Link</string>
+    <string name="about_copied_repo_snackbar">GitHub repository URL copied to clipboard</string>
+    <string name="about_btn_view_gpl">View App GPL-3.0 License Terms</string>
+    <string name="about_diag_title">Runtime Environment Diagnostics</string>
+    <string name="about_diag_os_version">OS Version</string>
+    <string name="about_diag_device_model">Device Model</string>
+    <string name="about_diag_abis">Supported ABIs</string>
+    <string name="about_diag_abi_universal">Universal</string>
+    <string name="about_diag_target_sdk">Target SDK</string>
+    <string name="about_diag_min_sdk">Minimum SDK</string>
+    <string name="about_logs_card_title">Runtime Diagnostics &amp; Logs</string>
+    <string name="about_logs_count_chip">%d logs</string>
+    <string name="about_logs_card_desc">Records background scheduling, source resolution, and wallpaper change events in real time. Automatically sanitizes sensitive credentials and private IPs.</string>
+    <string name="about_logs_last_status">Last Execution Status</string>
+    <string name="about_logs_status_not_run">Not yet executed</string>
+    <string name="about_logs_last_error">Last Error</string>
+    <string name="about_logs_error_none">None</string>
+    <string name="about_logs_btn_view">View Logs</string>
+    <string name="about_logs_btn_export">Export Report</string>
+    <string name="about_third_party_title">Third-Party Open Source Acknowledgments</string>
+    <string name="about_third_party_desc">Wallpaper Picker is built with the help of these open-source projects. We thank their creators in accordance with their respective licenses:</string>
+    <string name="about_lib_website">Website/Project</string>
+    <string name="about_lib_view_license">View License</string>
+    <string name="about_dialog_license_title">License</string>
+    <string name="about_log_dialog_title">Runtime &amp; Diagnostic Logs</string>
+    <string name="about_log_dialog_sanitize">Sanitize Info</string>
+    <string name="about_log_copied_snackbar">Logs copied to clipboard</string>
+    <string name="about_log_cleared_snackbar">Logs cleared</string>
+    <string name="about_log_warning_unsanitized">Sanitization disabled. Current logs contain API keys, credentials, or private IPs. Exercise caution when exporting or sharing to avoid privacy leaks!</string>
+    <string name="about_browser_open_failed">Could not open browser. Link copied to clipboard.</string>
 </resources>

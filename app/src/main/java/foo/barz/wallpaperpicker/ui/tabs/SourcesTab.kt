@@ -42,9 +42,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.CustomPhotosSourceConfig
 import foo.barz.wallpaperpicker.core.model.FavoritesSourceConfig
 import foo.barz.wallpaperpicker.core.model.HttpApiSourceConfig
@@ -109,15 +111,15 @@ fun SourcesTab(
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "壁纸图源管理",
+                                text = stringResource(R.string.source_tab_header_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             val statusSummary = when {
-                                enabledSources.isEmpty() -> "未启用任何图源，自动轮播将暂停"
-                                enabledSources.size == 1 -> "已启用 1 个图源: ${enabledSources.first().title}"
-                                else -> "已启用 ${enabledSources.size} 个图源 · 自动混合随机轮播"
+                                enabledSources.isEmpty() -> stringResource(R.string.source_tab_status_none)
+                                enabledSources.size == 1 -> stringResource(R.string.source_tab_status_single, enabledSources.first().title)
+                                else -> stringResource(R.string.source_tab_status_multiple, enabledSources.size)
                             }
                             Text(
                                 text = statusSummary,
@@ -142,7 +144,7 @@ fun SourcesTab(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
@@ -153,13 +155,13 @@ fun SourcesTab(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "尚未配置任何图源",
+                                text = stringResource(R.string.source_tab_empty_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "添加本地文件夹、系统相册、Immich 或网络图源后即可自动轮播",
+                                text = stringResource(R.string.source_tab_empty_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -167,7 +169,7 @@ fun SourcesTab(
                             Button(onClick = onOpenAddSource) {
                                 Icon(Icons.Default.Add, contentDescription = null)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("添加图源")
+                                Text(stringResource(R.string.source_tab_btn_add))
                             }
                         }
                     }
@@ -193,8 +195,8 @@ fun SourcesTab(
         // Floating Action Button to Add Source
         ExtendedFloatingActionButton(
             onClick = onOpenAddSource,
-            icon = { Icon(Icons.Default.Add, contentDescription = "添加图源") },
-            text = { Text("添加图源") },
+            icon = { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.source_tab_fab_add)) },
+            text = { Text(stringResource(R.string.source_tab_fab_add)) },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp)
@@ -276,7 +278,7 @@ private fun SourceItemCard(
                             .padding(horizontal = 5.dp, vertical = 1.dp)
                     ) {
                         Text(
-                            text = source.type.displayName,
+                            text = stringResource(source.type.displayNameRes),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
@@ -285,33 +287,39 @@ private fun SourceItemCard(
 
                 Spacer(modifier = Modifier.height(3.dp))
 
-                val subtitle = remember(source) {
-                    when (source.type) {
-                        WallpaperSourceType.CUSTOM_PHOTOS -> {
-                            val config = CustomPhotosSourceConfig.fromJson(source.configJson)
-                            "${config.imageCount} 张自选照片"
-                        }
-                        WallpaperSourceType.LOCAL_FOLDER -> {
-                            val config = LocalFolderSourceConfig.fromJson(source.configJson)
-                            if (config.folderName.isNotBlank()) "${config.folderName} · ${config.imageCount} 张图片" else "尚未选择文件夹"
-                        }
-                        WallpaperSourceType.MEDIA_STORE -> {
-                            val config = MediaStoreSourceConfig.fromJson(source.configJson)
-                            config.albumNames
-                        }
-                        WallpaperSourceType.IMMICH -> {
-                            val config = ImmichSourceConfig.fromJson(source.configJson)
-                            if (config.serverUrl.isNotBlank()) "${config.albumNames} · ${config.serverUrl}" else "尚未配置服务器"
-                        }
-                        WallpaperSourceType.HTTP_API -> {
-                            val config = HttpApiSourceConfig.fromJson(source.configJson)
-                            config.preset.label
-                        }
-                        WallpaperSourceType.FAVORITES -> {
-                            "离线持久收藏 · $favoritesCount 张已收藏"
-                        }
-                        WallpaperSourceType.COMPOSITE -> "多源混合"
+                val subtitle = when (source.type) {
+                    WallpaperSourceType.CUSTOM_PHOTOS -> {
+                        val config = CustomPhotosSourceConfig.fromJson(source.configJson)
+                        stringResource(R.string.source_card_custom_photos_format, config.imageCount)
                     }
+                    WallpaperSourceType.LOCAL_FOLDER -> {
+                        val config = LocalFolderSourceConfig.fromJson(source.configJson)
+                        if (config.folderName.isNotBlank()) {
+                            stringResource(R.string.source_card_folder_format, config.folderName, config.imageCount)
+                        } else {
+                            stringResource(R.string.source_card_folder_empty)
+                        }
+                    }
+                    WallpaperSourceType.MEDIA_STORE -> {
+                        val config = MediaStoreSourceConfig.fromJson(source.configJson)
+                        config.albumNames
+                    }
+                    WallpaperSourceType.IMMICH -> {
+                        val config = ImmichSourceConfig.fromJson(source.configJson)
+                        if (config.serverUrl.isNotBlank()) {
+                            stringResource(R.string.source_card_immich_format, config.albumNames, config.serverUrl)
+                        } else {
+                            stringResource(R.string.source_card_immich_empty)
+                        }
+                    }
+                    WallpaperSourceType.HTTP_API -> {
+                        val config = HttpApiSourceConfig.fromJson(source.configJson)
+                        stringResource(config.preset.labelRes)
+                    }
+                    WallpaperSourceType.FAVORITES -> {
+                        stringResource(R.string.source_card_favorites_format, favoritesCount)
+                    }
+                    WallpaperSourceType.COMPOSITE -> stringResource(R.string.source_card_composite)
                 }
 
                 Text(

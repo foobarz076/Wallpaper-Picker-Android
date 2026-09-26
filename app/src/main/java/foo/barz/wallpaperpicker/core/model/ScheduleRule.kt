@@ -1,23 +1,31 @@
 package foo.barz.wallpaperpicker.core.model
 
+import androidx.annotation.StringRes
+import foo.barz.wallpaperpicker.R
 import java.util.UUID
 
 /**
  * Trigger type for a schedule rule in the Schedule Rule Engine (Phase 4.2).
  */
-enum class ScheduleRuleTriggerType(val displayName: String) {
-    DAILY_TIME("每日定点打卡"),
-    TIME_WINDOW("时段周期轮播"),
-    SCREEN_OFF("锁屏熄屏触发")
+enum class ScheduleRuleTriggerType(
+    val displayName: String,
+    @get:StringRes val displayNameRes: Int
+) {
+    DAILY_TIME("每日定点打卡", R.string.rule_trigger_daily_time),
+    TIME_WINDOW("时段周期轮播", R.string.rule_trigger_time_window),
+    SCREEN_OFF("锁屏熄屏触发", R.string.rule_trigger_screen_off)
 }
 
 /**
  * Source binding strategy for a schedule rule.
  */
-enum class ScheduleRuleSourceBinding(val displayName: String) {
-    ACTIVE_DEFAULT("跟随全局激活源"),
-    SPECIFIC_SOURCE("指定专属图源"),
-    FAVORITES("我的收藏")
+enum class ScheduleRuleSourceBinding(
+    val displayName: String,
+    @get:StringRes val displayNameRes: Int
+) {
+    ACTIVE_DEFAULT("跟随全局激活源", R.string.rule_binding_active_default),
+    SPECIFIC_SOURCE("指定专属图源", R.string.rule_binding_specific_source),
+    FAVORITES("我的收藏", R.string.rule_binding_favorites)
 }
 
 /**

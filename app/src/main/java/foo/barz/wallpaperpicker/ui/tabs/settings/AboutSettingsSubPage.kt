@@ -35,8 +35,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.ui.AboutActivity
 
 /**
@@ -70,11 +72,11 @@ fun AboutSettingsSubPage(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.BatteryAlert, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("开启电池无限制以保障准时更换", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.about_battery_unrestricted_title), style = MaterialTheme.typography.titleSmall)
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "低电耗 (Doze) 模式与系统省电策略可能会延迟休眠期间的定时换壁纸。建议在系统设置中将本应用设为「无限制」或移入白名单。",
+                        text = stringResource(R.string.about_battery_unrestricted_desc),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.height(10.dp))
@@ -92,7 +94,7 @@ fun AboutSettingsSubPage(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = "应用详情设置",
+                                text = stringResource(R.string.about_battery_btn_app_details),
                                 maxLines = 1,
                                 textAlign = TextAlign.Center
                             )
@@ -105,7 +107,7 @@ fun AboutSettingsSubPage(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = "系统白名单",
+                                text = stringResource(R.string.about_battery_btn_whitelist),
                                 maxLines = 1,
                                 textAlign = TextAlign.Center
                             )
@@ -125,7 +127,7 @@ fun AboutSettingsSubPage(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "OEM 定制系统保活指南 (DontKillMyApp)",
+                            text = stringResource(R.string.about_battery_btn_dontkillmyapp),
                             maxLines = 1
                         )
                     }
@@ -144,11 +146,11 @@ fun AboutSettingsSubPage(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("电池优化白名单：已就绪", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.about_battery_ready_title), style = MaterialTheme.typography.titleSmall)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "本应用已豁免系统低电耗限制，后台调度与定时器唤醒将准时执行。",
+                        text = stringResource(R.string.about_battery_ready_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -164,7 +166,7 @@ fun AboutSettingsSubPage(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("查看 OEM 厂商定制系统保活指南")
+                        Text(stringResource(R.string.about_battery_btn_view_vendor_guide))
                     }
                 }
             }
@@ -185,7 +187,7 @@ fun AboutSettingsSubPage(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("关于与开源许可", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.about_card_title), style = MaterialTheme.typography.titleMedium)
                     }
                     SuggestionChip(
                         onClick = onOpenAbout,
@@ -195,7 +197,7 @@ fun AboutSettingsSubPage(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Wallpaper Picker (壁纸随心换) v1.0.0\n轻量、极低功耗、跨代兼容 Android 6.0 ~ 16 的多源壁纸轮换工具。遵循 GPL-3.0 协议开源。",
+                    text = stringResource(R.string.about_card_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -211,7 +213,7 @@ fun AboutSettingsSubPage(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("查看应用关于、诊断与第三方许可…")
+                    Text(stringResource(R.string.about_card_btn_details))
                 }
 
                 // Newly added feature in recent commit 295da07: Diagnostic logs view & export
@@ -231,7 +233,7 @@ fun AboutSettingsSubPage(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("查看与导出运行诊断日志…")
+                    Text(stringResource(R.string.about_card_btn_logs))
                 }
             }
         }

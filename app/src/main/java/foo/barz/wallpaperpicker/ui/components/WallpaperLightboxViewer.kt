@@ -50,11 +50,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import foo.barz.wallpaperpicker.R
 
 /**
  * Immersive full-screen media lightbox viewer mimicking social media gallery experience.
@@ -129,7 +131,7 @@ fun WallpaperLightboxViewer(
             // 1. Zoomable & pannable full-bleed image
             AsyncImage(
                 model = imageUri,
-                contentDescription = title ?: "壁纸大图",
+                contentDescription = title ?: stringResource(R.string.lightbox_full_image),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxSize()
@@ -171,7 +173,7 @@ fun WallpaperLightboxViewer(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "关闭",
+                                contentDescription = stringResource(R.string.action_close),
                                 tint = Color.White
                             )
                         }
@@ -180,7 +182,7 @@ fun WallpaperLightboxViewer(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = title ?: "当前壁纸原图",
+                                text = title ?: stringResource(R.string.lightbox_original_image),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = Color.White,
                                 maxLines = 1,
@@ -208,7 +210,7 @@ fun WallpaperLightboxViewer(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = "在外部图库中打开",
+                                contentDescription = stringResource(R.string.lightbox_open_in_gallery),
                                 tint = Color.White
                             )
                         }
@@ -254,7 +256,11 @@ fun WallpaperLightboxViewer(
                             ) {
                                 Icon(
                                     imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = if (isFavorite) "已收藏" else "设为收藏",
+                                    contentDescription = if (isFavorite) {
+                                        stringResource(R.string.dash_action_favorited)
+                                    } else {
+                                        stringResource(R.string.dash_action_favorite)
+                                    },
                                     tint = if (isFavorite) Color.Red else Color.White,
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -267,7 +273,7 @@ fun WallpaperLightboxViewer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Tune,
-                                    contentDescription = "微调构图",
+                                    contentDescription = stringResource(R.string.dash_action_tune),
                                     tint = Color.White,
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -288,7 +294,7 @@ fun WallpaperLightboxViewer(
                                 } else {
                                     Icon(
                                         imageVector = Icons.Default.Download,
-                                        contentDescription = "保存相册",
+                                        contentDescription = stringResource(R.string.dash_action_save),
                                         tint = Color.White,
                                         modifier = Modifier.size(24.dp)
                                     )
@@ -302,7 +308,7 @@ fun WallpaperLightboxViewer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
-                                    contentDescription = "分享壁纸",
+                                    contentDescription = stringResource(R.string.dash_action_share),
                                     tint = Color.White,
                                     modifier = Modifier.size(24.dp)
                                 )

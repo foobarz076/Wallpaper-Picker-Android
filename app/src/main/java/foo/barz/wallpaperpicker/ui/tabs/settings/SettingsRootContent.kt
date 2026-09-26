@@ -27,8 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.WidgetScaleType
 import foo.barz.wallpaperpicker.ui.MainUiState
 
@@ -72,12 +74,12 @@ fun SettingsRootContent(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "开启电池无限制以保障准时更换",
+                            text = stringResource(R.string.settings_battery_banner_title),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer
                         )
                         Text(
-                            text = "点击前往配置系统白名单与厂商保活指南",
+                            text = stringResource(R.string.settings_battery_banner_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
                         )
@@ -95,39 +97,39 @@ fun SettingsRootContent(
         SettingsSubPage.values().forEach { subPage ->
             val summaryText = when (subPage) {
                 SettingsSubPage.DISPLAY -> {
-                    "${state.target.label} · ${state.cropMode.label} · ${state.scrollMode.label}"
+                    "${stringResource(state.target.labelRes)} · ${stringResource(state.cropMode.labelRes)} · ${stringResource(state.scrollMode.labelRes)}"
                 }
                 SettingsSubPage.SCHEDULING -> {
                     if (!state.isScheduled) {
-                        "已停止自动轮换"
+                        stringResource(R.string.settings_summary_scheduling_stopped)
                     } else if (state.ruleEngineEnabled) {
                         val activeCount = state.scheduleRules.count { it.isEnabled }
-                        "规则日程表已生效 ($activeCount 条规则启用)"
+                        stringResource(R.string.settings_summary_scheduling_rules_format, activeCount)
                     } else {
                         val triggers = mutableListOf<String>()
-                        if (state.intervalScheduleEnabled) triggers.add("周期 ${state.intervalMinutes}m")
-                        if (state.dailyAnchorEnabled) triggers.add("定点打卡 (${state.dailyAnchorTimes.size}次)")
-                        if (state.screenOffTriggerEnabled) triggers.add("锁屏熄屏换")
-                        if (triggers.isEmpty()) "已开启 · 待激活触发器" else "已开启 · ${triggers.joinToString(" + ")}"
+                        if (state.intervalScheduleEnabled) triggers.add(stringResource(R.string.settings_summary_trigger_interval_format, state.intervalMinutes))
+                        if (state.dailyAnchorEnabled) triggers.add(stringResource(R.string.settings_summary_trigger_anchors_format, state.dailyAnchorTimes.size))
+                        if (state.screenOffTriggerEnabled) triggers.add(stringResource(R.string.settings_summary_trigger_screen_off))
+                        if (triggers.isEmpty()) stringResource(R.string.settings_summary_scheduling_standby) else stringResource(R.string.settings_summary_scheduling_active_format, triggers.joinToString(" + "))
                     }
                 }
                 SettingsSubPage.SAFEGUARDS -> {
-                    val quietText = if (state.quietHoursEnabled) "免打扰生效中" else "免打扰已关闭"
-                    val shuffleText = if (state.fairShuffle) "智能洗牌 (${state.fairShuffleCapacity}张)" else "纯随机挑选"
+                    val quietText = if (state.quietHoursEnabled) stringResource(R.string.settings_summary_quiet_active) else stringResource(R.string.settings_summary_quiet_inactive)
+                    val shuffleText = if (state.fairShuffle) stringResource(R.string.settings_summary_smart_shuffle_format, state.fairShuffleCapacity) else stringResource(R.string.settings_summary_pure_random)
                     "$quietText · $shuffleText"
                 }
                 SettingsSubPage.WIDGETS -> {
-                    val scaleText = if (state.widgetScaleType == WidgetScaleType.CROP) "居中铺满" else "完整原比"
-                    "微件缩略图 ($scaleText) · 桌面快捷方式与磁贴"
+                    val scaleText = stringResource(state.widgetScaleType.displayNameRes)
+                    stringResource(R.string.settings_summary_widget_format, scaleText)
                 }
                 SettingsSubPage.STORAGE -> {
                     val cacheText = SettingsHelpers.formatFileSize(state.cacheSizeBytes)
-                    val tierLabel = state.cacheSizeTier.displayName
-                    "缓存 $cacheText / $tierLabel · 收藏 ${state.favoritesList.size} 张"
+                    val tierLabel = stringResource(state.cacheSizeTier.displayNameRes)
+                    stringResource(R.string.settings_summary_storage_format, cacheText, tierLabel, state.favoritesList.size)
                 }
                 SettingsSubPage.ABOUT -> {
-                    val batteryStatus = if (isIgnoringBatteryOptimizations) "电池无限制已就绪" else "电池需配置"
-                    "v1.0.0 · $batteryStatus · 诊断日志"
+                    val batteryStatus = if (isIgnoringBatteryOptimizations) stringResource(R.string.settings_summary_battery_ready) else stringResource(R.string.settings_summary_battery_needed)
+                    stringResource(R.string.settings_summary_about_format, batteryStatus)
                 }
             }
 
@@ -160,7 +162,7 @@ fun SettingsRootContent(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = subPage.title,
+                            text = stringResource(subPage.titleRes),
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -175,7 +177,7 @@ fun SettingsRootContent(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = subPage.description,
+                            text = stringResource(subPage.descriptionRes),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline,
                             maxLines = 1,

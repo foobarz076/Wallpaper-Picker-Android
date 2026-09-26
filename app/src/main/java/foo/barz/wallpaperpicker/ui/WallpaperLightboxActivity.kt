@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import foo.barz.wallpaperpicker.MainActivity
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.action.WallpaperActionManager
 import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
 import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
@@ -59,7 +60,7 @@ class WallpaperLightboxActivity : ComponentActivity() {
             ?: prefs.lastWallpaperUri
 
         if (rawUri == null) {
-            Toast.makeText(this, "尚未更换过壁纸", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.dash_empty_title), Toast.LENGTH_SHORT).show()
             val mainIntent = Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
@@ -93,10 +94,10 @@ class WallpaperLightboxActivity : ComponentActivity() {
                             isSaving = false
                             withContext(Dispatchers.Main) {
                                 if (result.isSuccess) {
-                                    Toast.makeText(this@WallpaperLightboxActivity, "壁纸已保存至系统相册", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_saved_to_gallery), Toast.LENGTH_SHORT).show()
                                 } else {
-                                    val err = result.exceptionOrNull()?.localizedMessage ?: "保存失败"
-                                    Toast.makeText(this@WallpaperLightboxActivity, "保存失败: $err", Toast.LENGTH_SHORT).show()
+                                    val err = result.exceptionOrNull()?.localizedMessage ?: getString(R.string.status_failed)
+                                    Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_save_failed, err), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -116,10 +117,10 @@ class WallpaperLightboxActivity : ComponentActivity() {
                                 isSaving = false
                                 withContext(Dispatchers.Main) {
                                     if (result.isSuccess) {
-                                        Toast.makeText(this@WallpaperLightboxActivity, "壁纸已保存至系统相册", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_saved_to_gallery), Toast.LENGTH_SHORT).show()
                                     } else {
-                                        val err = result.exceptionOrNull()?.localizedMessage ?: "保存失败"
-                                        Toast.makeText(this@WallpaperLightboxActivity, "保存失败: $err", Toast.LENGTH_SHORT).show()
+                                        val err = result.exceptionOrNull()?.localizedMessage ?: getString(R.string.status_failed)
+                                        Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_save_failed, err), Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
@@ -133,10 +134,10 @@ class WallpaperLightboxActivity : ComponentActivity() {
                             isSaving = false
                             withContext(Dispatchers.Main) {
                                 if (result.isSuccess) {
-                                    Toast.makeText(this@WallpaperLightboxActivity, "壁纸已保存至系统相册", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_saved_to_gallery), Toast.LENGTH_SHORT).show()
                                 } else {
-                                    val err = result.exceptionOrNull()?.localizedMessage ?: "保存失败"
-                                    Toast.makeText(this@WallpaperLightboxActivity, "保存失败: $err", Toast.LENGTH_SHORT).show()
+                                    val err = result.exceptionOrNull()?.localizedMessage ?: getString(R.string.status_failed)
+                                    Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_save_failed, err), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -173,7 +174,7 @@ class WallpaperLightboxActivity : ComponentActivity() {
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(
                                             this@WallpaperLightboxActivity,
-                                            if (newFav) "已添加到收藏" else "已取消收藏",
+                                            if (newFav) getString(R.string.lightbox_added_favorite) else getString(R.string.lightbox_removed_favorite),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
@@ -183,7 +184,7 @@ class WallpaperLightboxActivity : ComponentActivity() {
                                 scope.launch {
                                     val result = WallpaperActionManager.openInGallery(this@WallpaperLightboxActivity, uri)
                                     if (result.isFailure) {
-                                        Toast.makeText(this@WallpaperLightboxActivity, "无法打开外部图库", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_cannot_open_gallery), Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },
@@ -192,7 +193,7 @@ class WallpaperLightboxActivity : ComponentActivity() {
                                 scope.launch {
                                     val result = WallpaperActionManager.shareWallpaper(this@WallpaperLightboxActivity, uri, initialTitle)
                                     if (result.isFailure) {
-                                        Toast.makeText(this@WallpaperLightboxActivity, "分享壁纸失败", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_share_failed), Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },
@@ -251,7 +252,7 @@ class WallpaperLightboxActivity : ComponentActivity() {
                                         }
                                     }
                                     withContext(Dispatchers.Main) {
-                                        Toast.makeText(this@WallpaperLightboxActivity, "构图设置已保存", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_composition_saved), Toast.LENGTH_SHORT).show()
                                         showAdjustmentSheet = false
                                         showLightbox = true
                                     }

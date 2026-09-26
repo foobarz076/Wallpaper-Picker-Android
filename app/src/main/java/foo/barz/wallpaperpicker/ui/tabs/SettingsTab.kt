@@ -31,10 +31,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.ScheduleRule
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
@@ -239,11 +241,9 @@ fun SettingsTab(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            title = { Text("开启精细定时器需忽略电池优化") },
+            title = { Text(stringResource(R.string.battery_dialog_title)) },
             text = {
-                Text(
-                    "Android 系统的低电耗模式 (Doze) 会在息屏休眠时冻结定时器唤醒，导致壁纸无法准时更换。\n\n建议前往系统设置将本应用设为「无限制」或加入电池优化白名单。"
-                )
+                Text(stringResource(R.string.battery_dialog_msg))
             },
             confirmButton = {
                 Button(
@@ -252,7 +252,7 @@ fun SettingsTab(
                         SettingsHelpers.openAppBatteryDetailsSettings(context)
                     }
                 ) {
-                    Text("前往设置")
+                    Text(stringResource(R.string.battery_dialog_btn_settings))
                 }
             },
             dismissButton = {
@@ -263,13 +263,13 @@ fun SettingsTab(
                             onToggleExactTimer(true)
                         }
                     ) {
-                        Text("仍然开启")
+                        Text(stringResource(R.string.battery_dialog_btn_enable_anyway))
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     TextButton(
                         onClick = { showBatteryOptimizationPrompt = false }
                     ) {
-                        Text("取消")
+                        Text(stringResource(R.string.action_cancel))
                     }
                 }
             }

@@ -37,7 +37,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.ScheduleRule
 import foo.barz.wallpaperpicker.core.model.ScheduleRuleSourceBinding
 import foo.barz.wallpaperpicker.core.model.ScheduleRuleTriggerType
@@ -79,10 +81,13 @@ fun ScheduleRuleEditDialog(
     var targetScreen by remember { mutableStateOf(initialRule?.targetScreen ?: WallpaperTarget.BOTH) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val emptyNameErr = stringResource(R.string.rule_err_name_empty)
+    val selectSourceErr = stringResource(R.string.rule_err_select_source)
+
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = {
-            Text(if (isEditMode) "编辑调度规则" else "新建调度规则")
+            Text(if (isEditMode) stringResource(R.string.rule_dialog_title_edit) else stringResource(R.string.rule_dialog_title_create))
         },
         text = {
             Column(
@@ -98,14 +103,14 @@ fun ScheduleRuleEditDialog(
                         name = it
                         errorMessage = null
                     },
-                    label = { Text("规则名称") },
-                    placeholder = { Text("例如：晨间相册、工作时段轮换") },
+                    label = { Text(stringResource(R.string.rule_name_label)) },
+                    placeholder = { Text(stringResource(R.string.rule_name_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 // 2. Trigger Type Selection
-                Text("触发方式", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.rule_trigger_type_section), style = MaterialTheme.typography.labelLarge)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -116,7 +121,7 @@ fun ScheduleRuleEditDialog(
                         FilterChip(
                             selected = triggerType == type,
                             onClick = { triggerType = type },
-                            label = { Text(type.displayName) }
+                            label = { Text(stringResource(type.displayNameRes)) }
                         )
                     }
                 }
@@ -128,7 +133,7 @@ fun ScheduleRuleEditDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("定点打卡时刻：", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.rule_daily_time_label), style = MaterialTheme.typography.bodySmall)
                             OutlinedButton(
                                 onClick = {
                                     val parsed = CompositeTriggerHelper.parseTime(targetTime) ?: Pair(8, 0)
@@ -153,7 +158,7 @@ fun ScheduleRuleEditDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("时段区间：", style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.rule_window_range_label), style = MaterialTheme.typography.bodySmall)
                                 OutlinedButton(
                                     onClick = {
                                         val parsed = CompositeTriggerHelper.parseTime(windowStartTime) ?: Pair(9, 0)
@@ -166,9 +171,9 @@ fun ScheduleRuleEditDialog(
                                         ).show()
                                     }
                                 ) {
-                                    Text("从 $windowStartTime")
+                                    Text(stringResource(R.string.rule_window_from_format, windowStartTime))
                                 }
-                                Text("至", style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.rule_window_to_label), style = MaterialTheme.typography.bodySmall)
                                 OutlinedButton(
                                     onClick = {
                                         val parsed = CompositeTriggerHelper.parseTime(windowEndTime) ?: Pair(18, 0)
@@ -181,11 +186,11 @@ fun ScheduleRuleEditDialog(
                                         ).show()
                                     }
                                 ) {
-                                    Text("到 $windowEndTime")
+                                    Text(stringResource(R.string.rule_window_to_format, windowEndTime))
                                 }
                             }
 
-                            Text("轮换间隔：", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.rule_interval_label), style = MaterialTheme.typography.bodySmall)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -193,12 +198,12 @@ fun ScheduleRuleEditDialog(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 listOf(
-                                    15L to "15分钟",
-                                    30L to "30分钟",
-                                    60L to "1小时",
-                                    120L to "2小时",
-                                    240L to "4小时",
-                                    360L to "6小时"
+                                    15L to stringResource(R.string.rule_interval_15m),
+                                    30L to stringResource(R.string.rule_interval_30m),
+                                    60L to stringResource(R.string.rule_interval_1h),
+                                    120L to stringResource(R.string.rule_interval_2h),
+                                    240L to stringResource(R.string.rule_interval_4h),
+                                    360L to stringResource(R.string.rule_interval_6h)
                                 ).forEach { (min, label) ->
                                     FilterChip(
                                         selected = intervalMinutes == min,
@@ -214,12 +219,12 @@ fun ScheduleRuleEditDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("熄屏防抖延迟：", style = MaterialTheme.typography.bodySmall)
-                            listOf(3 to "3秒", 5 to "5秒", 10 to "10秒").forEach { (sec, label) ->
+                            Text(stringResource(R.string.rule_screen_off_delay_label), style = MaterialTheme.typography.bodySmall)
+                            listOf(3, 5, 10).forEach { sec ->
                                 FilterChip(
                                     selected = screenOffDelaySeconds == sec,
                                     onClick = { screenOffDelaySeconds = sec },
-                                    label = { Text(label) }
+                                    label = { Text(stringResource(R.string.rule_delay_seconds_format, sec)) }
                                 )
                             }
                         }
@@ -229,7 +234,7 @@ fun ScheduleRuleEditDialog(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 // 4. Source Binding Strategy
-                Text("专属图源绑定", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.rule_binding_section), style = MaterialTheme.typography.labelLarge)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -240,16 +245,16 @@ fun ScheduleRuleEditDialog(
                         FilterChip(
                             selected = sourceBinding == binding,
                             onClick = { sourceBinding = binding },
-                            label = { Text(binding.displayName) }
+                            label = { Text(stringResource(binding.displayNameRes)) }
                         )
                     }
                 }
 
                 if (sourceBinding == ScheduleRuleSourceBinding.SPECIFIC_SOURCE) {
-                    Text("选择绑定的图源实例：", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.rule_binding_select_label), style = MaterialTheme.typography.bodySmall)
                     if (availableSources.isEmpty()) {
                         Text(
-                            text = "尚未在「图源管理」中配置图源，请先添加图源",
+                            text = stringResource(R.string.rule_binding_no_sources),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -280,7 +285,7 @@ fun ScheduleRuleEditDialog(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 // 5. Target Screen
-                Text("更换应用目标", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.rule_target_section), style = MaterialTheme.typography.labelLarge)
                 val canSeparateTarget = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -289,18 +294,18 @@ fun ScheduleRuleEditDialog(
                     FilterChip(
                         selected = targetScreen == WallpaperTarget.BOTH,
                         onClick = { targetScreen = WallpaperTarget.BOTH },
-                        label = { Text("桌面与锁屏") }
+                        label = { Text(stringResource(WallpaperTarget.BOTH.labelRes)) }
                     )
                     if (canSeparateTarget) {
                         FilterChip(
                             selected = targetScreen == WallpaperTarget.SYSTEM,
                             onClick = { targetScreen = WallpaperTarget.SYSTEM },
-                            label = { Text("仅桌面") }
+                            label = { Text(stringResource(WallpaperTarget.SYSTEM.labelRes)) }
                         )
                         FilterChip(
                             selected = targetScreen == WallpaperTarget.LOCK,
                             onClick = { targetScreen = WallpaperTarget.LOCK },
-                            label = { Text("仅锁屏") }
+                            label = { Text(stringResource(WallpaperTarget.LOCK.labelRes)) }
                         )
                     }
                 }
@@ -319,11 +324,11 @@ fun ScheduleRuleEditDialog(
                 onClick = {
                     val trimmedName = name.trim()
                     if (trimmedName.isEmpty()) {
-                        errorMessage = "请输入规则名称"
+                        errorMessage = emptyNameErr
                         return@Button
                     }
                     if (sourceBinding == ScheduleRuleSourceBinding.SPECIFIC_SOURCE && selectedSourceId.isNullOrBlank()) {
-                        errorMessage = "请选择绑定的专属图源"
+                        errorMessage = selectSourceErr
                         return@Button
                     }
 
@@ -344,12 +349,12 @@ fun ScheduleRuleEditDialog(
                     onSaveRule(updatedRule)
                 }
             ) {
-                Text("保存")
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
-                Text("取消")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

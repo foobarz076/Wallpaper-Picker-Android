@@ -31,7 +31,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.worker.CompositeTriggerHelper
 import foo.barz.wallpaperpicker.ui.MainUiState
 
@@ -82,9 +84,9 @@ fun SafeguardsSettingsSubPage(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text("夜间免打扰时段 (Quiet Hours)", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.safeguard_quiet_hours_title), style = MaterialTheme.typography.titleMedium)
                             Text(
-                                text = "在睡眠时段内静默暂停自动更换，避免夜间唤醒与屏幕耗电",
+                                text = stringResource(R.string.safeguard_quiet_hours_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -103,7 +105,7 @@ fun SafeguardsSettingsSubPage(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("休眠时段：", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.safeguard_quiet_hours_period), style = MaterialTheme.typography.bodySmall)
                         OutlinedButton(
                             onClick = {
                                 TimePickerDialog(
@@ -119,10 +121,10 @@ fun SafeguardsSettingsSubPage(
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                         ) {
-                            Text("从 ${CompositeTriggerHelper.formatTime(state.quietHoursStartHour, state.quietHoursStartMinute)}")
+                            Text(stringResource(R.string.safeguard_quiet_hours_from, CompositeTriggerHelper.formatTime(state.quietHoursStartHour, state.quietHoursStartMinute)))
                         }
 
-                        Text("至", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.safeguard_quiet_hours_to_label), style = MaterialTheme.typography.bodySmall)
 
                         OutlinedButton(
                             onClick = {
@@ -139,7 +141,7 @@ fun SafeguardsSettingsSubPage(
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                         ) {
-                            Text("到 ${CompositeTriggerHelper.formatTime(state.quietHoursEndHour, state.quietHoursEndMinute)}")
+                            Text(stringResource(R.string.safeguard_quiet_hours_to, CompositeTriggerHelper.formatTime(state.quietHoursEndHour, state.quietHoursEndMinute)))
                         }
                     }
                 }
@@ -165,9 +167,9 @@ fun SafeguardsSettingsSubPage(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text("防碰撞冷却抑制 (Cooldown)", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.safeguard_cooldown_title), style = MaterialTheme.typography.titleMedium)
                             Text(
-                                text = "距上次更换不足指定时间时拦截自动任务，避免与定点时刻或手动更换重叠",
+                                text = stringResource(R.string.safeguard_cooldown_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -185,11 +187,11 @@ fun SafeguardsSettingsSubPage(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf(5L to "5分钟", 10L to "10分钟", 15L to "15分钟", 30L to "30分钟").forEach { (minutes, label) ->
+                        listOf(5L, 10L, 15L, 30L).forEach { minutes ->
                             FilterChip(
                                 selected = state.cooldownMinutes == minutes,
                                 onClick = { onSetCooldownMinutes(minutes) },
-                                label = { Text(label) }
+                                label = { Text(stringResource(R.string.safeguard_cooldown_mins, minutes)) }
                             )
                         }
                     }
@@ -216,9 +218,9 @@ fun SafeguardsSettingsSubPage(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text("使用手机时推迟更换", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.safeguard_defer_title), style = MaterialTheme.typography.titleMedium)
                             Text(
-                                text = "检测到亮屏或正在使用手机时暂缓更换壁纸，防止游戏、观影或打字时发生掉帧卡顿",
+                                text = stringResource(R.string.safeguard_defer_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -251,9 +253,9 @@ fun SafeguardsSettingsSubPage(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text("智能洗牌防重复 (Fair Shuffle)", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.safeguard_fair_shuffle_title), style = MaterialTheme.typography.titleMedium)
                             Text(
-                                text = "记忆最近已用壁纸，在一整轮展示完之前避免高频抽取相同图片",
+                                text = stringResource(R.string.safeguard_fair_shuffle_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -268,7 +270,7 @@ fun SafeguardsSettingsSubPage(
                 if (state.fairShuffle) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "记忆窗口深度：",
+                        text = stringResource(R.string.safeguard_fair_shuffle_capacity_label),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -281,7 +283,7 @@ fun SafeguardsSettingsSubPage(
                             FilterChip(
                                 selected = state.fairShuffleCapacity == capacity,
                                 onClick = { onFairShuffleCapacitySelected(capacity) },
-                                label = { Text("$capacity 张") }
+                                label = { Text(stringResource(R.string.safeguard_fair_shuffle_capacity_items, capacity)) }
                             )
                         }
                     }
@@ -293,7 +295,7 @@ fun SafeguardsSettingsSubPage(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "当前牌堆记忆: ${state.fairShuffleRecordedCount} / ${state.fairShuffleCapacity} 张",
+                            text = stringResource(R.string.safeguard_fair_shuffle_status, state.fairShuffleRecordedCount, state.fairShuffleCapacity),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -302,7 +304,7 @@ fun SafeguardsSettingsSubPage(
                             enabled = state.fairShuffleRecordedCount > 0,
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                         ) {
-                            Text("重置洗牌牌堆", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.safeguard_fair_shuffle_reset), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }

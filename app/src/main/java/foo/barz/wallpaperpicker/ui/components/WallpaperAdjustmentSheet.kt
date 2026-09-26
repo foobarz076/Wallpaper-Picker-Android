@@ -52,11 +52,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import kotlin.math.roundToInt
@@ -111,12 +113,12 @@ fun WallpaperAdjustmentSheet(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
-                        text = "单图属性调整与构图微调",
+                        text = stringResource(R.string.adjust_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = item.title ?: "当前壁纸",
+                        text = item.title ?: stringResource(R.string.dash_current_wallpaper),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
@@ -140,7 +142,7 @@ fun WallpaperAdjustmentSheet(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "构图实时模拟预览",
+                        text = stringResource(R.string.adjust_preview_title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -162,7 +164,7 @@ fun WallpaperAdjustmentSheet(
 
                         AsyncImage(
                             model = item.displayUri,
-                            contentDescription = "预览构图",
+                            contentDescription = stringResource(R.string.adjust_preview_desc),
                             alignment = BiasAlignment(horizontalBias, verticalBias),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
@@ -183,9 +185,9 @@ fun WallpaperAdjustmentSheet(
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
+                    val mirroredSuffix = if (flipHorizontal) stringResource(R.string.adjust_mirrored_badge) else ""
                     Text(
-                        text = "当前焦点坐标: (${(focusX * 100).roundToInt()}%, ${(focusY * 100).roundToInt()}%)" +
-                                if (flipHorizontal) " · 已水平镜像" else "",
+                        text = stringResource(R.string.adjust_current_focus, (focusX * 100).roundToInt(), (focusY * 100).roundToInt()) + mirroredSuffix,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -220,12 +222,12 @@ fun WallpaperAdjustmentSheet(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "水平镜像翻转",
+                                text = stringResource(R.string.adjust_flip_title),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "左右镜像画面，便于避开桌面图标或修正视线",
+                                text = stringResource(R.string.adjust_flip_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -260,7 +262,7 @@ fun WallpaperAdjustmentSheet(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "裁剪中心焦点微调",
+                            text = stringResource(R.string.adjust_crop_focus_title),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
@@ -274,12 +276,13 @@ fun WallpaperAdjustmentSheet(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("水平焦点 (X):", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.adjust_focus_x_label), style = MaterialTheme.typography.bodySmall)
+                        val xPercent = (focusX * 100).roundToInt()
                         Text(
                             text = when {
-                                focusX < 0.35f -> "偏左 (${(focusX * 100).roundToInt()}%)"
-                                focusX > 0.65f -> "偏右 (${(focusX * 100).roundToInt()}%)"
-                                else -> "居中 (${(focusX * 100).roundToInt()}%)"
+                                focusX < 0.35f -> stringResource(R.string.adjust_focus_x_left, xPercent)
+                                focusX > 0.65f -> stringResource(R.string.adjust_focus_x_right, xPercent)
+                                else -> stringResource(R.string.adjust_focus_x_center, xPercent)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
@@ -301,12 +304,13 @@ fun WallpaperAdjustmentSheet(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("垂直焦点 (Y):", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.adjust_focus_y_label), style = MaterialTheme.typography.bodySmall)
+                        val yPercent = (focusY * 100).roundToInt()
                         Text(
                             text = when {
-                                focusY < 0.35f -> "顶部/头部 (${(focusY * 100).roundToInt()}%)"
-                                focusY > 0.65f -> "底部/下移 (${(focusY * 100).roundToInt()}%)"
-                                else -> "居中 (${(focusY * 100).roundToInt()}%)"
+                                focusY < 0.35f -> stringResource(R.string.adjust_focus_y_top, yPercent)
+                                focusY > 0.65f -> stringResource(R.string.adjust_focus_y_bottom, yPercent)
+                                else -> stringResource(R.string.adjust_focus_y_center, yPercent)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
@@ -332,21 +336,21 @@ fun WallpaperAdjustmentSheet(
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                         ) {
-                            Text("头部优先", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.adjust_preset_head), style = MaterialTheme.typography.labelSmall)
                         }
                         OutlinedButton(
                             onClick = { focusX = 0.5f; focusY = 0.5f },
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                         ) {
-                            Text("标准居中", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.adjust_preset_center), style = MaterialTheme.typography.labelSmall)
                         }
                         OutlinedButton(
                             onClick = { focusX = 0.5f; focusY = 0.85f },
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                         ) {
-                            Text("底部优先", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.adjust_preset_bottom), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -366,13 +370,13 @@ fun WallpaperAdjustmentSheet(
                         .padding(14.dp)
                 ) {
                     Text(
-                        text = "桌面视差滚动策略",
+                        text = stringResource(R.string.adjust_scroll_title),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "可单独覆写此壁纸的滚动表现，默认跟随全局设置",
+                        text = stringResource(R.string.adjust_scroll_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -386,25 +390,25 @@ fun WallpaperAdjustmentSheet(
                         FilterChip(
                             selected = selectedScrollMode == null,
                             onClick = { selectedScrollMode = null },
-                            label = { Text("跟随全局", style = MaterialTheme.typography.labelSmall) },
+                            label = { Text(stringResource(R.string.adjust_scroll_follow_global), style = MaterialTheme.typography.labelSmall) },
                             modifier = Modifier.weight(1f)
                         )
                         FilterChip(
                             selected = selectedScrollMode == WallpaperScrollMode.AUTO,
                             onClick = { selectedScrollMode = WallpaperScrollMode.AUTO },
-                            label = { Text("自适应", style = MaterialTheme.typography.labelSmall) },
+                            label = { Text(stringResource(R.string.adjust_scroll_auto), style = MaterialTheme.typography.labelSmall) },
                             modifier = Modifier.weight(1f)
                         )
                         FilterChip(
                             selected = selectedScrollMode == WallpaperScrollMode.ALWAYS,
                             onClick = { selectedScrollMode = WallpaperScrollMode.ALWAYS },
-                            label = { Text("平移", style = MaterialTheme.typography.labelSmall) },
+                            label = { Text(stringResource(R.string.adjust_scroll_always), style = MaterialTheme.typography.labelSmall) },
                             modifier = Modifier.weight(1f)
                         )
                         FilterChip(
                             selected = selectedScrollMode == WallpaperScrollMode.NEVER,
                             onClick = { selectedScrollMode = WallpaperScrollMode.NEVER },
-                            label = { Text("单屏", style = MaterialTheme.typography.labelSmall) },
+                            label = { Text(stringResource(R.string.adjust_scroll_never), style = MaterialTheme.typography.labelSmall) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -412,10 +416,10 @@ fun WallpaperAdjustmentSheet(
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = when (selectedScrollMode) {
-                            null -> "当前跟随全局设置: ${globalScrollMode.label}"
-                            WallpaperScrollMode.AUTO -> "AUTO: 宽图视差平移，竖图锁定单屏不拉伸"
-                            WallpaperScrollMode.ALWAYS -> "ALWAYS: 强制生成双倍屏宽画布随桌面滚动"
-                            WallpaperScrollMode.NEVER -> "NEVER: 严格锁定单屏显示，禁止任何平移"
+                            null -> stringResource(R.string.adjust_scroll_global_format, globalScrollMode.label)
+                            WallpaperScrollMode.AUTO -> stringResource(R.string.adjust_scroll_auto_desc)
+                            WallpaperScrollMode.ALWAYS -> stringResource(R.string.adjust_scroll_always_desc)
+                            WallpaperScrollMode.NEVER -> stringResource(R.string.adjust_scroll_never_desc)
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
@@ -441,7 +445,7 @@ fun WallpaperAdjustmentSheet(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("重置为全局默认")
+                Text(stringResource(R.string.adjust_reset_global))
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -466,7 +470,7 @@ fun WallpaperAdjustmentSheet(
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("仅保存记忆")
+                    Text(stringResource(R.string.adjust_save_memory_only))
                 }
 
                 Button(
@@ -484,7 +488,7 @@ fun WallpaperAdjustmentSheet(
                 ) {
                     Icon(Icons.Default.Wallpaper, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("保存并应用")
+                    Text(stringResource(R.string.adjust_save_and_apply))
                 }
             }
 

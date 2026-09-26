@@ -26,7 +26,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.ui.MainUiState
 
@@ -60,7 +62,7 @@ fun StorageSettingsSubPage(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("存储与缓存概览", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.storage_overview_title), style = MaterialTheme.typography.titleMedium)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -71,16 +73,16 @@ fun StorageSettingsSubPage(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("已收藏壁纸 (私有持久化)", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.storage_favorites_title), style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            text = "存放在内部专属目录，断网永久可用，绝不受系统或缓存清理影响",
+                            text = stringResource(R.string.storage_favorites_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "${state.favoritesList.size} 张 · ${SettingsHelpers.formatFileSize(state.favoritesSizeBytes)}",
+                        text = stringResource(R.string.storage_favorites_summary, state.favoritesList.size, SettingsHelpers.formatFileSize(state.favoritesSizeBytes)),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -97,9 +99,9 @@ fun StorageSettingsSubPage(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("临时网络缓存 (LRU 缓存池)", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.storage_cache_title), style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            text = "网络图源下载的临时图片，用于离线降级复用。超出容量上限后按最久未展示 (LRU) 顺序自动淘汰，已收藏壁纸受离线保护永不删除",
+                            text = stringResource(R.string.storage_cache_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -117,10 +119,10 @@ fun StorageSettingsSubPage(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Cache Size Tier Configuration & Disabled Option
-                Text("自动清理与缓存容量上限", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.storage_tier_title), style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "配置网络缓存池的最大淘汰容量；达到上限后自动淘汰最旧图片：",
+                    text = stringResource(R.string.storage_tier_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -131,33 +133,25 @@ fun StorageSettingsSubPage(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        FilterChip(
-                            selected = state.cacheSizeTier == CacheSizeTier.SMALL,
-                            onClick = { onCacheSizeTierSelected(CacheSizeTier.SMALL) },
-                            label = { Text("小 (20MB)") }
-                        )
-                        FilterChip(
-                            selected = state.cacheSizeTier == CacheSizeTier.STANDARD,
-                            onClick = { onCacheSizeTierSelected(CacheSizeTier.STANDARD) },
-                            label = { Text("标准 (50MB)") }
-                        )
-                        FilterChip(
-                            selected = state.cacheSizeTier == CacheSizeTier.LARGE,
-                            onClick = { onCacheSizeTierSelected(CacheSizeTier.LARGE) },
-                            label = { Text("大 (100MB)") }
-                        )
+                        listOf(CacheSizeTier.SMALL, CacheSizeTier.STANDARD, CacheSizeTier.LARGE).forEach { tier ->
+                            FilterChip(
+                                selected = state.cacheSizeTier == tier,
+                                onClick = { onCacheSizeTierSelected(tier) },
+                                label = { Text(stringResource(tier.displayNameRes)) }
+                            )
+                        }
                     }
 
                     FilterChip(
                         selected = state.cacheSizeTier == CacheSizeTier.DISABLED,
                         onClick = { onCacheSizeTierSelected(CacheSizeTier.DISABLED) },
-                        label = { Text("禁用自动清理 (不限制)") }
+                        label = { Text(stringResource(CacheSizeTier.DISABLED.displayNameRes)) }
                     )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = state.cacheSizeTier.description,
+                    text = stringResource(state.cacheSizeTier.descriptionRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (state.cacheSizeTier == CacheSizeTier.DISABLED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
@@ -170,7 +164,7 @@ fun StorageSettingsSubPage(
                     enabled = state.favoritesList.isNotEmpty() && !state.isExportingFavorites,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (state.isExportingFavorites) "正在导出…" else "导出全部收藏")
+                    Text(if (state.isExportingFavorites) stringResource(R.string.storage_exporting_favorites) else stringResource(R.string.storage_export_favorites))
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -187,7 +181,7 @@ fun StorageSettingsSubPage(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("管理存储空间与清理缓存…")
+                    Text(stringResource(R.string.storage_btn_manage_space))
                 }
             }
         }

@@ -47,11 +47,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import foo.barz.wallpaperpicker.R
 
 /**
  * Universal album item model for the refactored album picker.
@@ -113,13 +115,13 @@ fun AlbumPickerSheet(
                 Column {
                     Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(
-                        text = "支持多选组合轮播，未选择时默认全库随机",
+                        text = stringResource(R.string.album_picker_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
                 }
                 IconButton(onClick = onDismissRequest) {
-                    Icon(Icons.Default.Clear, contentDescription = "关闭")
+                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.action_close))
                 }
             }
 
@@ -130,12 +132,12 @@ fun AlbumPickerSheet(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("搜索相册名称…") },
+                placeholder = { Text(stringResource(R.string.album_picker_search_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "清除搜索")
+                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.album_picker_clear_search))
                         }
                     }
                 },
@@ -152,20 +154,20 @@ fun AlbumPickerSheet(
                 FilterChip(
                     selected = tempSelectedIds.isEmpty(),
                     onClick = { tempSelectedIds = emptySet() },
-                    label = { Text("全库随机") }
+                    label = { Text(stringResource(R.string.album_picker_chip_all_random)) }
                 )
                 FilterChip(
                     selected = tempSelectedIds.isNotEmpty() && tempSelectedIds.size == specificAlbums.size,
                     onClick = {
                         tempSelectedIds = specificAlbums.mapNotNull { it.id }.toSet()
                     },
-                    label = { Text("全选 (${specificAlbums.size})") }
+                    label = { Text(stringResource(R.string.album_picker_chip_select_all_format, specificAlbums.size)) }
                 )
                 if (tempSelectedIds.isNotEmpty()) {
                     FilterChip(
                         selected = false,
                         onClick = { tempSelectedIds = emptySet() },
-                        label = { Text("清空选择") }
+                        label = { Text(stringResource(R.string.album_picker_chip_clear_selection)) }
                     )
                 }
             }
@@ -244,7 +246,7 @@ fun AlbumPickerSheet(
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
-                                        text = "${allPhotosItem.count} 张照片 · 全库混合随机抽取",
+                                        text = stringResource(R.string.album_picker_all_photos_desc, allPhotosItem.count),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.outline
                                     )
@@ -253,7 +255,7 @@ fun AlbumPickerSheet(
                                 Checkbox(
                                     checked = isAllSelected,
                                     onCheckedChange = { if (it) tempSelectedIds = emptySet() }
-                                )
+                                 )
                             }
                         }
                     }
@@ -335,7 +337,7 @@ fun AlbumPickerSheet(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = "${album.count} 张照片",
+                                    text = stringResource(R.string.album_picker_photos_count_format, album.count),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.outline
                                 )
@@ -365,9 +367,9 @@ fun AlbumPickerSheet(
             ) {
                 Text(
                     text = if (tempSelectedIds.isEmpty()) {
-                        "当前模式: 全库随机"
+                        stringResource(R.string.album_picker_mode_all)
                     } else {
-                        "已选 ${tempSelectedIds.size} 个相册组合"
+                        stringResource(R.string.album_picker_mode_selected_format, tempSelectedIds.size)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
@@ -380,7 +382,7 @@ fun AlbumPickerSheet(
                         onDismissRequest()
                     }
                 ) {
-                    Text("确定")
+                    Text(stringResource(R.string.action_confirm))
                 }
             }
         }

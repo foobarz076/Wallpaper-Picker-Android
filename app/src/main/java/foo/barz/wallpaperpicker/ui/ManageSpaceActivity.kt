@@ -56,9 +56,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
+import foo.barz.wallpaperpicker.R
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.Coil
@@ -159,10 +161,18 @@ class ManageSpaceViewModel(application: Application) : AndroidViewModel(applicat
                 removedHistoryCount = historyDb.clearInvalidUnfavoritedRecords(getApplication())
             }
 
+            val app = getApplication<Application>()
             val msg = if (removedHistoryCount > 0) {
-                "已清理下载壁纸原图缓存 (释放了 ${formatFileSize(freed)})，并同步移除了 $removedHistoryCount 条失效历史记录（缩略图已保留）"
+                app.getString(
+                    R.string.manage_space_status_wp_cleared_with_history,
+                    formatFileSize(freed),
+                    removedHistoryCount
+                )
             } else {
-                "已清理下载壁纸原图缓存 (释放了 ${formatFileSize(freed)})，缩略图已保留"
+                app.getString(
+                    R.string.manage_space_status_wp_cleared,
+                    formatFileSize(freed)
+                )
             }
 
             _uiState.update {
@@ -217,10 +227,14 @@ class ManageSpaceViewModel(application: Application) : AndroidViewModel(applicat
                 Coil.imageLoader(getApplication()).diskCache?.size ?: 0L
             }.getOrDefault(0L)
 
+            val app = getApplication<Application>()
             val msg = if (removedHistoryCount > 0) {
-                "全部图片缓存已成功清理，并同步移除了 $removedHistoryCount 条失效历史记录"
+                app.getString(
+                    R.string.manage_space_status_all_cleared_with_history,
+                    removedHistoryCount
+                )
             } else {
-                "全部图片缓存已成功清理"
+                app.getString(R.string.manage_space_status_all_cleared)
             }
 
             _uiState.update {
@@ -324,12 +338,12 @@ fun ManageSpaceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("存储空间管理") },
+                title = { Text(stringResource(R.string.manage_space_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -371,14 +385,14 @@ fun ManageSpaceScreen(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
-                            text = "可清理图片缓存",
+                            text = stringResource(R.string.manage_space_cleanable_cache),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         if (uiState.isCalculating) {
                             Text(
-                                text = "正在计算占用空间…",
+                                text = stringResource(R.string.manage_space_calculating),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -416,7 +430,7 @@ fun ManageSpaceScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "图片缓存管理",
+                            text = stringResource(R.string.manage_space_image_cache_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -425,7 +439,7 @@ fun ManageSpaceScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "已下载的网络壁纸与缩略图缓存独立统计。您可根据需要仅清理下载壁纸大图以保留缩略图预览，或一次性清理全部图片缓存。",
+                        text = stringResource(R.string.manage_space_image_cache_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -440,13 +454,16 @@ fun ManageSpaceScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "下载壁纸原图缓存",
+                                text = stringResource(R.string.manage_space_wp_cache_title),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "网络图源下载的大图文件，用于离线轮换：${formatFileSize(uiState.wallpaperCacheBytes)}",
+                                text = stringResource(
+                                    R.string.manage_space_wp_cache_desc,
+                                    formatFileSize(uiState.wallpaperCacheBytes)
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             )
@@ -458,7 +475,7 @@ fun ManageSpaceScreen(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            Text("仅清理下载壁纸", style = MaterialTheme.typography.labelSmall)
+                            Text(stringResource(R.string.manage_space_btn_clear_wp), style = MaterialTheme.typography.labelSmall)
                         }
                     }
 
@@ -474,13 +491,16 @@ fun ManageSpaceScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "界面缩略图与视图缓存",
+                                text = stringResource(R.string.manage_space_thumb_cache_title),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "历史记录与图源列表中的缩略图磁盘缓存：${formatFileSize(uiState.coilCacheBytes)}",
+                                text = stringResource(
+                                    R.string.manage_space_thumb_cache_desc,
+                                    formatFileSize(uiState.coilCacheBytes)
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             )
@@ -503,7 +523,7 @@ fun ManageSpaceScreen(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("清理中…")
+                            Text(stringResource(R.string.manage_space_btn_clearing))
                         } else {
                             Icon(
                                 imageVector = Icons.Default.DeleteOutline,
@@ -511,7 +531,7 @@ fun ManageSpaceScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("清理全部图片缓存 (${formatFileSize(uiState.totalImageCacheBytes)})")
+                            Text(stringResource(R.string.manage_space_btn_clear_all_format, formatFileSize(uiState.totalImageCacheBytes)))
                         }
                     }
                 }
@@ -539,7 +559,7 @@ fun ManageSpaceScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "清除所有数据",
+                            text = stringResource(R.string.manage_space_clear_data_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.error
@@ -549,7 +569,7 @@ fun ManageSpaceScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "将完全重置应用，彻底删除所有已保存的图源配置、文件夹索引数据库、定时切换任务及本地缓存。操作后应用将直接关闭，重新打开时如同初次安装。",
+                        text = stringResource(R.string.manage_space_clear_data_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -570,7 +590,7 @@ fun ManageSpaceScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("清空全部数据")
+                        Text(stringResource(R.string.manage_space_btn_clear_data))
                     }
                 }
             }
@@ -589,15 +609,15 @@ fun ManageSpaceScreen(
                 )
             },
             title = {
-                Text(text = "仅清理下载壁纸原图？")
+                Text(text = stringResource(R.string.manage_space_dialog_wp_title))
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "此操作仅释放网络图源下载的壁纸原图文件 (${formatFileSize(uiState.wallpaperCacheBytes)})。\n\n" +
-                                "• 缩略图缓存将得到保留，历史记录与图源列表仍可流畅预览。\n" +
-                                "• 已收藏壁纸（已持久化隔离）：不受任何影响。\n" +
-                                "• 未收藏的网络壁纸原图：本地文件将被清理，历史记录中将显示失效（后续可按需从网络重新下载）。"
+                        text = stringResource(
+                            R.string.manage_space_dialog_wp_msg,
+                            formatFileSize(uiState.wallpaperCacheBytes)
+                        )
                     )
                     Row(
                         modifier = Modifier
@@ -614,7 +634,7 @@ fun ManageSpaceScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "同时移除失去原图的非收藏历史记录",
+                            text = stringResource(R.string.manage_space_chk_remove_invalid),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -624,12 +644,12 @@ fun ManageSpaceScreen(
                 Button(
                     onClick = onConfirmClearWallpaperCache
                 ) {
-                    Text("确认清理下载壁纸")
+                    Text(stringResource(R.string.manage_space_btn_confirm_wp))
                 }
             },
             dismissButton = {
                 TextButton(onClick = onDismissClearWallpaperCacheDialog) {
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -647,15 +667,15 @@ fun ManageSpaceScreen(
                 )
             },
             title = {
-                Text(text = "清理全部图片缓存？")
+                Text(text = stringResource(R.string.manage_space_dialog_all_cache_title))
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "此操作将同时释放所有下载的壁纸原图以及界面缩略图与预加载缓存 (${formatFileSize(uiState.totalImageCacheBytes)})。\n\n" +
-                                "• 已收藏壁纸（已持久化隔离）：不受任何影响。\n" +
-                                "• 未收藏的网络壁纸原图：本地文件将被清理，历史记录中将显示失效。\n" +
-                                "• 缩略图将在再次浏览相关列表时按需重新生成。"
+                        text = stringResource(
+                            R.string.manage_space_dialog_all_cache_msg,
+                            formatFileSize(uiState.totalImageCacheBytes)
+                        )
                     )
                     Row(
                         modifier = Modifier
@@ -672,7 +692,7 @@ fun ManageSpaceScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "同时移除失去原图的非收藏历史记录",
+                            text = stringResource(R.string.manage_space_chk_remove_invalid),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -682,12 +702,12 @@ fun ManageSpaceScreen(
                 Button(
                     onClick = onConfirmClearAllImageCache
                 ) {
-                    Text("确认清理全部图片")
+                    Text(stringResource(R.string.manage_space_btn_confirm_all_cache))
                 }
             },
             dismissButton = {
                 TextButton(onClick = onDismissClearAllImageCacheDialog) {
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -705,11 +725,11 @@ fun ManageSpaceScreen(
                 )
             },
             title = {
-                Text(text = "确认清空应用所有数据？")
+                Text(text = stringResource(R.string.manage_space_dialog_reset_title))
             },
             text = {
                 Text(
-                    text = "此操作不可撤销！这将会清除所有配置、定时任务、本地索引及图片缓存。执行后应用将立即退出。"
+                    text = stringResource(R.string.manage_space_dialog_reset_msg)
                 )
             },
             confirmButton = {
@@ -722,12 +742,12 @@ fun ManageSpaceScreen(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("确认清空并退出")
+                    Text(stringResource(R.string.manage_space_btn_confirm_reset))
                 }
             },
             dismissButton = {
                 TextButton(onClick = onDismissDialog) {
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )

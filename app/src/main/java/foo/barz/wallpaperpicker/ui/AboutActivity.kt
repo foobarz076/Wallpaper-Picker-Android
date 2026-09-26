@@ -327,7 +327,7 @@ fun AboutScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -402,7 +402,7 @@ fun AboutScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "一款轻量、极低功耗、跨代兼容 Android 6.0 (API 23) 至 Android 16 (API 36+) 的多源壁纸轮换工具。坚持单分支架构与纯原生零 GMS 依赖。",
+                        text = stringResource(R.string.about_screen_app_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -430,14 +430,14 @@ fun AboutScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("开源仓库")
+                            Text(stringResource(R.string.about_btn_repo))
                         }
 
                         OutlinedButton(
                             onClick = {
                                 copyToClipboard(context, AppOpenSourceInfo.GITHUB_URL)
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("已复制 GitHub 仓库地址至剪贴板")
+                                    snackbarHostState.showSnackbar(context.getString(R.string.about_copied_repo_snackbar))
                                 }
                             },
                             modifier = Modifier.weight(1f)
@@ -448,7 +448,7 @@ fun AboutScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("复制链接")
+                            Text(stringResource(R.string.about_btn_copy_link))
                         }
                     }
 
@@ -466,7 +466,7 @@ fun AboutScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("查看本应用 GPL-3.0 许可证条款")
+                        Text(stringResource(R.string.about_btn_view_gpl))
                     }
                 }
             }
@@ -481,15 +481,15 @@ fun AboutScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("运行环境诊断", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.about_diag_title), style = MaterialTheme.typography.titleMedium)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    DiagnosticItem("系统版本", "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-                    DiagnosticItem("设备型号", "${Build.MANUFACTURER} ${Build.MODEL}")
-                    DiagnosticItem("支持架构", Build.SUPPORTED_ABIS.joinToString(", ").ifEmpty { "通用" })
-                    DiagnosticItem("目标 SDK", "API 36 (Android 16)")
-                    DiagnosticItem("最低兼容", "API 23 (Android 6.0 Marshmallow)")
+                    DiagnosticItem(stringResource(R.string.about_diag_os_version), "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+                    DiagnosticItem(stringResource(R.string.about_diag_device_model), "${Build.MANUFACTURER} ${Build.MODEL}")
+                    DiagnosticItem(stringResource(R.string.about_diag_abis), Build.SUPPORTED_ABIS.joinToString(", ").ifEmpty { context.getString(R.string.about_diag_abi_universal) })
+                    DiagnosticItem(stringResource(R.string.about_diag_target_sdk), "API 36 (Android 16)")
+                    DiagnosticItem(stringResource(R.string.about_diag_min_sdk), "API 23 (Android 6.0 Marshmallow)")
                 }
             }
 
@@ -508,27 +508,27 @@ fun AboutScreen(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("运行诊断与日志", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.about_logs_card_title), style = MaterialTheme.typography.titleMedium)
                         }
                         SuggestionChip(
                             onClick = {
                                 logCount = AppLog.getLogCount()
                                 showLogDialog = true
                             },
-                            label = { Text("$logCount 条日志") }
+                            label = { Text(stringResource(R.string.about_logs_count_chip, logCount)) }
                         )
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "实时记录应用后台调度、图源解析与壁纸切换事件。支持敏感凭据与私网地址自动脱敏，方便排查异常问题。",
+                        text = stringResource(R.string.about_logs_card_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    DiagnosticItem("上次执行状态", prefs.lastExecutionStatus ?: "尚未执行")
-                    DiagnosticItem("上次异常报错", prefs.lastErrorMessage ?: "无异常")
+                    DiagnosticItem(stringResource(R.string.about_logs_last_status), prefs.lastExecutionStatus ?: stringResource(R.string.about_logs_status_not_run))
+                    DiagnosticItem(stringResource(R.string.about_logs_last_error), prefs.lastErrorMessage ?: stringResource(R.string.about_logs_error_none))
 
                     Spacer(modifier = Modifier.height(14.dp))
                     Row(
@@ -548,7 +548,7 @@ fun AboutScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("查看日志")
+                            Text(stringResource(R.string.about_logs_btn_view))
                         }
 
                         Button(
@@ -564,7 +564,7 @@ fun AboutScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("导出报告")
+                            Text(stringResource(R.string.about_logs_btn_export))
                         }
                     }
                 }
@@ -583,11 +583,11 @@ fun AboutScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("第三方开源库致谢", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.about_third_party_title), style = MaterialTheme.typography.titleMedium)
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Wallpaper Picker 的构建离不开以下优秀的开源项目，我们谨遵各自许可证条款向其创作者深表谢意：",
+                        text = stringResource(R.string.about_third_party_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -654,7 +654,7 @@ fun AboutScreen(
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("官网/项目")
+                                Text(stringResource(R.string.about_lib_website))
                             }
 
                             Spacer(modifier = Modifier.width(4.dp))
@@ -664,7 +664,7 @@ fun AboutScreen(
                                     activeLicenseDialogText = lib.licenseText
                                 }
                             ) {
-                                Text("查看许可证")
+                                Text(stringResource(R.string.about_lib_view_license))
                             }
                         }
                     }
@@ -696,7 +696,7 @@ fun AboutScreen(
                         .padding(20.dp)
                 ) {
                     Text(
-                        text = activeLicenseDialogTitle ?: "许可证",
+                        text = activeLicenseDialogTitle ?: stringResource(R.string.about_dialog_license_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -730,7 +730,7 @@ fun AboutScreen(
                                 activeLicenseDialogText = null
                             }
                         ) {
-                            Text("关闭")
+                            Text(stringResource(R.string.action_close))
                         }
                     }
                 }
@@ -765,13 +765,13 @@ fun AboutScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "运行与诊断日志",
+                            text = stringResource(R.string.about_log_dialog_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "脱敏保护",
+                                text = stringResource(R.string.about_log_dialog_sanitize),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -794,7 +794,7 @@ fun AboutScreen(
                         OutlinedButton(
                             onClick = {
                                 DiagnosticReportHelper.copyToClipboard(context, currentLogs)
-                                scope.launch { snackbarHostState.showSnackbar("已复制日志至剪贴板") }
+                                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.about_log_copied_snackbar)) }
                             },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -804,7 +804,7 @@ fun AboutScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("复制")
+                            Text(stringResource(R.string.action_copy))
                         }
 
                         OutlinedButton(
@@ -819,14 +819,14 @@ fun AboutScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("分享")
+                            Text(stringResource(R.string.action_share))
                         }
 
                         OutlinedButton(
                             onClick = {
                                 AppLog.clearLogs()
                                 logCount = 0
-                                scope.launch { snackbarHostState.showSnackbar("日志已清空") }
+                                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.about_log_cleared_snackbar)) }
                             },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -836,7 +836,7 @@ fun AboutScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("清空")
+                            Text(stringResource(R.string.action_clear))
                         }
                     }
 
@@ -864,7 +864,7 @@ fun AboutScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "已关闭脱敏保护。当前日志包含 API Key、认证凭据或内网 IP 等私密信息，导出或分享时请小心使用，避免隐私泄露！",
+                                    text = stringResource(R.string.about_log_warning_unsanitized),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
@@ -906,7 +906,7 @@ fun AboutScreen(
                         horizontalArrangement = Arrangement.End
                     ) {
                         TextButton(onClick = { showLogDialog = false }) {
-                            Text("关闭")
+                            Text(stringResource(R.string.action_close))
                         }
                     }
                 }
@@ -957,7 +957,7 @@ private fun openBrowserUrl(
         }
         context.startActivity(intent)
     } catch (_: Exception) {
-        onError("未能打开浏览器，已将链接复制到剪贴板")
+        onError(context.getString(R.string.about_browser_open_failed))
         copyToClipboard(context, url)
     }
 }

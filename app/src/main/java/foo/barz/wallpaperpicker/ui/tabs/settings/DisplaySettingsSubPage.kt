@@ -27,7 +27,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
@@ -65,14 +67,14 @@ fun DisplaySettingsSubPage(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("更换应用目标", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.display_target_card_title), style = MaterialTheme.typography.titleMedium)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
                 val canSeparateTarget = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
                 if (!canSeparateTarget) {
                     Text(
-                        text = "当前设备运行 Android 6.0，系统规范限制将同时更新桌面与锁屏",
+                        text = stringResource(R.string.display_target_legacy_notice),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -86,18 +88,18 @@ fun DisplaySettingsSubPage(
                     FilterChip(
                         selected = state.target == WallpaperTarget.BOTH,
                         onClick = { onTargetSelected(WallpaperTarget.BOTH) },
-                        label = { Text("桌面与锁屏") }
+                        label = { Text(stringResource(WallpaperTarget.BOTH.labelRes)) }
                     )
                     if (canSeparateTarget) {
                         FilterChip(
                             selected = state.target == WallpaperTarget.SYSTEM,
                             onClick = { onTargetSelected(WallpaperTarget.SYSTEM) },
-                            label = { Text("仅桌面") }
+                            label = { Text(stringResource(WallpaperTarget.SYSTEM.labelRes)) }
                         )
                         FilterChip(
                             selected = state.target == WallpaperTarget.LOCK,
                             onClick = { onTargetSelected(WallpaperTarget.LOCK) },
-                            label = { Text("仅锁屏") }
+                            label = { Text(stringResource(WallpaperTarget.LOCK.labelRes)) }
                         )
                     }
                 }
@@ -114,7 +116,7 @@ fun DisplaySettingsSubPage(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("壁纸裁切与构图", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.display_crop_card_title), style = MaterialTheme.typography.titleMedium)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -132,14 +134,14 @@ fun DisplaySettingsSubPage(
                         FilterChip(
                             selected = state.cropMode == mode,
                             onClick = { onCropModeSelected(mode) },
-                            label = { Text(mode.label) }
+                            label = { Text(stringResource(mode.labelRes)) }
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = state.cropMode.description,
+                    text = stringResource(state.cropMode.descriptionRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -156,7 +158,7 @@ fun DisplaySettingsSubPage(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("桌面视差随动", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.display_scroll_card_title), style = MaterialTheme.typography.titleMedium)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -174,21 +176,21 @@ fun DisplaySettingsSubPage(
                         FilterChip(
                             selected = state.scrollMode == mode,
                             onClick = { onScrollModeSelected(mode) },
-                            label = { Text(mode.label) }
+                            label = { Text(stringResource(mode.labelRes)) }
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = state.scrollMode.description,
+                    text = stringResource(state.scrollMode.descriptionRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "提示：部分定制系统（如 HyperOS/MIUI 或已关闭壁纸随动的桌面）不支持壁纸平移。若滑动桌面时壁纸静止，建议选择「锁定居中」以单屏最清晰画质呈现。",
+                    text = stringResource(R.string.display_scroll_tip),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.tertiary
                 )
@@ -200,9 +202,9 @@ fun DisplaySettingsSubPage(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("修改设置时重设当前壁纸", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.display_reapply_on_change_title), style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            text = "更改裁切或滚动设置时，立即按新模式重新渲染并应用当前壁纸",
+                            text = stringResource(R.string.display_reapply_on_change_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -220,7 +222,7 @@ fun DisplaySettingsSubPage(
                         enabled = !state.isChanging,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("按当前设置重设正在使用的壁纸")
+                        Text(stringResource(R.string.display_btn_reapply_now))
                     }
                 }
             }
