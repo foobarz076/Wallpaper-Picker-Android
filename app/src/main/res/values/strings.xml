@@ -509,6 +509,30 @@
     <string name="storage_exporting_favorites">Exporting…</string>
     <string name="storage_btn_manage_space">Manage Storage &amp; Clear Cache…</string>
 
+    <!-- Backup & Restore Configuration -->
+    <string name="backup_card_title">Backup &amp; Restore Configuration</string>
+    <string name="backup_card_desc">Export or restore all wallpaper sources, scheduling rules, global settings, and favorite adjustments. Supports native AES-256-GCM streaming encryption.</string>
+    <string name="backup_btn_export">Backup Configuration</string>
+    <string name="backup_btn_restore">Restore Configuration</string>
+    <string name="backup_export_dialog_title">Export Configuration Backup</string>
+    <string name="backup_export_encrypted_checkbox">Encrypt backup with password (Recommended)</string>
+    <string name="backup_export_password_label">Encryption Password</string>
+    <string name="backup_export_password_confirm">Confirm Password</string>
+    <string name="backup_export_password_mismatch">Passwords do not match</string>
+    <string name="backup_export_password_empty">Password cannot be empty</string>
+    <string name="backup_export_crypto_notice">Encrypted with native AES-256-GCM + PBKDF2. Can be safely restored across devices without third-party dependencies.</string>
+    <string name="backup_export_warning_sensitive">Warning: Current configuration contains API keys or secret tokens. Unencrypted export may expose private credentials.</string>
+    <string name="backup_export_sanitize_checkbox">Redact credentials (Wipe API keys and query tokens)</string>
+    <string name="backup_export_saf_notice">Notice: Due to Android security boundaries, local folder (SAF) permissions and system album IDs cannot migrate across devices. Re-authorization may be required after restore.</string>
+    <string name="backup_export_btn_proceed">Choose Save Location</string>
+    <string name="backup_restore_pwd_dialog_title">Enter Backup Password</string>
+    <string name="backup_restore_pwd_label">Backup Password</string>
+    <string name="backup_restore_pwd_desc">This backup file is protected with AES-256-GCM encryption. Please enter the password to decrypt and restore.</string>
+    <string name="backup_restore_btn_confirm">Decrypt &amp; Restore</string>
+    <string name="backup_restore_confirm_title">Restore Configuration?</string>
+    <string name="backup_restore_confirm_msg">Restoring will overwrite existing sources, schedule rules, and app preferences with the backup. Unfavorited history will be kept. Continue?</string>
+    <string name="backup_restore_btn_overwrite">Confirm Restore</string>
+
     <!-- About Settings SubPage &amp; About Activity -->
     <string name="about_battery_unrestricted_title">Enable Unrestricted Battery for On-Time Rotation</string>
     <string name="about_battery_unrestricted_desc">Doze mode and aggressive system power saving may delay wallpaper rotation during standby. We recommend setting this app to \"Unrestricted\" or adding it to the battery whitelist.</string>

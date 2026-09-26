@@ -100,6 +100,10 @@ fun SettingsTab(
     onDeleteScheduleRule: (String) -> Unit = {},
     onToggleScheduleRuleEnabled: (String, Boolean) -> Unit = { _, _ -> },
     onPopulateDefaultRules: () -> Unit = {},
+    hasSensitiveData: Boolean = false,
+    onExportBackup: (android.net.Uri, String?, Boolean) -> Unit = { _, _, _ -> },
+    onCheckIsEncryptedBackup: (android.net.Uri) -> Boolean = { false },
+    onRestoreBackup: (android.net.Uri, String?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -221,7 +225,11 @@ fun SettingsTab(
                 state = state,
                 onCacheSizeTierSelected = onCacheSizeTierSelected,
                 onExportFavorites = onExportFavorites,
-                onOpenManageSpace = onOpenManageSpace
+                onOpenManageSpace = onOpenManageSpace,
+                hasSensitiveData = hasSensitiveData,
+                onExportBackup = onExportBackup,
+                onCheckIsEncryptedBackup = onCheckIsEncryptedBackup,
+                onRestoreBackup = onRestoreBackup
             )
 
             SettingsSubPage.ABOUT -> AboutSettingsSubPage(

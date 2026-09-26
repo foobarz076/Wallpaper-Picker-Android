@@ -147,6 +147,10 @@ fun MainScreen(
     onDeleteScheduleRule: (String) -> Unit = {},
     onToggleScheduleRuleEnabled: (String, Boolean) -> Unit = { _, _ -> },
     onPopulateDefaultRules: () -> Unit = {},
+    hasSensitiveData: Boolean = false,
+    onExportBackup: (Uri, String?, Boolean) -> Unit = { _, _, _ -> },
+    onCheckIsEncryptedBackup: (Uri) -> Boolean = { false },
+    onRestoreBackup: (Uri, String?) -> Unit = { _, _ -> },
     targetTab: MainTab? = null,
     onTabNavigated: () -> Unit = {},
     onChangeNow: () -> Unit,
@@ -337,7 +341,11 @@ fun MainScreen(
                         onSaveScheduleRule = onSaveScheduleRule,
                         onDeleteScheduleRule = onDeleteScheduleRule,
                         onToggleScheduleRuleEnabled = onToggleScheduleRuleEnabled,
-                        onPopulateDefaultRules = onPopulateDefaultRules
+                        onPopulateDefaultRules = onPopulateDefaultRules,
+                        hasSensitiveData = hasSensitiveData,
+                        onExportBackup = onExportBackup,
+                        onCheckIsEncryptedBackup = onCheckIsEncryptedBackup,
+                        onRestoreBackup = onRestoreBackup
                     )
                 }
             }

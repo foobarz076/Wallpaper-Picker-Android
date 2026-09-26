@@ -119,6 +119,10 @@ class MainActivity : ComponentActivity() {
                     onDeleteScheduleRule = viewModel::onDeleteScheduleRule,
                     onToggleScheduleRuleEnabled = viewModel::onToggleScheduleRuleEnabled,
                     onPopulateDefaultRules = viewModel::onPopulateDefaultRules,
+                    hasSensitiveData = viewModel.hasSensitiveDataForBackup(),
+                    onExportBackup = viewModel::exportBackup,
+                    onCheckIsEncryptedBackup = viewModel::checkIsEncryptedBackup,
+                    onRestoreBackup = viewModel::restoreBackup,
                     onChangeNow = viewModel::changeNow,
                     onClearStatus = viewModel::clearStatusMessage
                 )

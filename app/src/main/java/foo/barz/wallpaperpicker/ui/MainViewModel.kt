@@ -12,6 +12,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import foo.barz.wallpaperpicker.core.action.WallpaperActionManager
 import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
+import foo.barz.wallpaperpicker.core.backup.BackupManager
+import foo.barz.wallpaperpicker.core.backup.RestoreResult
 import foo.barz.wallpaperpicker.core.cache.WallpaperCacheManager
 import foo.barz.wallpaperpicker.core.database.LocalFolderFastScanner
 import foo.barz.wallpaperpicker.core.database.LocalFolderIndexDatabase
@@ -1629,6 +1631,132 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             String.format(Locale.getDefault(), "%.1f MB", mb)
         } else {
             String.format(Locale.getDefault(), "%.1f KB", kb)
+        }
+    }
+
+    /**
+     * Checks if current preferences or configured sources contain sensitive credentials.
+     */
+    fun hasSensitiveDataForBackup(): Boolean {
+        if (prefs.immichApiKey.isNotBlank()) return true
+        if (prefs.httpCustomUrl.contains("api_key", ignoreCase = true) ||
+            prefs.httpCustomUrl.contains("token", ignoreCase = true)) return true
+        val sources = sourcesDb.getAllSources()
+        return sources.any { s ->
+            if (s.type == WallpaperSourceType.IMMICH) {
+                val cfg = foo.barz.wallpaperpicker.core.model.ImmichSourceConfig.fromJson(s.configJson)
+                cfg.apiKey.isNotBlank()
+            } else if (s.type == WallpaperSourceType.HTTP_API) {
+                val cfg = foo.barz.wallpaperpicker.core.model.HttpApiSourceConfig.fromJson(s.configJson)
+                cfg.customUrl.contains("api_key", ignoreCase = true) || cfg.customUrl.contains("token", ignoreCase = true)
+            } else false
+        }
+    }
+
+    /**
+     * Exports configuration backup to the destination URI.
+     */
+    fun exportBackup(uri: Uri, password: String?, sanitize: Boolean) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(statusMessage = "正在打包导出配置备份…") }
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val context = getApplication<Application>()
+                    val outputStream = context.contentResolver.openOutputStream(uri)
+                        ?: throw IOException("无法写入目标文件")
+                    BackupManager.exportBackup(context, outputStream, password, sanitize)
+                }
+            }
+            if (result.isSuccess) {
+                val isEncrypted = !password.isNullOrBlank()
+                _uiState.update {
+                    it.copy(
+                        statusMessage = if (isEncrypted) "配置备份已成功导出并加密！" else "配置备份已导出完成"
+                    )
+                }
+            } else {
+                val error = result.exceptionOrNull()?.message ?: "导出失败"
+                _uiState.update { it.copy(statusMessage = "导出备份失败: $error") }
+            }
+        }
+    }
+
+    /**
+     * Inspects whether a chosen backup file begins with the encrypted magic header.
+     */
+    fun checkIsEncryptedBackup(uri: Uri): Boolean {
+        return runCatching {
+            val context = getApplication<Application>()
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                val buffered = if (stream.markSupported()) stream else java.io.BufferedInputStream(stream)
+                BackupManager.isEncryptedBackup(buffered)
+            } ?: false
+        }.getOrDefault(false)
+    }
+
+    /**
+     * Restores application preferences, sources, rules, and favorite overrides from a backup.
+     */
+    fun restoreBackup(uri: Uri, password: String?) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(statusMessage = "正在解析并还原配置…") }
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val context = getApplication<Application>()
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                        ?: throw IOException("无法打开备份文件")
+                    BackupManager.restoreBackup(context, inputStream, password)
+                }.getOrElse { e ->
+                    RestoreResult(success = false, errorMessage = e.message ?: "读取备份文件失败")
+                }
+            }
+
+            if (result.success) {
+                reloadSources()
+                loadScheduleRules()
+                refreshHistoryAndFavorites()
+                _uiState.update {
+                    it.copy(
+                        sourceType = prefs.sourceType,
+                        target = prefs.target,
+                        scrollMode = prefs.scrollMode,
+                        cropMode = prefs.cropMode,
+                        reapplyOnScrollChange = prefs.reapplyOnScrollChange,
+                        isScheduled = prefs.isScheduled,
+                        intervalMinutes = prefs.intervalMinutes,
+                        intervalScheduleEnabled = prefs.intervalScheduleEnabled,
+                        exactTimerEnabled = prefs.exactTimerEnabled,
+                        dailyAnchorEnabled = prefs.dailyAnchorEnabled,
+                        dailyAnchorTimes = prefs.dailyAnchorTimes,
+                        dailyAnchorHour = prefs.dailyAnchorHour,
+                        dailyAnchorMinute = prefs.dailyAnchorMinute,
+                        screenOffTriggerEnabled = prefs.screenOffTriggerEnabled,
+                        screenOffDelaySeconds = prefs.screenOffDelaySeconds,
+                        quietHoursEnabled = prefs.quietHoursEnabled,
+                        quietHoursStartHour = prefs.quietHoursStartHour,
+                        quietHoursStartMinute = prefs.quietHoursStartMinute,
+                        quietHoursEndHour = prefs.quietHoursEndHour,
+                        quietHoursEndMinute = prefs.quietHoursEndMinute,
+                        cooldownSuppressionEnabled = prefs.cooldownSuppressionEnabled,
+                        cooldownMinutes = prefs.cooldownMinutes,
+                        ruleEngineEnabled = prefs.ruleEngineEnabled,
+                        fairShuffle = prefs.fairShuffle,
+                        fairShuffleCapacity = prefs.fairShuffleCapacity,
+                        cacheSizeTier = prefs.cacheSizeTier,
+                        widgetScaleType = prefs.widgetScaleType,
+                        statusMessage = buildString {
+                            append("配置还原成功！已恢复 ${result.restoredSourcesCount} 个图源、${result.restoredRulesCount} 条规则、${result.restoredFavoritesCount} 项偏好记忆。")
+                            if (result.needsReauthorizationCount > 0) {
+                                append("（注意：${result.needsReauthorizationCount} 个本地文件夹授权已失效，请重新授权）")
+                            }
+                        }
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(statusMessage = result.errorMessage ?: "还原失败")
+                }
+            }
         }
     }
 

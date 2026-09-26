@@ -188,6 +188,14 @@ class ScheduleRulesDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     /**
+     * Clears all schedule rules from the database.
+     */
+    fun clearAllRules() {
+        val db = writableDatabase
+        db.delete(TABLE_NAME, null, null)
+    }
+
+    /**
      * Populates default preset rules if database is empty.
      */
     fun populateDefaultPresetRulesIfNeeded() {

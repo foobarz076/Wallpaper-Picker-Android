@@ -330,6 +330,102 @@ class PreferencesManager(context: Context) {
         prefs.edit().remove(KEY_RECENT_WALLPAPER_KEYS).apply()
     }
 
+    fun exportBackupPreferences(): foo.barz.wallpaperpicker.core.backup.BackupPreferences {
+        return foo.barz.wallpaperpicker.core.backup.BackupPreferences(
+            intervalMinutes = intervalMinutes,
+            target = target.name,
+            scrollMode = scrollMode.name,
+            cropMode = cropMode.name,
+            reapplyOnScrollChange = reapplyOnScrollChange,
+            isScheduled = isScheduled,
+            widgetScaleType = widgetScaleType.name,
+            sourceType = sourceType.name,
+            httpPresetType = httpPresetType.name,
+            httpCustomUrl = httpCustomUrl,
+            httpCustomJsonPath = httpCustomJsonPath,
+            wifiOnly = wifiOnly,
+            immichServerUrl = immichServerUrl,
+            immichApiKey = immichApiKey,
+            immichAlbumId = immichAlbumId,
+            immichAlbumName = immichAlbumName,
+            immichQuality = immichQuality.name,
+            immichIgnoreSsl = immichIgnoreSsl,
+            immichWifiOnly = immichWifiOnly,
+            mediaStoreAlbumId = mediaStoreAlbumId,
+            mediaStoreAlbumName = mediaStoreAlbumName,
+            mediaStoreAlbumIds = mediaStoreAlbumIds,
+            immichAlbumIds = immichAlbumIds,
+            compositeEnabledSources = compositeEnabledSources.map { it.name }.toSet(),
+            deferDuringInteraction = deferDuringInteraction,
+            fairShuffle = fairShuffle,
+            fairShuffleCapacity = fairShuffleCapacity,
+            cacheSizeTier = cacheSizeTier.name,
+            intervalScheduleEnabled = intervalScheduleEnabled,
+            exactTimerEnabled = exactTimerEnabled,
+            dailyAnchorEnabled = dailyAnchorEnabled,
+            dailyAnchorTimes = dailyAnchorTimes,
+            dailyAnchorHour = dailyAnchorHour,
+            dailyAnchorMinute = dailyAnchorMinute,
+            screenOffTriggerEnabled = screenOffTriggerEnabled,
+            screenOffDelaySeconds = screenOffDelaySeconds,
+            quietHoursEnabled = quietHoursEnabled,
+            quietHoursStartHour = quietHoursStartHour,
+            quietHoursStartMinute = quietHoursStartMinute,
+            quietHoursEndHour = quietHoursEndHour,
+            quietHoursEndMinute = quietHoursEndMinute,
+            cooldownSuppressionEnabled = cooldownSuppressionEnabled,
+            cooldownMinutes = cooldownMinutes,
+            ruleEngineEnabled = ruleEngineEnabled
+        )
+    }
+
+    fun importBackupPreferences(bp: foo.barz.wallpaperpicker.core.backup.BackupPreferences) {
+        intervalMinutes = bp.intervalMinutes
+        target = runCatching { foo.barz.wallpaperpicker.core.model.WallpaperTarget.valueOf(bp.target) }.getOrDefault(foo.barz.wallpaperpicker.core.model.WallpaperTarget.BOTH)
+        scrollMode = runCatching { foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.valueOf(bp.scrollMode) }.getOrDefault(foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.AUTO)
+        cropMode = runCatching { foo.barz.wallpaperpicker.core.model.WallpaperCropMode.valueOf(bp.cropMode) }.getOrDefault(foo.barz.wallpaperpicker.core.model.WallpaperCropMode.FIT_HEIGHT)
+        reapplyOnScrollChange = bp.reapplyOnScrollChange
+        isScheduled = bp.isScheduled
+        widgetScaleType = runCatching { foo.barz.wallpaperpicker.core.model.WidgetScaleType.valueOf(bp.widgetScaleType) }.getOrDefault(foo.barz.wallpaperpicker.core.model.WidgetScaleType.CROP)
+        sourceType = runCatching { foo.barz.wallpaperpicker.core.model.WallpaperSourceType.valueOf(bp.sourceType) }.getOrDefault(foo.barz.wallpaperpicker.core.model.WallpaperSourceType.LOCAL_FOLDER)
+        httpPresetType = runCatching { foo.barz.wallpaperpicker.core.model.HttpPresetType.valueOf(bp.httpPresetType) }.getOrDefault(foo.barz.wallpaperpicker.core.model.HttpPresetType.BING)
+        httpCustomUrl = bp.httpCustomUrl
+        httpCustomJsonPath = bp.httpCustomJsonPath
+        wifiOnly = bp.wifiOnly
+        immichServerUrl = bp.immichServerUrl
+        immichApiKey = bp.immichApiKey
+        immichAlbumId = bp.immichAlbumId
+        immichAlbumName = bp.immichAlbumName
+        immichQuality = runCatching { foo.barz.wallpaperpicker.core.model.ImmichQuality.valueOf(bp.immichQuality) }.getOrDefault(foo.barz.wallpaperpicker.core.model.ImmichQuality.PREVIEW)
+        immichIgnoreSsl = bp.immichIgnoreSsl
+        immichWifiOnly = bp.immichWifiOnly
+        mediaStoreAlbumId = bp.mediaStoreAlbumId
+        mediaStoreAlbumName = bp.mediaStoreAlbumName
+        mediaStoreAlbumIds = bp.mediaStoreAlbumIds
+        immichAlbumIds = bp.immichAlbumIds
+        compositeEnabledSources = bp.compositeEnabledSources.mapNotNull { runCatching { foo.barz.wallpaperpicker.core.model.WallpaperSourceType.valueOf(it) }.getOrNull() }.toSet()
+        deferDuringInteraction = bp.deferDuringInteraction
+        fairShuffle = bp.fairShuffle
+        fairShuffleCapacity = bp.fairShuffleCapacity
+        cacheSizeTier = runCatching { foo.barz.wallpaperpicker.core.model.CacheSizeTier.valueOf(bp.cacheSizeTier) }.getOrDefault(foo.barz.wallpaperpicker.core.model.CacheSizeTier.STANDARD)
+        intervalScheduleEnabled = bp.intervalScheduleEnabled
+        exactTimerEnabled = bp.exactTimerEnabled
+        dailyAnchorEnabled = bp.dailyAnchorEnabled
+        dailyAnchorTimes = bp.dailyAnchorTimes
+        dailyAnchorHour = bp.dailyAnchorHour
+        dailyAnchorMinute = bp.dailyAnchorMinute
+        screenOffTriggerEnabled = bp.screenOffTriggerEnabled
+        screenOffDelaySeconds = bp.screenOffDelaySeconds
+        quietHoursEnabled = bp.quietHoursEnabled
+        quietHoursStartHour = bp.quietHoursStartHour
+        quietHoursStartMinute = bp.quietHoursStartMinute
+        quietHoursEndHour = bp.quietHoursEndHour
+        quietHoursEndMinute = bp.quietHoursEndMinute
+        cooldownSuppressionEnabled = bp.cooldownSuppressionEnabled
+        cooldownMinutes = bp.cooldownMinutes
+        ruleEngineEnabled = bp.ruleEngineEnabled
+    }
+
     fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         prefs.registerOnSharedPreferenceChangeListener(listener)
     }

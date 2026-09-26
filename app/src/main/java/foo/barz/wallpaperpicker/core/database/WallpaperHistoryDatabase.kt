@@ -540,6 +540,64 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         )
     }
 
+    /**
+     * Retrieves all history items that are either marked as favorite or contain custom
+     * framing / scrolling preferences for backup serialization.
+     */
+    fun getFavoriteAndCustomOverrides(): List<WallpaperHistoryItem> {
+        val db = readableDatabase
+        val cursor = db.rawQuery(
+            """
+            SELECT * FROM $TABLE_NAME 
+            WHERE $COLUMN_IS_FAVORITE = 1 
+               OR $COLUMN_CUSTOM_SCROLL_MODE IS NOT NULL 
+               OR $COLUMN_CROP_FOCUS_X IS NOT NULL 
+               OR $COLUMN_FLIP_HORIZONTAL = 1
+            """.trimIndent(),
+            null
+        )
+        return cursor.use { extractItems(it) }
+    }
+
+    /**
+     * Restores a favorite or custom framing preference record from backup.
+     */
+    fun restoreFavoriteOverride(
+        sourceUri: String,
+        title: String?,
+        sourceType: WallpaperSourceType,
+        sourceTitle: String?,
+        isFavorite: Boolean,
+        favoriteTimestamp: Long?,
+        customScrollMode: WallpaperScrollMode?,
+        cropFocusX: Float?,
+        cropFocusY: Float?,
+        flipHorizontal: Boolean,
+        remoteUrl: String?
+    ) {
+        val db = writableDatabase
+        val existing = getItemByUri(sourceUri)
+        val values = ContentValues().apply {
+            put(COLUMN_SOURCE_URI, sourceUri)
+            if (title != null) put(COLUMN_TITLE, title)
+            put(COLUMN_SOURCE_TYPE, sourceType.name)
+            if (sourceTitle != null) put(COLUMN_SOURCE_TITLE, sourceTitle)
+            put(COLUMN_IS_FAVORITE, if (isFavorite) 1 else 0)
+            put(COLUMN_FAVORITE_TIMESTAMP, favoriteTimestamp)
+            put(COLUMN_CUSTOM_SCROLL_MODE, customScrollMode?.name)
+            put(COLUMN_CROP_FOCUS_X, cropFocusX)
+            put(COLUMN_CROP_FOCUS_Y, cropFocusY)
+            put(COLUMN_FLIP_HORIZONTAL, if (flipHorizontal) 1 else 0)
+            if (remoteUrl != null) put(COLUMN_REMOTE_URL, remoteUrl)
+        }
+        if (existing != null) {
+            db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(existing.id.toString()))
+        } else {
+            values.put(COLUMN_APPLIED_TIMESTAMP, favoriteTimestamp ?: System.currentTimeMillis())
+            db.insert(TABLE_NAME, null, values)
+        }
+    }
+
     companion object {
         private const val DATABASE_NAME = "wallpaper_history.db"
         private const val DATABASE_VERSION = 5

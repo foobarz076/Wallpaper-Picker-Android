@@ -508,6 +508,30 @@
     <string name="storage_exporting_favorites">正在导出…</string>
     <string name="storage_btn_manage_space">管理存储空间与清理缓存…</string>
 
+    <!-- Backup & Restore Configuration -->
+    <string name="backup_card_title">配置备份与还原</string>
+    <string name="backup_card_desc">导出或还原所有图源、轮播规则、全局设置和收藏偏好记忆。支持原生 AES-256-GCM 流式高强度加密。</string>
+    <string name="backup_btn_export">备份配置</string>
+    <string name="backup_btn_restore">还原配置</string>
+    <string name="backup_export_dialog_title">导出配置备份</string>
+    <string name="backup_export_encrypted_checkbox">使用密码加密备份 (推荐)</string>
+    <string name="backup_export_password_label">备份加密密码</string>
+    <string name="backup_export_password_confirm">确认加密密码</string>
+    <string name="backup_export_password_mismatch">两次输入的密码不一致</string>
+    <string name="backup_export_password_empty">密码不能为空</string>
+    <string name="backup_export_crypto_notice">采用原生 AES-256-GCM + PBKDF2 流式加密，可跨设备安全解密还原，无需第三方工具依赖。</string>
+    <string name="backup_export_warning_sensitive">警告：当前配置包含 Immich API Key 或带有密钥的 URL，未加密导出可能导致私密凭据泄露。</string>
+    <string name="backup_export_sanitize_checkbox">脱敏导出 (抹除 API Key 与私密凭据)</string>
+    <string name="backup_export_saf_notice">提示：受 Android 安全沙箱机制限制，本地文件夹 (SAF) 授权与系统相册 ID 无法跨设备迁移，还原后若失效需重新授权。</string>
+    <string name="backup_export_btn_proceed">选择保存位置</string>
+    <string name="backup_restore_pwd_dialog_title">输入恢复密码</string>
+    <string name="backup_restore_pwd_label">备份解密密码</string>
+    <string name="backup_restore_pwd_desc">此备份文件受 AES-256-GCM 高强度加密保护，请输入解密密码以继续还原。</string>
+    <string name="backup_restore_btn_confirm">解密并还原</string>
+    <string name="backup_restore_confirm_title">确认还原配置？</string>
+    <string name="backup_restore_confirm_msg">还原将使用备份覆盖现有的图源、轮播规则和全局偏好设置。未收藏的历史记录将保留。是否确认继续？</string>
+    <string name="backup_restore_btn_overwrite">确认还原</string>
+
     <!-- About Settings SubPage &amp; About Activity -->
     <string name="about_battery_unrestricted_title">开启电池无限制以保障准时更换</string>
     <string name="about_battery_unrestricted_desc">低电耗 (Doze) 模式与系统省电策略可能会延迟休眠期间的定时换壁纸。建议在系统设置中将本应用设为「无限制」或移入白名单。</string>

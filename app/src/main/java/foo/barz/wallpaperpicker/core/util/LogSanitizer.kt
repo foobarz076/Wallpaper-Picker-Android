@@ -20,7 +20,7 @@ object LogSanitizer {
 
     // Regex to mask query parameters in URLs containing tokens or keys
     private val QUERY_PARAM_PATTERN: Pattern = Pattern.compile(
-        """(?i)([?&](?:api[_-]?key|token|auth|key|secret)=)[^&\s]+"""
+        """(?i)([?&](?:api[_-]?key|access[_-]?token|token|auth|key|secret|client[_-]?secret)=)[^&\s]+"""
     )
 
     // Regex to mask standalone Bearer tokens

@@ -1,7 +1,11 @@
 package foo.barz.wallpaperpicker.ui.tabs.settings
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,7 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -25,6 +33,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -32,12 +44,16 @@ import androidx.compose.ui.unit.dp
 import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.ui.MainUiState
-
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import foo.barz.wallpaperpicker.ui.components.BackupExportDialog
+import foo.barz.wallpaperpicker.ui.components.BackupRestoreConfirmDialog
+import foo.barz.wallpaperpicker.ui.components.BackupRestorePasswordDialog
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Sub-page for storage utilization, network cache eviction limits,
- * favorites backup export, and space management.
+ * favorites backup export, and full configuration backup & restore.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -46,8 +62,42 @@ fun StorageSettingsSubPage(
     onCacheSizeTierSelected: (CacheSizeTier) -> Unit,
     onExportFavorites: () -> Unit,
     onOpenManageSpace: () -> Unit,
+    hasSensitiveData: Boolean = false,
+    onExportBackup: (Uri, String?, Boolean) -> Unit = { _, _, _ -> },
+    onCheckIsEncryptedBackup: (Uri) -> Boolean = { false },
+    onRestoreBackup: (Uri, String?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
+    var showExportDialog by remember { mutableStateOf(false) }
+    var pendingExportPassword by remember { mutableStateOf<String?>(null) }
+    var pendingExportSanitize by remember { mutableStateOf(false) }
+
+    var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
+    var showRestorePasswordDialog by remember { mutableStateOf(false) }
+    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
+
+    val createDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        if (uri != null) {
+            onExportBackup(uri, pendingExportPassword, pendingExportSanitize)
+        }
+    }
+
+    val openDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            pendingRestoreUri = uri
+            val isEncrypted = onCheckIsEncryptedBackup(uri)
+            if (isEncrypted) {
+                showRestorePasswordDialog = true
+            } else {
+                showRestoreConfirmDialog = true
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -57,6 +107,7 @@ fun StorageSettingsSubPage(
     ) {
         Spacer(modifier = Modifier.height(4.dp))
 
+        // Storage Overview Card
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -183,6 +234,114 @@ fun StorageSettingsSubPage(
             }
         }
 
+        // Backup & Restore Configuration Card
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.SettingsBackupRestore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.backup_card_title), style = MaterialTheme.typography.titleMedium)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.backup_card_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showExportDialog = true },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Upload,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.backup_btn_export))
+                    }
+
+                    OutlinedButton(
+                        onClick = { openDocumentLauncher.launch(arrayOf("*/*")) },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.backup_btn_restore))
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    if (showExportDialog) {
+        BackupExportDialog(
+            hasSensitiveData = hasSensitiveData,
+            onDismissRequest = { showExportDialog = false },
+            onConfirmExport = { password, sanitize ->
+                showExportDialog = false
+                pendingExportPassword = password
+                pendingExportSanitize = sanitize
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                val filename = if (!password.isNullOrBlank()) {
+                    "wallpaper_picker_$timestamp.wpbak"
+                } else {
+                    "wallpaper_picker_$timestamp.json"
+                }
+                createDocumentLauncher.launch(filename)
+            }
+        )
+    }
+
+    if (showRestorePasswordDialog) {
+        BackupRestorePasswordDialog(
+            onDismissRequest = {
+                showRestorePasswordDialog = false
+                pendingRestoreUri = null
+            },
+            onConfirmRestore = { password ->
+                showRestorePasswordDialog = false
+                pendingRestoreUri?.let { uri ->
+                    onRestoreBackup(uri, password)
+                }
+                pendingRestoreUri = null
+            }
+        )
+    }
+
+    if (showRestoreConfirmDialog) {
+        BackupRestoreConfirmDialog(
+            onDismissRequest = {
+                showRestoreConfirmDialog = false
+                pendingRestoreUri = null
+            },
+            onConfirmRestore = {
+                showRestoreConfirmDialog = false
+                pendingRestoreUri?.let { uri ->
+                    onRestoreBackup(uri, null)
+                }
+                pendingRestoreUri = null
+            }
+        )
     }
 }

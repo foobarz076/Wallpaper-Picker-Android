@@ -170,6 +170,14 @@ class WallpaperSourcesDatabase(private val context: Context) : SQLiteOpenHelper(
     }
 
     /**
+     * Clears all configured sources from the database.
+     */
+    fun clearAll() {
+        val db = writableDatabase
+        db.delete(TABLE_NAME, null, null)
+    }
+
+    /**
      * Auto-migrates existing settings from PreferencesManager if the sources table is empty.
      */
     fun migrateFromPreferencesIfNeeded(prefs: PreferencesManager) {
