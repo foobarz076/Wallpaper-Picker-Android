@@ -548,6 +548,20 @@
     <string name="backup_restore_missing_fav_btn_later">稍后再说</string>
     <string name="storage_favorites_missing_badge">缺失本地原图 %1$d 张</string>
     <string name="storage_favorites_btn_redownload">一键补全缺失收藏原图</string>
+    <string name="backup_export_sheet_subtitle">导出图源、轮播规则、偏好及可选离线媒体</string>
+    <string name="backup_export_content_section">备份内容</string>
+    <string name="backup_export_content_base">应用设置、图源与轮播规则</string>
+    <string name="backup_export_content_base_desc">默认包含</string>
+    <string name="backup_restore_summary_title">配置还原成功</string>
+    <string name="backup_restore_summary_metrics">已成功恢复 %1$d 个图源、%2$d 条规则和 %3$d 项偏好记忆。</string>
+    <string name="backup_restore_action_title">待处理事项</string>
+    <string name="backup_restore_saf_warning_title">%1$d 个本地文件夹图源需重新授权</string>
+    <string name="backup_restore_saf_warning_desc">受 Android 权限隔离限制，本地目录访问授权无法跨设备继承，请在图源管理中重新指定。</string>
+    <string name="backup_restore_saf_btn_sources">前往图源管理</string>
+    <string name="backup_restore_fav_missing_title">%1$d 张收藏壁纸未下载本地原图</string>
+    <string name="backup_restore_fav_missing_desc">本地暂无原图缓存。建议立即从网络图源批量重新拉取，以保障离线完整查看。</string>
+    <string name="backup_restore_fav_btn_batch_download">一键批量下载</string>
+    <string name="backup_restore_btn_done">完成</string>
 
     <!-- About Settings SubPage &amp; About Activity -->
     <string name="about_battery_unrestricted_title">开启电池无限制以保障准时更换</string>

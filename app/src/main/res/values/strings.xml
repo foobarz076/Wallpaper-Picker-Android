@@ -549,6 +549,20 @@
     <string name="backup_restore_missing_fav_btn_later">Later</string>
     <string name="storage_favorites_missing_badge">%1$d offline images missing</string>
     <string name="storage_favorites_btn_redownload">Redownload Missing Favorites</string>
+    <string name="backup_export_sheet_subtitle">Export preferences, sources, rules, and optional offline media</string>
+    <string name="backup_export_content_section">Backup Content</string>
+    <string name="backup_export_content_base">App preferences, sources &amp; rules</string>
+    <string name="backup_export_content_base_desc">Included by default</string>
+    <string name="backup_restore_summary_title">Configuration Restored</string>
+    <string name="backup_restore_summary_metrics">Successfully restored %1$d sources, %2$d rules, and %3$d preference records.</string>
+    <string name="backup_restore_action_title">Recommended Actions</string>
+    <string name="backup_restore_saf_warning_title">%1$d local folders require re-authorization</string>
+    <string name="backup_restore_saf_warning_desc">Due to Android SAF security boundaries, local folder permissions cannot migrate across devices. Please re-select folders in source management.</string>
+    <string name="backup_restore_saf_btn_sources">Go to Sources</string>
+    <string name="backup_restore_fav_missing_title">%1$d favorite images not cached locally</string>
+    <string name="backup_restore_fav_missing_desc">Original images are missing locally. You can batch redownload them from the network now to ensure full offline access.</string>
+    <string name="backup_restore_fav_btn_batch_download">Redownload All</string>
+    <string name="backup_restore_btn_done">Done</string>
 
     <!-- About Settings SubPage &amp; About Activity -->
     <string name="about_battery_unrestricted_title">Enable Unrestricted Battery for On-Time Rotation</string>

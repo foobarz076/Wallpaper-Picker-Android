@@ -75,6 +75,18 @@ import java.util.UUID
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
+/**
+ * Summary of a completed backup restore operation.
+ */
+data class RestoreSummary(
+    val restoredSourcesCount: Int = 0,
+    val restoredRulesCount: Int = 0,
+    val restoredFavoritesCount: Int = 0,
+    val needsReauthorizationCount: Int = 0,
+    val missingFavoritesCount: Int = 0,
+    val sigNotice: String? = null
+)
+
 data class MainUiState(
     val sourceType: WallpaperSourceType = WallpaperSourceType.LOCAL_FOLDER,
     val folderUri: Uri? = null,
@@ -128,6 +140,7 @@ data class MainUiState(
     val missingFavoritesCount: Int = 0,
     val isBatchDownloadingFavorites: Boolean = false,
     val showMissingFavoritesPromptCount: Int? = null,
+    val restoreSummary: RestoreSummary? = null,
     val isExportingFavorites: Boolean = false,
     val isRedownloadingHistoryId: Long? = null,
     val sourcesList: List<WallpaperSourceEntity> = emptyList(),
@@ -1322,17 +1335,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Dismisses the restore summary modal dialog.
+     */
+    fun dismissRestoreSummary() {
+        _uiState.update { it.copy(restoreSummary = null, showMissingFavoritesPromptCount = null) }
+    }
+
+    /**
      * Dismisses the prompt offering to batch download missing favorited wallpapers after restore.
      */
     fun dismissMissingFavoritesPrompt() {
-        _uiState.update { it.copy(showMissingFavoritesPromptCount = null) }
+        dismissRestoreSummary()
     }
 
     /**
      * User confirmation callback to dismiss the prompt and initiate batch redownload.
      */
     fun confirmBatchDownloadMissingFavorites() {
-        dismissMissingFavoritesPrompt()
+        dismissRestoreSummary()
         batchRedownloadMissingFavorites()
     }
 
@@ -1875,20 +1895,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     fairShuffleCapacity = prefs.fairShuffleCapacity,
                     cacheSizeTier = prefs.cacheSizeTier,
                     widgetScaleType = prefs.widgetScaleType,
-                    showMissingFavoritesPromptCount = if (result.missingFavoritesCount > 0) result.missingFavoritesCount else null,
-                    statusMessage = buildString {
-                        append("配置还原成功！已恢复 ${result.restoredSourcesCount} 个图源、${result.restoredRulesCount} 条规则、${result.restoredFavoritesCount} 项偏好记忆。")
-                        if (result.missingFavoritesCount > 0) {
-                            append("（有 ${result.missingFavoritesCount} 个收藏原图未在本地，可一键重新下载）")
-                        }
-                        if (extraNotice != null) {
-                            append(" ")
-                            append(extraNotice)
-                        }
-                        if (result.needsReauthorizationCount > 0) {
-                            append("（注意：${result.needsReauthorizationCount} 个本地文件夹授权已失效，请重新授权）")
-                        }
-                    }
+                    restoreSummary = RestoreSummary(
+                        restoredSourcesCount = result.restoredSourcesCount,
+                        restoredRulesCount = result.restoredRulesCount,
+                        restoredFavoritesCount = result.restoredFavoritesCount,
+                        needsReauthorizationCount = result.needsReauthorizationCount,
+                        missingFavoritesCount = result.missingFavoritesCount,
+                        sigNotice = extraNotice
+                    ),
+                    showMissingFavoritesPromptCount = null,
+                    statusMessage = null
                 )
             }
         } else {

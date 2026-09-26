@@ -161,6 +161,7 @@ fun MainScreen(
     onDismissMissingFavoritesPrompt: () -> Unit = {},
     onConfirmBatchDownloadMissingFavorites: () -> Unit = {},
     onBatchRedownloadMissingFavorites: () -> Unit = {},
+    onDismissRestoreSummary: () -> Unit = {},
     targetTab: MainTab? = null,
     onTabNavigated: () -> Unit = {},
     onChangeNow: () -> Unit,
@@ -362,7 +363,12 @@ fun MainScreen(
                         onRestoreBackupWithOpenPgp = onRestoreBackupWithOpenPgp,
                         onDismissMissingFavoritesPrompt = onDismissMissingFavoritesPrompt,
                         onConfirmBatchDownloadMissingFavorites = onConfirmBatchDownloadMissingFavorites,
-                        onBatchRedownloadMissingFavorites = onBatchRedownloadMissingFavorites
+                        onBatchRedownloadMissingFavorites = onBatchRedownloadMissingFavorites,
+                        onDismissRestoreSummary = onDismissRestoreSummary,
+                        onNavigateToSources = {
+                            selectedTab = MainTab.SOURCES
+                            settingsSubPage = null
+                        }
                     )
                 }
             }

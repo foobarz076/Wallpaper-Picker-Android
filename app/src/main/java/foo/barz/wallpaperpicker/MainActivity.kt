@@ -130,6 +130,7 @@ class MainActivity : ComponentActivity() {
                     onDismissMissingFavoritesPrompt = viewModel::dismissMissingFavoritesPrompt,
                     onConfirmBatchDownloadMissingFavorites = viewModel::confirmBatchDownloadMissingFavorites,
                     onBatchRedownloadMissingFavorites = viewModel::batchRedownloadMissingFavorites,
+                    onDismissRestoreSummary = viewModel::dismissRestoreSummary,
                     onChangeNow = viewModel::changeNow,
                     onClearStatus = viewModel::clearStatusMessage
                 )

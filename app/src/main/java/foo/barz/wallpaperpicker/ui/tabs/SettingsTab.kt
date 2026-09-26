@@ -114,6 +114,8 @@ fun SettingsTab(
     onDismissMissingFavoritesPrompt: () -> Unit = {},
     onConfirmBatchDownloadMissingFavorites: () -> Unit = {},
     onBatchRedownloadMissingFavorites: () -> Unit = {},
+    onDismissRestoreSummary: () -> Unit = {},
+    onNavigateToSources: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -245,7 +247,9 @@ fun SettingsTab(
                 onRestoreBackupWithOpenPgp = onRestoreBackupWithOpenPgp,
                 onDismissMissingFavoritesPrompt = onDismissMissingFavoritesPrompt,
                 onConfirmBatchDownloadMissingFavorites = onConfirmBatchDownloadMissingFavorites,
-                onBatchRedownloadMissingFavorites = onBatchRedownloadMissingFavorites
+                onBatchRedownloadMissingFavorites = onBatchRedownloadMissingFavorites,
+                onDismissRestoreSummary = onDismissRestoreSummary,
+                onNavigateToSources = onNavigateToSources
             )
 
             SettingsSubPage.ABOUT -> AboutSettingsSubPage(

@@ -52,9 +52,11 @@ import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.ui.MainUiState
 import foo.barz.wallpaperpicker.ui.components.BackupExportDialog
 import foo.barz.wallpaperpicker.ui.components.BackupExportMode
+import foo.barz.wallpaperpicker.ui.components.BackupExportSheet
 import foo.barz.wallpaperpicker.ui.components.BackupRestoreConfirmDialog
 import foo.barz.wallpaperpicker.ui.components.BackupRestoreMissingFavoritesDialog
 import foo.barz.wallpaperpicker.ui.components.BackupRestorePasswordDialog
+import foo.barz.wallpaperpicker.ui.components.BackupRestoreSummaryDialog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -80,6 +82,8 @@ fun StorageSettingsSubPage(
     onDismissMissingFavoritesPrompt: () -> Unit = {},
     onConfirmBatchDownloadMissingFavorites: () -> Unit = {},
     onBatchRedownloadMissingFavorites: () -> Unit = {},
+    onDismissRestoreSummary: () -> Unit = {},
+    onNavigateToSources: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
@@ -389,7 +393,7 @@ fun StorageSettingsSubPage(
     }
 
     if (showExportDialog) {
-        BackupExportDialog(
+        BackupExportSheet(
             hasSensitiveData = hasSensitiveData,
             isOpenPgpAvailable = isOpenPgpAvailable,
             favoritesCount = state.favoritesList.size,
@@ -445,7 +449,19 @@ fun StorageSettingsSubPage(
         )
     }
 
-    if (state.showMissingFavoritesPromptCount != null && state.showMissingFavoritesPromptCount > 0) {
+    if (state.restoreSummary != null) {
+        BackupRestoreSummaryDialog(
+            summary = state.restoreSummary,
+            onDismissRequest = onDismissRestoreSummary,
+            onNavigateToSources = {
+                onDismissRestoreSummary()
+                onNavigateToSources()
+            },
+            onBatchDownloadFavorites = {
+                onConfirmBatchDownloadMissingFavorites()
+            }
+        )
+    } else if (state.showMissingFavoritesPromptCount != null && state.showMissingFavoritesPromptCount > 0) {
         BackupRestoreMissingFavoritesDialog(
             missingCount = state.showMissingFavoritesPromptCount,
             onDismissRequest = onDismissMissingFavoritesPrompt,
