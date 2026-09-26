@@ -151,6 +151,7 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
                             uri.contains("/cache/wallpapers") -> WallpaperSourceType.HTTP_API
                             uri.startsWith("http://") || uri.startsWith("https://") -> WallpaperSourceType.HTTP_API
                             uri.contains("/files/favorites") -> WallpaperSourceType.FAVORITES
+                            uri.contains("/files/custom_sources") -> WallpaperSourceType.CUSTOM_PHOTOS
                             else -> WallpaperSourceType.LOCAL_FOLDER
                         }
                         values.put(COLUMN_SOURCE_TYPE, concreteType.name)

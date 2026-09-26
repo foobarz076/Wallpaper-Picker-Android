@@ -133,6 +133,10 @@ object WallpaperSourceFactory {
                     database = WallpaperHistoryDatabase(context)
                 )
             }
+            WallpaperSourceType.CUSTOM_PHOTOS -> {
+                val config = foo.barz.wallpaperpicker.core.model.CustomPhotosSourceConfig.fromJson(entity.configJson)
+                CustomPhotosSource(context, entity.id, entity.title, config)
+            }
             WallpaperSourceType.COMPOSITE -> {
                 throw IllegalArgumentException("Composite cannot be instantiated directly from single entity")
             }
@@ -149,6 +153,15 @@ object WallpaperSourceFactory {
         bypassNetworkConstraints: Boolean = false
     ): WallpaperSource {
         return when (type) {
+            WallpaperSourceType.CUSTOM_PHOTOS -> {
+                val sourcesDb = foo.barz.wallpaperpicker.core.database.WallpaperSourcesDatabase(context)
+                val entity = sourcesDb.getAllSources().firstOrNull { it.type == WallpaperSourceType.CUSTOM_PHOTOS }
+                if (entity != null) {
+                    createSourceFromEntity(context, entity, bypassNetworkConstraints)
+                } else {
+                    CustomPhotosSource(context, "default", "自选照片集")
+                }
+            }
             WallpaperSourceType.LOCAL_FOLDER -> {
                 val folderUri = prefs.folderUri
                     ?: throw IllegalStateException("未选择壁纸文件夹，请先授权选择文件夹")

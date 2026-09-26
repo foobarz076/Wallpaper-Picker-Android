@@ -70,6 +70,7 @@ data class WallpaperHistoryItem(
                 WallpaperSourceType.MEDIA_STORE -> if (badge != "系统相册") "$badge (系统相册)" else badge
                 WallpaperSourceType.IMMICH -> if (!badge.startsWith("Immich")) "Immich · $badge" else badge
                 WallpaperSourceType.HTTP_API -> if (!badge.contains("HTTP") && !badge.contains("网络") && !badge.contains("Bing") && !badge.contains("Picsum")) "$badge (网络壁纸)" else badge
+                WallpaperSourceType.CUSTOM_PHOTOS -> if (badge != "自选照片集") "$badge (自选照片)" else badge
                 WallpaperSourceType.FAVORITES -> "我的收藏"
                 WallpaperSourceType.COMPOSITE -> badge
             }
@@ -90,6 +91,7 @@ data class WallpaperHistoryItem(
                 sourceUri.contains("/cache/wallpapers") && sourceType == WallpaperSourceType.HTTP_API -> "网络壁纸"
                 sourceUri.startsWith("http://") || sourceUri.startsWith("https://") -> "网络壁纸"
                 sourceType == WallpaperSourceType.FAVORITES || sourceUri.contains("/files/favorites") -> "我的收藏"
+                sourceType == WallpaperSourceType.CUSTOM_PHOTOS || sourceUri.contains("/files/custom_sources") -> "自选照片集"
                 sourceType == WallpaperSourceType.LOCAL_FOLDER -> "本地文件夹"
                 sourceType == WallpaperSourceType.MEDIA_STORE -> "系统相册"
                 sourceType == WallpaperSourceType.IMMICH -> "Immich"

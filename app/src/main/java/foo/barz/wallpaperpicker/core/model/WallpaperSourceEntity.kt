@@ -195,3 +195,39 @@ data class FavoritesSourceConfig(
         }
     }
 }
+
+/**
+ * Configuration payload for a Custom Photos (PhotoPicker) wallpaper source.
+ */
+data class CustomPhotosSourceConfig(
+    val fileNames: List<String> = emptyList(),
+    val imageCount: Int = fileNames.size
+) {
+    fun toJson(): String {
+        return JSONObject().apply {
+            val array = JSONArray()
+            fileNames.forEach { array.put(it) }
+            put("fileNames", array)
+            put("imageCount", imageCount)
+        }.toString()
+    }
+
+    companion object {
+        fun fromJson(jsonStr: String): CustomPhotosSourceConfig {
+            return runCatching {
+                val json = JSONObject(jsonStr)
+                val list = mutableListOf<String>()
+                val array = json.optJSONArray("fileNames")
+                if (array != null) {
+                    for (i in 0 until array.length()) {
+                        list.add(array.getString(i))
+                    }
+                }
+                CustomPhotosSourceConfig(
+                    fileNames = list,
+                    imageCount = json.optInt("imageCount", list.size)
+                )
+            }.getOrDefault(CustomPhotosSourceConfig())
+        }
+    }
+}

@@ -13,7 +13,8 @@ class Phase3Test {
     @Test
     fun testWallpaperSourceTypes() {
         val types = WallpaperSourceType.values()
-        assertEquals(6, types.size)
+        assertEquals(7, types.size)
+        assertEquals("自选照片集", WallpaperSourceType.CUSTOM_PHOTOS.displayName)
         assertEquals("本地文件夹", WallpaperSourceType.LOCAL_FOLDER.displayName)
         assertEquals("系统相册", WallpaperSourceType.MEDIA_STORE.displayName)
         assertEquals("自建相册 (Immich)", WallpaperSourceType.IMMICH.displayName)

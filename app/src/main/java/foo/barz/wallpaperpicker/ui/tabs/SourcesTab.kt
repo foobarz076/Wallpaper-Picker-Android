@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Tune
@@ -44,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import foo.barz.wallpaperpicker.core.model.CustomPhotosSourceConfig
 import foo.barz.wallpaperpicker.core.model.FavoritesSourceConfig
 import foo.barz.wallpaperpicker.core.model.HttpApiSourceConfig
 import foo.barz.wallpaperpicker.core.model.ImmichSourceConfig
@@ -238,6 +240,7 @@ private fun SourceItemCard(
             ) {
                 Icon(
                     imageVector = when (source.type) {
+                        WallpaperSourceType.CUSTOM_PHOTOS -> Icons.Default.Image
                         WallpaperSourceType.LOCAL_FOLDER -> Icons.Default.Folder
                         WallpaperSourceType.MEDIA_STORE -> Icons.Default.Collections
                         WallpaperSourceType.IMMICH -> Icons.Default.PhotoLibrary
@@ -284,6 +287,10 @@ private fun SourceItemCard(
 
                 val subtitle = remember(source) {
                     when (source.type) {
+                        WallpaperSourceType.CUSTOM_PHOTOS -> {
+                            val config = CustomPhotosSourceConfig.fromJson(source.configJson)
+                            "${config.imageCount} 张自选照片"
+                        }
                         WallpaperSourceType.LOCAL_FOLDER -> {
                             val config = LocalFolderSourceConfig.fromJson(source.configJson)
                             if (config.folderName.isNotBlank()) "${config.folderName} · ${config.imageCount} 张图片" else "尚未选择文件夹"

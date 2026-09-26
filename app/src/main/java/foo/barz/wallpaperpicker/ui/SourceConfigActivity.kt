@@ -11,7 +11,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,16 +27,31 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import foo.barz.wallpaperpicker.core.model.CustomPhotosSourceConfig
+import foo.barz.wallpaperpicker.core.source.CustomPhotosSource
+import java.io.File
+import java.util.UUID
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -151,10 +169,15 @@ private fun SourceConfigScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val db = remember { WallpaperSourcesDatabase(context) }
     val historyDb = remember { WallpaperHistoryDatabase(context) }
+    val workingSourceId = remember(sourceId) { sourceId ?: UUID.randomUUID().toString() }
 
-    var selectedType by remember { mutableStateOf(WallpaperSourceType.LOCAL_FOLDER) }
+    var selectedType by remember { mutableStateOf(if (isEditMode) WallpaperSourceType.LOCAL_FOLDER else WallpaperSourceType.CUSTOM_PHOTOS) }
     var title by remember { mutableStateOf("") }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
+    // Custom Photos state
+    var customPhotosList by remember { mutableStateOf<List<File>>(emptyList()) }
+    var isImportingPhotos by remember { mutableStateOf(false) }
 
     // Local Folder state
     var folderUriStr by remember { mutableStateOf("") }
@@ -198,6 +221,11 @@ private fun SourceConfigScreen(
                 selectedType = entity.type
                 title = entity.title
                 when (entity.type) {
+                    WallpaperSourceType.CUSTOM_PHOTOS -> {
+                        withContext(Dispatchers.IO) {
+                            customPhotosList = CustomPhotosSource.getPhotos(context, workingSourceId)
+                        }
+                    }
                     WallpaperSourceType.LOCAL_FOLDER -> {
                         val config = LocalFolderSourceConfig.fromJson(entity.configJson)
                         folderUriStr = config.folderUri
@@ -235,6 +263,7 @@ private fun SourceConfigScreen(
         } else {
             // Default title for Add mode
             title = when (selectedType) {
+                WallpaperSourceType.CUSTOM_PHOTOS -> "自选照片集"
                 WallpaperSourceType.LOCAL_FOLDER -> "本地文件夹"
                 WallpaperSourceType.MEDIA_STORE -> "系统相册"
                 WallpaperSourceType.IMMICH -> "Immich 相册"
@@ -329,12 +358,35 @@ private fun SourceConfigScreen(
         }
     }
 
+    // PhotoPicker launcher
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            coroutineScope.launch {
+                isImportingPhotos = true
+                withContext(Dispatchers.IO) {
+                    CustomPhotosSource.importPhotos(context, workingSourceId, uris)
+                    customPhotosList = CustomPhotosSource.getPhotos(context, workingSourceId)
+                }
+                isImportingPhotos = false
+            }
+        }
+    }
+
+    val handleCancel = {
+        if (!isEditMode) {
+            CustomPhotosSource.cleanupSourceDirectory(context, workingSourceId)
+        }
+        onCancel()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(if (isEditMode) "编辑壁纸图源" else "添加壁纸图源") },
                 navigationIcon = {
-                    IconButton(onClick = onCancel) {
+                    IconButton(onClick = handleCancel) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
@@ -364,6 +416,12 @@ private fun SourceConfigScreen(
 
                             // Validation based on type
                             when (selectedType) {
+                                WallpaperSourceType.CUSTOM_PHOTOS -> {
+                                    if (customPhotosList.isEmpty()) {
+                                        coroutineScope.launch { snackbarHostState.showSnackbar("请至少挑选一张照片加入自选集") }
+                                        return@Button
+                                    }
+                                }
                                 WallpaperSourceType.LOCAL_FOLDER -> {
                                     if (folderUriStr.isBlank()) {
                                         coroutineScope.launch { snackbarHostState.showSnackbar("请先选择壁纸文件夹") }
@@ -396,6 +454,10 @@ private fun SourceConfigScreen(
                             }
 
                             val configJson = when (selectedType) {
+                                WallpaperSourceType.CUSTOM_PHOTOS -> CustomPhotosSourceConfig(
+                                    fileNames = customPhotosList.map { it.name },
+                                    imageCount = customPhotosList.size
+                                ).toJson()
                                 WallpaperSourceType.LOCAL_FOLDER -> LocalFolderSourceConfig(
                                     folderUri = folderUriStr,
                                     folderName = folderName,
@@ -442,6 +504,7 @@ private fun SourceConfigScreen(
                                 db.updateSource(updated)
                             } else {
                                 val newSource = WallpaperSourceEntity(
+                                    id = workingSourceId,
                                     type = selectedType,
                                     title = trimmedTitle,
                                     isEnabled = true,
@@ -480,6 +543,7 @@ private fun SourceConfigScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     val availableTypes = listOf(
+                        WallpaperSourceType.CUSTOM_PHOTOS,
                         WallpaperSourceType.LOCAL_FOLDER,
                         WallpaperSourceType.MEDIA_STORE,
                         WallpaperSourceType.IMMICH,
@@ -500,6 +564,7 @@ private fun SourceConfigScreen(
                                     if (!isEditMode) {
                                         selectedType = type
                                         title = when (type) {
+                                            WallpaperSourceType.CUSTOM_PHOTOS -> "自选照片集"
                                             WallpaperSourceType.LOCAL_FOLDER -> if (folderName.isNotBlank()) folderName else "本地文件夹"
                                             WallpaperSourceType.MEDIA_STORE -> "系统相册"
                                             WallpaperSourceType.IMMICH -> "Immich 相册"
@@ -548,6 +613,132 @@ private fun SourceConfigScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     when (selectedType) {
+                        WallpaperSourceType.CUSTOM_PHOTOS -> {
+                            Text(
+                                text = "从系统照片选择器挑选照片。所选照片将复制到应用私有存储中，不受系统相册权限变动或清理缓存影响。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            if (customPhotosList.isEmpty()) {
+                                Text(
+                                    text = "尚未选择任何照片",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = {
+                                        photoPickerLauncher.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                        )
+                                    },
+                                    enabled = !isImportingPhotos,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    if (isImportingPhotos) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("正在导入照片…")
+                                    } else {
+                                        Text("从相册挑选照片")
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = "已选 ${customPhotosList.size} 张照片",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                LazyRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    items(customPhotosList, key = { it.name }) { photoFile ->
+                                        Box(
+                                            modifier = Modifier
+                                                .size(80.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                        ) {
+                                            AsyncImage(
+                                                model = photoFile,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                            IconButton(
+                                                onClick = {
+                                                    CustomPhotosSource.deletePhoto(photoFile)
+                                                    customPhotosList = CustomPhotosSource.getPhotos(context, workingSourceId)
+                                                },
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .size(24.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                                                        shape = CircleShape
+                                                    )
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "删除",
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            photoPickerLauncher.launch(
+                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                            )
+                                        },
+                                        enabled = !isImportingPhotos,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        if (isImportingPhotos) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(18.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("导入中…")
+                                        } else {
+                                            Text("追加照片")
+                                        }
+                                    }
+                                    OutlinedButton(
+                                        onClick = {
+                                            CustomPhotosSource.cleanupSourceDirectory(context, workingSourceId)
+                                            customPhotosList = emptyList()
+                                        },
+                                        enabled = !isImportingPhotos,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("清空照片")
+                                    }
+                                }
+                            }
+                        }
+
                         WallpaperSourceType.LOCAL_FOLDER -> {
                             Text(
                                 text = if (folderUriStr.isNotBlank()) "已选目录: $folderName" else "尚未选择文件夹",

@@ -23,9 +23,11 @@ class Phase4MultiSourceTest {
     @Test
     fun testSourceTypeEnumExpansion() {
         val types = WallpaperSourceType.values()
-        assertEquals(6, types.size)
+        assertEquals(7, types.size)
+        assertTrue(types.contains(WallpaperSourceType.CUSTOM_PHOTOS))
         assertTrue(types.contains(WallpaperSourceType.FAVORITES))
         assertTrue(types.contains(WallpaperSourceType.COMPOSITE))
+        assertEquals("自选照片集", WallpaperSourceType.CUSTOM_PHOTOS.displayName)
         assertEquals("我的收藏", WallpaperSourceType.FAVORITES.displayName)
         assertEquals("多源混合轮播", WallpaperSourceType.COMPOSITE.displayName)
     }
@@ -283,5 +285,19 @@ class Phase4MultiSourceTest {
         val updated = state.copy(sourcesList = listOf(entity))
         assertEquals(1, updated.sourcesList.size)
         assertEquals("Folder A", updated.sourcesList[0].title)
+    }
+
+    @Test
+    fun testCustomPhotosSourceConfigSerialization() {
+        val config = foo.barz.wallpaperpicker.core.model.CustomPhotosSourceConfig(
+            fileNames = listOf("photo1.jpg", "photo2.png"),
+            imageCount = 2
+        )
+        val json = config.toJson()
+        val parsed = foo.barz.wallpaperpicker.core.model.CustomPhotosSourceConfig.fromJson(json)
+        assertEquals(2, parsed.imageCount)
+        assertEquals(2, parsed.fileNames.size)
+        assertEquals("photo1.jpg", parsed.fileNames[0])
+        assertEquals("photo2.png", parsed.fileNames[1])
     }
 }

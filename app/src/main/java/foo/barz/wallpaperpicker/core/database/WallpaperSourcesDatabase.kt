@@ -166,6 +166,7 @@ class WallpaperSourcesDatabase(private val context: Context) : SQLiteOpenHelper(
     fun deleteSource(id: String) {
         val db = writableDatabase
         db.delete(TABLE_NAME, "$COLUMN_ID = ?", arrayOf(id))
+        foo.barz.wallpaperpicker.core.source.CustomPhotosSource.cleanupSourceDirectory(context, id)
     }
 
     /**
