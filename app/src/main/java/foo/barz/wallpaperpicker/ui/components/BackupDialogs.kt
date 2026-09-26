@@ -33,6 +33,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -705,7 +706,8 @@ fun BackupRestoreSummaryDialog(
     summary: RestoreSummary,
     onDismissRequest: () -> Unit,
     onNavigateToSources: () -> Unit,
-    onBatchDownloadFavorites: () -> Unit
+    onBatchDownloadFavorites: () -> Unit,
+    isDownloadingFavorites: Boolean = false
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -858,15 +860,30 @@ fun BackupRestoreSummaryDialog(
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(10.dp))
+                                val isBusy = isDownloadingFavorites
                                 Button(
                                     onClick = onBatchDownloadFavorites,
+                                    enabled = !isBusy,
                                     modifier = Modifier.align(Alignment.End),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.backup_restore_fav_btn_batch_download),
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
+                                    if (isBusy) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(14.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = stringResource(R.string.backup_restore_fav_btn_downloading),
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    } else {
+                                        Text(
+                                            text = stringResource(R.string.backup_restore_fav_btn_batch_download),
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    }
                                 }
                             }
                         }

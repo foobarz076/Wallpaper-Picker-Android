@@ -1440,6 +1440,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update {
                 it.copy(
                     isBatchDownloadingFavorites = false,
+                    missingFavoritesCount = failCount,
+                    restoreSummary = it.restoreSummary?.copy(missingFavoritesCount = failCount),
                     statusMessage = buildString {
                         append("收藏壁纸恢复完成：成功下载 $successCount 张")
                         if (failCount > 0) append("，失败 $failCount 张")

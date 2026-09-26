@@ -472,6 +472,7 @@ fun MainScreen(
     if (state.restoreSummary != null) {
         BackupRestoreSummaryDialog(
             summary = state.restoreSummary,
+            isDownloadingFavorites = state.isBatchDownloadingFavorites,
             onDismissRequest = onDismissRestoreSummary,
             onNavigateToSources = {
                 onDismissRestoreSummary()
@@ -479,7 +480,11 @@ fun MainScreen(
                 settingsSubPage = null
             },
             onBatchDownloadFavorites = {
-                onConfirmBatchDownloadMissingFavorites()
+                if (state.restoreSummary.needsReauthorizationCount > 0) {
+                    onBatchRedownloadMissingFavorites()
+                } else {
+                    onConfirmBatchDownloadMissingFavorites()
+                }
             }
         )
     } else if (state.showMissingFavoritesPromptCount != null && state.showMissingFavoritesPromptCount > 0) {

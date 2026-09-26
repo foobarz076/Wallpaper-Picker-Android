@@ -561,6 +561,7 @@
     <string name="backup_restore_fav_missing_title">%1$d 张收藏壁纸未下载本地原图</string>
     <string name="backup_restore_fav_missing_desc">本地暂无原图缓存。建议立即从网络图源批量重新拉取，以保障离线完整查看。</string>
     <string name="backup_restore_fav_btn_batch_download">一键批量下载</string>
+    <string name="backup_restore_fav_btn_downloading">正在下载…</string>
     <string name="backup_restore_btn_done">完成</string>
     <string name="dash_onboarding_title">欢迎使用壁纸轮播</string>
     <string name="dash_onboarding_desc">新设备换机？可直接导入旧手机的配置与收藏备份，或添加您的第一个壁纸源开始体验。</string>
