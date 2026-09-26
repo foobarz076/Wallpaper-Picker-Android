@@ -2,6 +2,7 @@ package foo.barz.wallpaperpicker.ui.tabs.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,10 +33,13 @@ import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.ui.MainUiState
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+
 /**
  * Sub-page for storage utilization, network cache eviction limits,
  * favorites backup export, and space management.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StorageSettingsSubPage(
     state: MainUiState,
@@ -128,25 +132,18 @@ fun StorageSettingsSubPage(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(CacheSizeTier.SMALL, CacheSizeTier.STANDARD, CacheSizeTier.LARGE).forEach { tier ->
-                            FilterChip(
-                                selected = state.cacheSizeTier == tier,
-                                onClick = { onCacheSizeTierSelected(tier) },
-                                label = { Text(stringResource(tier.displayNameRes)) }
-                            )
-                        }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CacheSizeTier.entries.forEach { tier ->
+                        FilterChip(
+                            selected = state.cacheSizeTier == tier,
+                            onClick = { onCacheSizeTierSelected(tier) },
+                            label = { Text(stringResource(tier.displayNameRes)) }
+                        )
                     }
-
-                    FilterChip(
-                        selected = state.cacheSizeTier == CacheSizeTier.DISABLED,
-                        onClick = { onCacheSizeTierSelected(CacheSizeTier.DISABLED) },
-                        label = { Text(stringResource(CacheSizeTier.DISABLED.displayNameRes)) }
-                    )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))

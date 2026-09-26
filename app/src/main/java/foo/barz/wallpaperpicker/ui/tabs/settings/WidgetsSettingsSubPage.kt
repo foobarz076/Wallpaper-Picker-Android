@@ -3,6 +3,7 @@ package foo.barz.wallpaperpicker.ui.tabs.settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.WidgetScaleType
 import foo.barz.wallpaperpicker.core.shortcut.ShortcutHelper
@@ -42,6 +44,7 @@ import foo.barz.wallpaperpicker.ui.MainUiState
  * Sub-page for configuring launcher shortcuts, desktop app widgets,
  * and quick settings notification tiles.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WidgetsSettingsSubPage(
     state: MainUiState,
@@ -144,9 +147,10 @@ fun WidgetsSettingsSubPage(
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     WidgetScaleType.entries.forEach { type ->
                         FilterChip(
