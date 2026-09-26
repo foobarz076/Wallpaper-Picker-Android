@@ -26,10 +26,15 @@
         android:manageSpaceActivity=".ui.ManageSpaceActivity">
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"
@@ -116,6 +121,29 @@
             android:name=".core.worker.ScreenOffWatcherService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Quick Settings Tiles (Android 7.0+ API 24+) -->
+        <service
+            android:name=".core.tile.NextWallpaperTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_next_wallpaper"
+            android:label="@string/tile_next_wallpaper_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".core.tile.ToggleScheduleTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_toggle_schedule"
+            android:label="@string/tile_toggle_schedule_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

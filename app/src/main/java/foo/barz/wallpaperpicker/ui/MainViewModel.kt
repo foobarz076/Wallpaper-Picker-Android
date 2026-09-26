@@ -43,6 +43,7 @@ import foo.barz.wallpaperpicker.core.worker.ScreenOffWatcherService
 import foo.barz.wallpaperpicker.core.worker.WallpaperAlarmScheduler
 import foo.barz.wallpaperpicker.core.worker.WallpaperChangeExecutor
 import foo.barz.wallpaperpicker.core.worker.WallpaperExecutionResult
+import foo.barz.wallpaperpicker.core.worker.WallpaperSchedulerHelper
 import foo.barz.wallpaperpicker.core.worker.WallpaperWorker
 import foo.barz.wallpaperpicker.data.PreferencesManager
 import kotlinx.coroutines.Dispatchers
@@ -209,6 +210,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
+    private val prefChangeListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        when (key) {
+            PreferencesManager.KEY_IS_SCHEDULED -> {
+                _uiState.update { it.copy(isScheduled = prefs.isScheduled) }
+            }
+            PreferencesManager.KEY_LAST_TIMESTAMP,
+            PreferencesManager.KEY_LAST_TITLE,
+            PreferencesManager.KEY_LAST_URI -> {
+                _uiState.update {
+                    it.copy(
+                        lastWallpaperTitle = prefs.lastWallpaperTitle,
+                        lastWallpaperUri = prefs.lastWallpaperUri,
+                        lastChangedText = formatTimestamp(prefs.lastChangedTimestamp, prefs.lastWallpaperTitle),
+                        lastExecutionStatus = prefs.lastExecutionStatus,
+                        lastErrorMessage = prefs.lastErrorMessage,
+                        cacheSizeBytes = cacheManager.getCacheSizeBytes(),
+                        fairShuffleRecordedCount = prefs.getRecentWallpaperKeys().size
+                    )
+                }
+                refreshHistoryAndFavorites()
+            }
+        }
+    }
+
     init {
         // Retroactively populate history database with last active wallpaper if empty
         val lastUri = prefs.lastWallpaperUri
@@ -227,6 +252,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         refreshHistoryAndFavorites()
         reloadSources()
         loadScheduleRules()
+        prefs.registerOnSharedPreferenceChangeListener(prefChangeListener)
     }
 
     fun reloadSources() {
@@ -767,14 +793,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(isScheduled = enabled) }
 
         if (enabled) {
-            refreshScheduling()
+            WallpaperSchedulerHelper.refreshScheduling(context)
             _uiState.update { it.copy(statusMessage = "壁纸自动轮播已启动") }
         } else {
-            WallpaperAlarmScheduler.cancel(context)
-            WallpaperWorker.cancel(context)
-            ScreenOffWatcherService.stop(context)
+            WallpaperSchedulerHelper.cancelScheduling(context)
             _uiState.update { it.copy(statusMessage = "已停止自动轮播") }
         }
+        foo.barz.wallpaperpicker.core.tile.ToggleScheduleTileService.requestUpdate(context)
     }
 
     fun onToggleIntervalSchedule(enabled: Boolean) {
@@ -964,17 +989,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun refreshScheduling() {
         val context = getApplication<Application>()
-        if (prefs.ruleEngineEnabled) {
-            WallpaperAlarmScheduler.schedule(context)
-            WallpaperWorker.schedule(context, 15L) // Background fallback heartbeat
-        } else if (prefs.exactTimerEnabled) {
-            WallpaperWorker.cancel(context)
-            WallpaperAlarmScheduler.schedule(context)
-        } else {
-            WallpaperAlarmScheduler.cancel(context)
-            WallpaperWorker.schedule(context, prefs.intervalMinutes)
-        }
-        ScreenOffWatcherService.syncWithPreferences(context)
+        WallpaperSchedulerHelper.refreshScheduling(context)
+        foo.barz.wallpaperpicker.core.tile.ToggleScheduleTileService.requestUpdate(context)
     }
 
     fun changeNow() {
@@ -1618,5 +1634,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun hasMediaPermission(): Boolean {
         return foo.barz.wallpaperpicker.core.source.MediaStoreSource.hasAnyPermission(getApplication())
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        prefs.unregisterOnSharedPreferenceChangeListener(prefChangeListener)
     }
 }

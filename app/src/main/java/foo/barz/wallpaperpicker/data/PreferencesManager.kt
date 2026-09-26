@@ -330,18 +330,26 @@ class PreferencesManager(context: Context) {
         prefs.edit().remove(KEY_RECENT_WALLPAPER_KEYS).apply()
     }
 
+    fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    fun unregisterOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs.unregisterOnSharedPreferenceChangeListener(listener)
+    }
+
     companion object {
-        private const val PREF_NAME = "wallpaper_picker_prefs"
-        private const val KEY_FOLDER_URI = "folder_uri"
-        private const val KEY_INTERVAL_MINUTES = "interval_minutes"
-        private const val KEY_TARGET = "target"
-        private const val KEY_SCROLL_MODE = "scroll_mode"
-        private const val KEY_CROP_MODE = "crop_mode"
-        private const val KEY_REAPPLY_ON_SCROLL_CHANGE = "reapply_on_scroll_change"
-        private const val KEY_IS_SCHEDULED = "is_scheduled"
-        private const val KEY_LAST_TIMESTAMP = "last_timestamp"
-        private const val KEY_LAST_TITLE = "last_title"
-        private const val KEY_LAST_URI = "last_uri"
+        const val PREF_NAME = "wallpaper_picker_prefs"
+        const val KEY_FOLDER_URI = "folder_uri"
+        const val KEY_INTERVAL_MINUTES = "interval_minutes"
+        const val KEY_TARGET = "target"
+        const val KEY_SCROLL_MODE = "scroll_mode"
+        const val KEY_CROP_MODE = "crop_mode"
+        const val KEY_REAPPLY_ON_SCROLL_CHANGE = "reapply_on_scroll_change"
+        const val KEY_IS_SCHEDULED = "is_scheduled"
+        const val KEY_LAST_TIMESTAMP = "last_timestamp"
+        const val KEY_LAST_TITLE = "last_title"
+        const val KEY_LAST_URI = "last_uri"
         private const val KEY_LAST_SOURCE_TYPE = "last_source_type"
         private const val KEY_LAST_SOURCE_TITLE = "last_source_title"
         private const val KEY_LAST_EXECUTION_STATUS = "last_execution_status"

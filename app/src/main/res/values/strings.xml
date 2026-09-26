@@ -12,4 +12,6 @@
     <string name="shortcut_view_long">查看当前壁纸</string>
     <string name="widget_name">当前壁纸卡片</string>
     <string name="widget_description">在桌面查看当前壁纸缩略图，支持一键切换与轻触查看原图</string>
+    <string name="tile_next_wallpaper_label">立即换壁纸</string>
+    <string name="tile_toggle_schedule_label">自动换壁纸</string>
 </resources>

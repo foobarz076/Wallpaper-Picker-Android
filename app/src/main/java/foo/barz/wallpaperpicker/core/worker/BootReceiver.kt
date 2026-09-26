@@ -15,13 +15,11 @@ class BootReceiver : BroadcastReceiver() {
         if (action == Intent.ACTION_BOOT_COMPLETED || action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             val prefs = PreferencesManager(context)
             if (prefs.isScheduled) {
-                if (prefs.exactTimerEnabled) {
-                    WallpaperAlarmScheduler.schedule(context)
-                } else {
-                    WallpaperWorker.schedule(context, prefs.intervalMinutes)
-                }
+                WallpaperSchedulerHelper.refreshScheduling(context)
+            } else {
+                WallpaperSchedulerHelper.cancelScheduling(context)
             }
-            ScreenOffWatcherService.syncWithPreferences(context)
+            foo.barz.wallpaperpicker.core.tile.ToggleScheduleTileService.requestUpdate(context)
         }
     }
 }

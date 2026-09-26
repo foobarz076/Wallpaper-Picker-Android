@@ -224,8 +224,9 @@ object WallpaperChangeExecutor {
             }
         }
 
-        // 13. Refresh home screen widgets
+        // 13. Refresh home screen widgets and Quick Settings tiles
         CurrentWallpaperWidgetProvider.updateAllWidgets(context)
+        foo.barz.wallpaperpicker.core.tile.NextWallpaperTileService.requestUpdate(context)
 
         return WallpaperExecutionResult.Success(wallpaperData.title, wallpaperData.sourceUri)
     }

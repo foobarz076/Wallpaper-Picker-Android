@@ -142,12 +142,21 @@ fun MainScreen(
     onDeleteScheduleRule: (String) -> Unit = {},
     onToggleScheduleRuleEnabled: (String, Boolean) -> Unit = { _, _ -> },
     onPopulateDefaultRules: () -> Unit = {},
+    targetTab: MainTab? = null,
+    onTabNavigated: () -> Unit = {},
     onChangeNow: () -> Unit,
     onClearStatus: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.DASHBOARD) }
     var isHistorySheetOpen by remember { mutableStateOf(false) }
+
+    LaunchedEffect(targetTab) {
+        if (targetTab != null) {
+            selectedTab = targetTab
+            onTabNavigated()
+        }
+    }
 
     LaunchedEffect(state.statusMessage, isHistorySheetOpen) {
         val msg = state.statusMessage
