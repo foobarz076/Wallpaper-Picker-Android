@@ -44,9 +44,17 @@ class QuickSettingsTilesTest {
 
         val content = stringsFile.readText()
         assertTrue(content.contains("name=\"tile_next_wallpaper_label\""))
-        assertTrue(content.contains("立即换壁纸"))
+        assertTrue(content.contains("Next Wallpaper"))
         assertTrue(content.contains("name=\"tile_toggle_schedule_label\""))
-        assertTrue(content.contains("自动换壁纸"))
+        assertTrue(content.contains("Auto Wallpaper"))
+
+        val zhStringsFile = File("src/main/res/values-zh-rCN/strings.xml")
+        assertTrue(zhStringsFile.exists(), "values-zh-rCN/strings.xml must exist")
+        val zhContent = zhStringsFile.readText()
+        assertTrue(zhContent.contains("name=\"tile_next_wallpaper_label\""))
+        assertTrue(zhContent.contains("立即换壁纸"))
+        assertTrue(zhContent.contains("name=\"tile_toggle_schedule_label\""))
+        assertTrue(zhContent.contains("自动换壁纸"))
     }
 
     @Test

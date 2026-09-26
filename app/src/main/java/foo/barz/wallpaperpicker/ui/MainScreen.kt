@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
@@ -179,7 +180,7 @@ fun MainScreen(
                     val currentTitle = if (selectedTab == MainTab.SETTINGS && settingsSubPage != null) {
                         settingsSubPage!!.title
                     } else {
-                        selectedTab.title
+                        stringResource(selectedTab.titleRes)
                     }
                     AnimatedContent(
                         targetState = currentTitle,
@@ -197,7 +198,7 @@ fun MainScreen(
                         IconButton(onClick = { settingsSubPage = null }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "返回设置"
+                                contentDescription = stringResource(MainTab.SETTINGS.titleRes)
                             )
                         }
                     }
@@ -212,6 +213,7 @@ fun MainScreen(
         bottomBar = {
             NavigationBar {
                 MainTab.values().forEach { tab ->
+                    val tabTitle = stringResource(tab.titleRes)
                     NavigationBarItem(
                         selected = selectedTab == tab,
                         onClick = {
@@ -220,8 +222,8 @@ fun MainScreen(
                                 settingsSubPage = null
                             }
                         },
-                        icon = { Icon(tab.icon, contentDescription = tab.title) },
-                        label = { Text(tab.title) }
+                        icon = { Icon(tab.icon, contentDescription = tabTitle) },
+                        label = { Text(tabTitle) }
                     )
                 }
             }

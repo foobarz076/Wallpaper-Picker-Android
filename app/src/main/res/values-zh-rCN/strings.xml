@@ -1,0 +1,42 @@
+<resources>
+    <!-- App & General info -->
+    <string name="source_config_title">图源配置</string>
+    <string name="manage_space_title">存储空间管理</string>
+    <string name="about_title">关于</string>
+
+    <!-- Navigation Tabs -->
+    <string name="tab_dashboard">控制台</string>
+    <string name="tab_history">历史</string>
+    <string name="tab_sources">图源</string>
+    <string name="tab_settings">设置</string>
+
+    <!-- General Status -->
+    <string name="status_ready">准备就绪</string>
+    <string name="status_running">正在更换壁纸…</string>
+    <string name="status_success">壁纸更换成功！</string>
+    <string name="status_failed">更换失败</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_next_short">立即换壁纸</string>
+    <string name="shortcut_next_long">立即切换壁纸</string>
+    <string name="shortcut_view_short">查看壁纸</string>
+    <string name="shortcut_view_long">查看当前壁纸</string>
+
+    <!-- App Widget -->
+    <string name="widget_name">当前壁纸卡片</string>
+    <string name="widget_description">在桌面查看当前壁纸缩略图，支持一键切换与轻触查看原图</string>
+
+    <!-- Quick Settings Tiles -->
+    <string name="tile_next_wallpaper_label">立即换壁纸</string>
+    <string name="tile_toggle_schedule_label">自动换壁纸</string>
+
+    <!-- Common Actions -->
+    <string name="action_ok">确定</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_save">保存</string>
+    <string name="action_delete">删除</string>
+    <string name="action_confirm">确认</string>
+    <string name="action_close">关闭</string>
+    <string name="action_refresh">刷新</string>
+    <string name="action_share">分享</string>
+</resources>

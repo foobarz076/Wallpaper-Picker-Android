@@ -22,10 +22,10 @@ class HistoryAndFavoritesTest {
         assertEquals(MainTab.SOURCES, tabs[2])
         assertEquals(MainTab.SETTINGS, tabs[3])
 
-        assertEquals("控制台", MainTab.DASHBOARD.title)
-        assertEquals("历史", MainTab.HISTORY.title)
-        assertEquals("图源", MainTab.SOURCES.title)
-        assertEquals("设置", MainTab.SETTINGS.title)
+        assertEquals(R.string.tab_dashboard, MainTab.DASHBOARD.titleRes)
+        assertEquals(R.string.tab_history, MainTab.HISTORY.titleRes)
+        assertEquals(R.string.tab_sources, MainTab.SOURCES.titleRes)
+        assertEquals(R.string.tab_settings, MainTab.SETTINGS.titleRes)
     }
 
     @Test
