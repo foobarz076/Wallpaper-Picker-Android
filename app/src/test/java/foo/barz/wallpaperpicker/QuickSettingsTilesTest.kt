@@ -1,6 +1,8 @@
 package foo.barz.wallpaperpicker
 
+import android.content.Context
 import foo.barz.wallpaperpicker.core.tile.NextWallpaperTileService
+import foo.barz.wallpaperpicker.core.tile.TileUpdateHelper
 import foo.barz.wallpaperpicker.core.tile.ToggleScheduleTileService
 import foo.barz.wallpaperpicker.core.worker.WallpaperSchedulerHelper
 import java.io.File
@@ -87,6 +89,12 @@ class QuickSettingsTilesTest {
 
         val toggleUpdateMethod = ToggleScheduleTileService.Companion::class.java.getMethod("requestUpdate", android.content.Context::class.java)
         assertNotNull(toggleUpdateMethod)
+
+        // Validate TileUpdateHelper methods exist
+        val helperClass = TileUpdateHelper::class.java
+        assertNotNull(helperClass)
+        assertNotNull(helperClass.getMethod("requestNextWallpaperTileUpdate", Context::class.java))
+        assertNotNull(helperClass.getMethod("requestToggleScheduleTileUpdate", Context::class.java))
     }
 
     @Test

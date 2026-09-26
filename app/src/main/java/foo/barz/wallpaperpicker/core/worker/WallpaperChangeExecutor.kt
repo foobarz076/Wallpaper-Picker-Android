@@ -7,6 +7,7 @@ import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
 import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
 import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
 import foo.barz.wallpaperpicker.core.source.WallpaperSourceFactory
+import foo.barz.wallpaperpicker.core.tile.TileUpdateHelper
 import foo.barz.wallpaperpicker.core.widget.CurrentWallpaperWidgetProvider
 import foo.barz.wallpaperpicker.data.PreferencesManager
 import foo.barz.wallpaperpicker.core.util.AppLog
@@ -236,7 +237,7 @@ object WallpaperChangeExecutor {
 
         // 13. Refresh home screen widgets and Quick Settings tiles
         CurrentWallpaperWidgetProvider.updateAllWidgets(context)
-        foo.barz.wallpaperpicker.core.tile.NextWallpaperTileService.requestUpdate(context)
+        TileUpdateHelper.requestNextWallpaperTileUpdate(context)
 
         return WallpaperExecutionResult.Success(wallpaperData.title, wallpaperData.sourceUri)
     }

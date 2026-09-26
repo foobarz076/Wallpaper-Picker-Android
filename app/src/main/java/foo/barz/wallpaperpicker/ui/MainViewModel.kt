@@ -50,6 +50,7 @@ import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
 import foo.barz.wallpaperpicker.core.source.ImmichSource
 import foo.barz.wallpaperpicker.core.source.MediaStoreSource
 import foo.barz.wallpaperpicker.core.source.WallpaperSourceFactory
+import foo.barz.wallpaperpicker.core.tile.TileUpdateHelper
 import foo.barz.wallpaperpicker.core.widget.CurrentWallpaperWidgetProvider
 import foo.barz.wallpaperpicker.core.worker.CompositeTriggerHelper
 import foo.barz.wallpaperpicker.core.worker.ScreenOffWatcherService
@@ -847,7 +848,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             WallpaperSchedulerHelper.cancelScheduling(context)
             _uiState.update { it.copy(statusMessage = "已停止自动轮播") }
         }
-        foo.barz.wallpaperpicker.core.tile.ToggleScheduleTileService.requestUpdate(context)
+        TileUpdateHelper.requestToggleScheduleTileUpdate(context)
     }
 
     fun onToggleIntervalSchedule(enabled: Boolean) {
@@ -1038,7 +1039,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun refreshScheduling() {
         val context = getApplication<Application>()
         WallpaperSchedulerHelper.refreshScheduling(context)
-        foo.barz.wallpaperpicker.core.tile.ToggleScheduleTileService.requestUpdate(context)
+        TileUpdateHelper.requestToggleScheduleTileUpdate(context)
     }
 
     fun changeNow() {

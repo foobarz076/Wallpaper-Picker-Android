@@ -3,6 +3,7 @@ package foo.barz.wallpaperpicker.core.worker
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import foo.barz.wallpaperpicker.core.tile.TileUpdateHelper
 import foo.barz.wallpaperpicker.data.PreferencesManager
 
 /**
@@ -19,7 +20,7 @@ class BootReceiver : BroadcastReceiver() {
             } else {
                 WallpaperSchedulerHelper.cancelScheduling(context)
             }
-            foo.barz.wallpaperpicker.core.tile.ToggleScheduleTileService.requestUpdate(context)
+            TileUpdateHelper.requestToggleScheduleTileUpdate(context)
         }
     }
 }
