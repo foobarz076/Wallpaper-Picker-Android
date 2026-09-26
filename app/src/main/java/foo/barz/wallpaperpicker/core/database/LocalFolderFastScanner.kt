@@ -22,7 +22,10 @@ object LocalFolderFastScanner {
         withContext(Dispatchers.IO) {
             runCatching {
                 scanWithDocumentsContract(context, folderUri)
-            }.getOrElse {
+            }.getOrElse { error ->
+                if (error is SecurityException) {
+                    throw SecurityException("缺少文件夹读取权限，请在图源配置中重新选择文件夹并授权", error)
+                }
                 // Fallback to DocumentFile if raw DocumentsContract query fails
                 scanWithDocumentFile(context, folderUri)
             }

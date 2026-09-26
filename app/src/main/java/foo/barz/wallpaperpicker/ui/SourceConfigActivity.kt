@@ -271,6 +271,14 @@ private fun SourceConfigScreen(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
         if (uri != null) {
+            try {
+                // Persist read access across app restarts and background workers
+                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(uri, flags)
+            } catch (e: SecurityException) {
+                foo.barz.wallpaperpicker.core.util.AppLog.w("SourceConfig", "Failed to take persistable URI permission for $uri", e)
+            }
+
             folderUriStr = uri.toString()
             val docFile = DocumentFile.fromTreeUri(context, uri)
             folderName = docFile?.name ?: "自定义文件夹"
@@ -279,10 +287,20 @@ private fun SourceConfigScreen(
             }
             coroutineScope.launch {
                 isScanningFolder = true
-                val count = withContext(Dispatchers.IO) {
-                    LocalFolderFastScanner.scanFolder(context, uri).size
+                val records = withContext(Dispatchers.IO) {
+                    try {
+                        LocalFolderFastScanner.scanFolder(context, uri)
+                    } catch (e: Exception) {
+                        foo.barz.wallpaperpicker.core.util.AppLog.w("SourceConfig", "Failed to scan folder $uri", e)
+                        emptyList()
+                    }
                 }
-                indexedImageCount = count
+                indexedImageCount = records.size
+                if (records.isNotEmpty()) {
+                    withContext(Dispatchers.IO) {
+                        foo.barz.wallpaperpicker.core.database.LocalFolderIndexDatabase(context).replaceFolderIndex(uri, records)
+                    }
+                }
                 isScanningFolder = false
             }
         }
