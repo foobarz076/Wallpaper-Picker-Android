@@ -525,6 +525,15 @@
     <string name="backup_export_sanitize_checkbox">Redact credentials (Wipe API keys and query tokens)</string>
     <string name="backup_export_saf_notice">Notice: Due to Android security boundaries, local folder (SAF) permissions and system album IDs cannot migrate across devices. Re-authorization may be required after restore.</string>
     <string name="backup_export_btn_proceed">Choose Save Location</string>
+    <string name="backup_export_mode_label">Encryption Method</string>
+    <string name="backup_export_mode_native">Password (AES-256-GCM, Recommended)</string>
+    <string name="backup_export_mode_openpgp">OpenKeychain / OpenPGP</string>
+    <string name="backup_export_mode_openpgp_unavailable">OpenKeychain (Not Installed)</string>
+    <string name="backup_export_mode_none">Plaintext (Unencrypted)</string>
+    <string name="backup_export_openpgp_notice">Will use OpenKeychain for OpenPGP encryption. Supports asymmetric keys and YubiKey NFC/USB hardware tokens.</string>
+    <string name="backup_export_openpgp_sign_checkbox">Sign backup with private key (Optional)</string>
+    <string name="backup_export_openpgp_sign_desc">Verifies authenticity on restore. Requires entering PIN or tapping hardware token during export.</string>
+    <string name="backup_restore_openpgp_decrypting">Calling OpenKeychain for decryption…</string>
     <string name="backup_restore_pwd_dialog_title">Enter Backup Password</string>
     <string name="backup_restore_pwd_label">Backup Password</string>
     <string name="backup_restore_pwd_desc">This backup file is protected with AES-256-GCM encryption. Please enter the password to decrypt and restore.</string>

@@ -524,6 +524,15 @@
     <string name="backup_export_sanitize_checkbox">脱敏导出 (抹除 API Key 与私密凭据)</string>
     <string name="backup_export_saf_notice">提示：受 Android 安全沙箱机制限制，本地文件夹 (SAF) 授权与系统相册 ID 无法跨设备迁移，还原后若失效需重新授权。</string>
     <string name="backup_export_btn_proceed">选择保存位置</string>
+    <string name="backup_export_mode_label">加密方式</string>
+    <string name="backup_export_mode_native">原生密码加密 (AES-256-GCM，推荐)</string>
+    <string name="backup_export_mode_openpgp">OpenKeychain / OpenPGP</string>
+    <string name="backup_export_mode_openpgp_unavailable">OpenKeychain (未安装)</string>
+    <string name="backup_export_mode_none">明文导出 (不加密)</string>
+    <string name="backup_export_openpgp_notice">将通过 OpenKeychain 进行标准 OpenPGP 加密，支持使用您的 PGP 公钥或 YubiKey 硬件安全密钥进行保护。</string>
+    <string name="backup_export_openpgp_sign_checkbox">同时使用私钥签名备份 (可选)</string>
+    <string name="backup_export_openpgp_sign_desc">还原时可校验备份真实来源；导出时需验证身份 (PIN、密码或触碰硬件密钥)</string>
+    <string name="backup_restore_openpgp_decrypting">正在通过 OpenKeychain 进行解密…</string>
     <string name="backup_restore_pwd_dialog_title">输入恢复密码</string>
     <string name="backup_restore_pwd_label">备份解密密码</string>
     <string name="backup_restore_pwd_desc">此备份文件受 AES-256-GCM 高强度加密保护，请输入解密密码以继续还原。</string>

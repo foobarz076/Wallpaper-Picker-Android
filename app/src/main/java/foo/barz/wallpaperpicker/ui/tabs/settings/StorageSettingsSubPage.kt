@@ -1,7 +1,11 @@
 package foo.barz.wallpaperpicker.ui.tabs.settings
 
+import android.app.Activity
+import android.app.PendingIntent
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,9 +46,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import foo.barz.wallpaperpicker.R
+import foo.barz.wallpaperpicker.core.backup.BackupFormat
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.ui.MainUiState
 import foo.barz.wallpaperpicker.ui.components.BackupExportDialog
+import foo.barz.wallpaperpicker.ui.components.BackupExportMode
 import foo.barz.wallpaperpicker.ui.components.BackupRestoreConfirmDialog
 import foo.barz.wallpaperpicker.ui.components.BackupRestorePasswordDialog
 import java.text.SimpleDateFormat
@@ -63,24 +69,69 @@ fun StorageSettingsSubPage(
     onExportFavorites: () -> Unit,
     onOpenManageSpace: () -> Unit,
     hasSensitiveData: Boolean = false,
+    isOpenPgpAvailable: Boolean = false,
     onExportBackup: (Uri, String?, Boolean) -> Unit = { _, _, _ -> },
-    onCheckIsEncryptedBackup: (Uri) -> Boolean = { false },
+    onExportBackupWithOpenPgp: (Uri, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _ -> },
+    onDetectBackupFormat: (Uri) -> BackupFormat = { BackupFormat.PLAINTEXT },
     onRestoreBackup: (Uri, String?) -> Unit = { _, _ -> },
+    onRestoreBackupWithOpenPgp: (Uri, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
+    var pendingExportMode by remember { mutableStateOf(BackupExportMode.NATIVE_AES_GCM) }
     var pendingExportPassword by remember { mutableStateOf<String?>(null) }
     var pendingExportSanitize by remember { mutableStateOf(false) }
+    var pendingExportSign by remember { mutableStateOf(false) }
 
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
     var showRestorePasswordDialog by remember { mutableStateOf(false) }
     var showRestoreConfirmDialog by remember { mutableStateOf(false) }
 
+    var pendingOpenPgpAction by remember { mutableStateOf<((Intent?) -> Unit)?>(null) }
+
+    val openPgpIntentSenderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { activityResult ->
+        if (activityResult.resultCode == Activity.RESULT_OK) {
+            pendingOpenPgpAction?.invoke(activityResult.data)
+        }
+        pendingOpenPgpAction = null
+    }
+
+    fun startOpenPgpExport(uri: Uri, sanitize: Boolean, sign: Boolean, resumeIntent: Intent? = null) {
+        onExportBackupWithOpenPgp(uri, sanitize, sign, resumeIntent) { pendingIntent ->
+            pendingOpenPgpAction = { returnedIntent ->
+                startOpenPgpExport(uri, sanitize, sign, returnedIntent)
+            }
+            openPgpIntentSenderLauncher.launch(
+                IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+            )
+        }
+    }
+
+    fun startOpenPgpRestore(uri: Uri, resumeIntent: Intent? = null) {
+        onRestoreBackupWithOpenPgp(uri, resumeIntent) { pendingIntent ->
+            pendingOpenPgpAction = { returnedIntent ->
+                startOpenPgpRestore(uri, returnedIntent)
+            }
+            openPgpIntentSenderLauncher.launch(
+                IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+            )
+        }
+    }
+
     val createDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
         if (uri != null) {
-            onExportBackup(uri, pendingExportPassword, pendingExportSanitize)
+            when (pendingExportMode) {
+                BackupExportMode.NATIVE_AES_GCM, BackupExportMode.UNENCRYPTED -> {
+                    onExportBackup(uri, pendingExportPassword, pendingExportSanitize)
+                }
+                BackupExportMode.OPENPGP -> {
+                    startOpenPgpExport(uri, pendingExportSanitize, pendingExportSign)
+                }
+            }
         }
     }
 
@@ -89,11 +140,16 @@ fun StorageSettingsSubPage(
     ) { uri ->
         if (uri != null) {
             pendingRestoreUri = uri
-            val isEncrypted = onCheckIsEncryptedBackup(uri)
-            if (isEncrypted) {
-                showRestorePasswordDialog = true
-            } else {
-                showRestoreConfirmDialog = true
+            when (onDetectBackupFormat(uri)) {
+                BackupFormat.NATIVE_ENCRYPTED -> {
+                    showRestorePasswordDialog = true
+                }
+                BackupFormat.OPENPGP -> {
+                    startOpenPgpRestore(uri)
+                }
+                BackupFormat.PLAINTEXT -> {
+                    showRestoreConfirmDialog = true
+                }
             }
         }
     }
@@ -297,16 +353,19 @@ fun StorageSettingsSubPage(
     if (showExportDialog) {
         BackupExportDialog(
             hasSensitiveData = hasSensitiveData,
+            isOpenPgpAvailable = isOpenPgpAvailable,
             onDismissRequest = { showExportDialog = false },
-            onConfirmExport = { password, sanitize ->
+            onConfirmExport = { mode, password, sanitize, sign ->
                 showExportDialog = false
+                pendingExportMode = mode
                 pendingExportPassword = password
                 pendingExportSanitize = sanitize
+                pendingExportSign = sign
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-                val filename = if (!password.isNullOrBlank()) {
-                    "wallpaper_picker_$timestamp.wpbak"
-                } else {
-                    "wallpaper_picker_$timestamp.json"
+                val filename = when (mode) {
+                    BackupExportMode.NATIVE_AES_GCM -> "wallpaper_picker_$timestamp.wpbak"
+                    BackupExportMode.OPENPGP -> "wallpaper_picker_$timestamp.asc"
+                    BackupExportMode.UNENCRYPTED -> "wallpaper_picker_$timestamp.json"
                 }
                 createDocumentLauncher.launch(filename)
             }

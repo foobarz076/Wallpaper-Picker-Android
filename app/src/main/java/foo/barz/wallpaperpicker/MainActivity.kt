@@ -120,9 +120,13 @@ class MainActivity : ComponentActivity() {
                     onToggleScheduleRuleEnabled = viewModel::onToggleScheduleRuleEnabled,
                     onPopulateDefaultRules = viewModel::onPopulateDefaultRules,
                     hasSensitiveData = viewModel.hasSensitiveDataForBackup(),
+                    isOpenPgpAvailable = viewModel.isOpenPgpProviderAvailable(),
                     onExportBackup = viewModel::exportBackup,
+                    onExportBackupWithOpenPgp = viewModel::exportBackupWithOpenPgp,
+                    onDetectBackupFormat = viewModel::detectBackupFileFormat,
                     onCheckIsEncryptedBackup = viewModel::checkIsEncryptedBackup,
                     onRestoreBackup = viewModel::restoreBackup,
+                    onRestoreBackupWithOpenPgp = viewModel::restoreBackupWithOpenPgp,
                     onChangeNow = viewModel::changeNow,
                     onClearStatus = viewModel::clearStatusMessage
                 )

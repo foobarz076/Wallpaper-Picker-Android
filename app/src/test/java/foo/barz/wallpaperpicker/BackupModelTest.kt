@@ -273,4 +273,67 @@ class BackupModelTest {
         val plaintextStream = ByteArrayInputStream("{\"schemaVersion\": 1}".toByteArray(Charsets.UTF_8))
         assertFalse(foo.barz.wallpaperpicker.core.backup.BackupManager.isEncryptedBackup(plaintextStream))
     }
+
+    @Test
+    fun testOpenPgpMessageDetection() {
+        // 1. ASCII Armor detection
+        val asciiArmored = """
+            -----BEGIN PGP MESSAGE-----
+            Version: OpenKeychain v5.7.1
+
+            wcBMAxV36zWj...
+            -----END PGP MESSAGE-----
+        """.trimIndent().toByteArray(Charsets.US_ASCII)
+
+        assertTrue(foo.barz.wallpaperpicker.core.backup.OpenPgpBackupEngine.isOpenPgpMessage(ByteArrayInputStream(asciiArmored)))
+
+        // 2. Binary OpenPGP packet headers (RFC 4880 / RFC 9580)
+        // Tag 1 (PKESK) old format: 10_0001_00 = 0x84
+        val pkeskPacket = byteArrayOf(0x84.toByte(), 0x01, 0x02, 0x03, 0x04)
+        assertTrue(foo.barz.wallpaperpicker.core.backup.OpenPgpBackupEngine.isOpenPgpMessage(ByteArrayInputStream(pkeskPacket)))
+
+        // Tag 3 (SKESK) old format: 10_0011_00 = 0x8C
+        val skeskPacket = byteArrayOf(0x8C.toByte(), 0x05, 0x01, 0x02, 0x03)
+        assertTrue(foo.barz.wallpaperpicker.core.backup.OpenPgpBackupEngine.isOpenPgpMessage(ByteArrayInputStream(skeskPacket)))
+
+        // Tag 9 (SED) old format: 10_1001_00 = 0xA4
+        val sedPacket = byteArrayOf(0xA4.toByte(), 0x00, 0x10, 0x20)
+        assertTrue(foo.barz.wallpaperpicker.core.backup.OpenPgpBackupEngine.isOpenPgpMessage(ByteArrayInputStream(sedPacket)))
+
+        // Tag 18 (SEIPD) new format: 11_010010 = 0xD2
+        val seipdPacket = byteArrayOf(0xD2.toByte(), 0x01, 0x02, 0x03, 0x04)
+        assertTrue(foo.barz.wallpaperpicker.core.backup.OpenPgpBackupEngine.isOpenPgpMessage(ByteArrayInputStream(seipdPacket)))
+
+        // 3. Rejects non-OpenPGP messages
+        val jsonStream = ByteArrayInputStream("{\"schemaVersion\": 1}".toByteArray(Charsets.UTF_8))
+        assertFalse(foo.barz.wallpaperpicker.core.backup.OpenPgpBackupEngine.isOpenPgpMessage(jsonStream))
+
+        val randomBytes = byteArrayOf(0x01, 0x02, 0x03, 0x04)
+        assertFalse(foo.barz.wallpaperpicker.core.backup.OpenPgpBackupEngine.isOpenPgpMessage(ByteArrayInputStream(randomBytes)))
+
+        val shortBytes = byteArrayOf(0x84.toByte(), 0x01)
+        assertFalse(foo.barz.wallpaperpicker.core.backup.OpenPgpBackupEngine.isOpenPgpMessage(ByteArrayInputStream(shortBytes)))
+    }
+
+    @Test
+    fun testDetectBackupFormat() {
+        // Native Encrypted
+        val encryptedData = ByteArrayOutputStream().apply {
+            val encryptStream = BackupCryptoEngine.wrapEncryptStream(this, "testPass".toCharArray())
+            encryptStream.write("{}".toByteArray(Charsets.UTF_8))
+            encryptStream.close()
+        }.toByteArray()
+        val nativeFormat = foo.barz.wallpaperpicker.core.backup.BackupManager.detectBackupFormat(ByteArrayInputStream(encryptedData))
+        assertEquals(foo.barz.wallpaperpicker.core.backup.BackupFormat.NATIVE_ENCRYPTED, nativeFormat)
+
+        // OpenPGP Armor
+        val asciiArmored = "-----BEGIN PGP MESSAGE-----\n\n...".toByteArray(Charsets.US_ASCII)
+        val openPgpFormat = foo.barz.wallpaperpicker.core.backup.BackupManager.detectBackupFormat(ByteArrayInputStream(asciiArmored))
+        assertEquals(foo.barz.wallpaperpicker.core.backup.BackupFormat.OPENPGP, openPgpFormat)
+
+        // Plaintext JSON
+        val plainJson = "{\"schemaVersion\": 1, \"preferences\": {}}".toByteArray(Charsets.UTF_8)
+        val plaintextFormat = foo.barz.wallpaperpicker.core.backup.BackupManager.detectBackupFormat(ByteArrayInputStream(plainJson))
+        assertEquals(foo.barz.wallpaperpicker.core.backup.BackupFormat.PLAINTEXT, plaintextFormat)
+    }
 }

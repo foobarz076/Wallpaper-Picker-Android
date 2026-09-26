@@ -1,6 +1,9 @@
 package foo.barz.wallpaperpicker.ui
 
+import android.app.PendingIntent
+import android.content.Intent
 import android.net.Uri
+import foo.barz.wallpaperpicker.core.backup.BackupFormat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -148,9 +151,13 @@ fun MainScreen(
     onToggleScheduleRuleEnabled: (String, Boolean) -> Unit = { _, _ -> },
     onPopulateDefaultRules: () -> Unit = {},
     hasSensitiveData: Boolean = false,
+    isOpenPgpAvailable: Boolean = false,
     onExportBackup: (Uri, String?, Boolean) -> Unit = { _, _, _ -> },
+    onExportBackupWithOpenPgp: (Uri, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _ -> },
+    onDetectBackupFormat: (Uri) -> BackupFormat = { BackupFormat.PLAINTEXT },
     onCheckIsEncryptedBackup: (Uri) -> Boolean = { false },
     onRestoreBackup: (Uri, String?) -> Unit = { _, _ -> },
+    onRestoreBackupWithOpenPgp: (Uri, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _ -> },
     targetTab: MainTab? = null,
     onTabNavigated: () -> Unit = {},
     onChangeNow: () -> Unit,
@@ -343,9 +350,13 @@ fun MainScreen(
                         onToggleScheduleRuleEnabled = onToggleScheduleRuleEnabled,
                         onPopulateDefaultRules = onPopulateDefaultRules,
                         hasSensitiveData = hasSensitiveData,
+                        isOpenPgpAvailable = isOpenPgpAvailable,
                         onExportBackup = onExportBackup,
+                        onExportBackupWithOpenPgp = onExportBackupWithOpenPgp,
+                        onDetectBackupFormat = onDetectBackupFormat,
                         onCheckIsEncryptedBackup = onCheckIsEncryptedBackup,
-                        onRestoreBackup = onRestoreBackup
+                        onRestoreBackup = onRestoreBackup,
+                        onRestoreBackupWithOpenPgp = onRestoreBackupWithOpenPgp
                     )
                 }
             }

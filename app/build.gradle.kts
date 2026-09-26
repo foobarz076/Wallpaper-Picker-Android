@@ -65,6 +65,7 @@ dependencies {
 
     implementation(libs.okhttp)
     implementation(libs.conscrypt.android)
+    implementation(libs.openpgp.api)
 
     testImplementation(kotlin("test"))
     testImplementation("org.json:json:20231013")

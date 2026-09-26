@@ -10,10 +10,18 @@ import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import android.app.PendingIntent
 import foo.barz.wallpaperpicker.core.action.WallpaperActionManager
 import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
+import foo.barz.wallpaperpicker.core.backup.BackupFormat
 import foo.barz.wallpaperpicker.core.backup.BackupManager
+import foo.barz.wallpaperpicker.core.backup.OpenPgpBackupEngine
+import foo.barz.wallpaperpicker.core.backup.OpenPgpOperationResult
 import foo.barz.wallpaperpicker.core.backup.RestoreResult
+import org.openintents.openpgp.util.OpenPgpApi
+import org.openintents.openpgp.util.OpenPgpServiceConnection
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import foo.barz.wallpaperpicker.core.cache.WallpaperCacheManager
 import foo.barz.wallpaperpicker.core.database.LocalFolderFastScanner
 import foo.barz.wallpaperpicker.core.database.LocalFolderIndexDatabase
@@ -1710,53 +1718,344 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     RestoreResult(success = false, errorMessage = e.message ?: "读取备份文件失败")
                 }
             }
+            handleRestoreResult(result)
+        }
+    }
 
-            if (result.success) {
-                reloadSources()
-                loadScheduleRules()
-                refreshHistoryAndFavorites()
-                _uiState.update {
-                    it.copy(
-                        sourceType = prefs.sourceType,
-                        target = prefs.target,
-                        scrollMode = prefs.scrollMode,
-                        cropMode = prefs.cropMode,
-                        reapplyOnScrollChange = prefs.reapplyOnScrollChange,
-                        isScheduled = prefs.isScheduled,
-                        intervalMinutes = prefs.intervalMinutes,
-                        intervalScheduleEnabled = prefs.intervalScheduleEnabled,
-                        exactTimerEnabled = prefs.exactTimerEnabled,
-                        dailyAnchorEnabled = prefs.dailyAnchorEnabled,
-                        dailyAnchorTimes = prefs.dailyAnchorTimes,
-                        dailyAnchorHour = prefs.dailyAnchorHour,
-                        dailyAnchorMinute = prefs.dailyAnchorMinute,
-                        screenOffTriggerEnabled = prefs.screenOffTriggerEnabled,
-                        screenOffDelaySeconds = prefs.screenOffDelaySeconds,
-                        quietHoursEnabled = prefs.quietHoursEnabled,
-                        quietHoursStartHour = prefs.quietHoursStartHour,
-                        quietHoursStartMinute = prefs.quietHoursStartMinute,
-                        quietHoursEndHour = prefs.quietHoursEndHour,
-                        quietHoursEndMinute = prefs.quietHoursEndMinute,
-                        cooldownSuppressionEnabled = prefs.cooldownSuppressionEnabled,
-                        cooldownMinutes = prefs.cooldownMinutes,
-                        ruleEngineEnabled = prefs.ruleEngineEnabled,
-                        fairShuffle = prefs.fairShuffle,
-                        fairShuffleCapacity = prefs.fairShuffleCapacity,
-                        cacheSizeTier = prefs.cacheSizeTier,
-                        widgetScaleType = prefs.widgetScaleType,
-                        statusMessage = buildString {
-                            append("配置还原成功！已恢复 ${result.restoredSourcesCount} 个图源、${result.restoredRulesCount} 条规则、${result.restoredFavoritesCount} 项偏好记忆。")
-                            if (result.needsReauthorizationCount > 0) {
-                                append("（注意：${result.needsReauthorizationCount} 个本地文件夹授权已失效，请重新授权）")
-                            }
+    private fun handleRestoreResult(result: RestoreResult, extraNotice: String? = null) {
+        if (result.success) {
+            reloadSources()
+            loadScheduleRules()
+            refreshHistoryAndFavorites()
+            _uiState.update {
+                it.copy(
+                    sourceType = prefs.sourceType,
+                    target = prefs.target,
+                    scrollMode = prefs.scrollMode,
+                    cropMode = prefs.cropMode,
+                    reapplyOnScrollChange = prefs.reapplyOnScrollChange,
+                    isScheduled = prefs.isScheduled,
+                    intervalMinutes = prefs.intervalMinutes,
+                    intervalScheduleEnabled = prefs.intervalScheduleEnabled,
+                    exactTimerEnabled = prefs.exactTimerEnabled,
+                    dailyAnchorEnabled = prefs.dailyAnchorEnabled,
+                    dailyAnchorTimes = prefs.dailyAnchorTimes,
+                    dailyAnchorHour = prefs.dailyAnchorHour,
+                    dailyAnchorMinute = prefs.dailyAnchorMinute,
+                    screenOffTriggerEnabled = prefs.screenOffTriggerEnabled,
+                    screenOffDelaySeconds = prefs.screenOffDelaySeconds,
+                    quietHoursEnabled = prefs.quietHoursEnabled,
+                    quietHoursStartHour = prefs.quietHoursStartHour,
+                    quietHoursStartMinute = prefs.quietHoursStartMinute,
+                    quietHoursEndHour = prefs.quietHoursEndHour,
+                    quietHoursEndMinute = prefs.quietHoursEndMinute,
+                    cooldownSuppressionEnabled = prefs.cooldownSuppressionEnabled,
+                    cooldownMinutes = prefs.cooldownMinutes,
+                    ruleEngineEnabled = prefs.ruleEngineEnabled,
+                    fairShuffle = prefs.fairShuffle,
+                    fairShuffleCapacity = prefs.fairShuffleCapacity,
+                    cacheSizeTier = prefs.cacheSizeTier,
+                    widgetScaleType = prefs.widgetScaleType,
+                    statusMessage = buildString {
+                        append("配置还原成功！已恢复 ${result.restoredSourcesCount} 个图源、${result.restoredRulesCount} 条规则、${result.restoredFavoritesCount} 项偏好记忆。")
+                        if (extraNotice != null) {
+                            append(" ")
+                            append(extraNotice)
                         }
+                        if (result.needsReauthorizationCount > 0) {
+                            append("（注意：${result.needsReauthorizationCount} 个本地文件夹授权已失效，请重新授权）")
+                        }
+                    }
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(statusMessage = result.errorMessage ?: "还原失败")
+            }
+        }
+    }
+
+    /**
+     * Checks if OpenKeychain or any compatible OpenPGP provider is installed.
+     */
+    fun isOpenPgpProviderAvailable(): Boolean {
+        return OpenPgpBackupEngine.isProviderInstalled(getApplication())
+    }
+
+    /**
+     * Detects backup file format (Native Encrypted, OpenPGP, or Plaintext).
+     */
+    fun detectBackupFileFormat(uri: Uri): BackupFormat {
+        return runCatching {
+            val context = getApplication<Application>()
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                BackupManager.detectBackupFormat(stream)
+            } ?: BackupFormat.PLAINTEXT
+        }.getOrDefault(BackupFormat.PLAINTEXT)
+    }
+
+    private var openPgpConnection: OpenPgpServiceConnection? = null
+    private var openPgpApi: OpenPgpApi? = null
+
+    /**
+     * Key ID previously selected by the user via ACTION_GET_SIGN_KEY_ID.
+     * When non-null, the two-phase export flow skips the key-selection step and proceeds
+     * directly to encryption using this key ID.
+     */
+    private var pendingOpenPgpKeyId: Long? = null
+    private var pendingOpenPgpSign: Boolean = false
+
+    /**
+     * Guard flag to prevent concurrent bind attempts from overwriting each other's connection.
+     * Rapid successive calls (e.g. from Compose recomposition) would otherwise each create a
+     * new OpenPgpServiceConnection, causing the previously bound API to become a dead binder.
+     */
+    @Volatile private var isBindingInProgress = false
+
+    /**
+     * Binds to the OpenPGP provider service asynchronously.
+     */
+    fun bindOpenPgp(onReady: (OpenPgpApi) -> Unit, onError: (String) -> Unit) {
+        val existingApi = openPgpApi
+        if (existingApi != null && openPgpConnection?.isBound == true) {
+            onReady(existingApi)
+            return
+        }
+        if (isBindingInProgress) {
+            onError("OpenPGP 服务正在连接中，请稍后重试")
+            return
+        }
+        isBindingInProgress = true
+
+        val conn = OpenPgpBackupEngine.createServiceConnection(
+            context = getApplication(),
+            onBound = { api ->
+                openPgpApi = api
+                isBindingInProgress = false
+                onReady(api)
+            },
+            onError = { e ->
+                isBindingInProgress = false
+                onError(e.message ?: "绑定 OpenPGP 服务失败")
+            }
+        )
+        if (conn == null) {
+            isBindingInProgress = false
+            onError("未检测到已安装的 OpenPGP 提供商 (如 OpenKeychain)")
+            return
+        }
+        openPgpConnection = conn
+        conn.bindToService()
+    }
+
+    /**
+     * Exports configuration backup encrypted via OpenKeychain using a two-phase flow:
+     *
+     * Phase 1 — Key selection: if no key ID has been selected yet, calls ACTION_GET_SIGN_KEY_ID.
+     *   OpenKeychain returns USER_INTERACTION_REQUIRED so the user can pick their signing key.
+     *   After the user confirms, [resumeIntent] carries the result back here and Phase 1 resolves
+     *   the key ID from [OpenPgpApi.RESULT_SIGN_KEY_ID].
+     *
+     * Phase 2 — Encryption: calls ACTION_ENCRYPT (or ACTION_SIGN_AND_ENCRYPT if [sign] is true)
+     *   with the resolved key ID.
+     *   Hardware tokens (YubiKey, CanoKey) or passphrase-protected keys may trigger another
+     *   USER_INTERACTION_REQUIRED round for PIN/NFC tap confirmation.
+     *
+     * [resumeIntent] drives both phase transitions: when null the operation starts fresh;
+     * when non-null it resumes whichever phase last requested user interaction.
+     */
+    fun exportBackupWithOpenPgp(
+        uri: Uri,
+        sanitize: Boolean,
+        sign: Boolean = false,
+        resumeIntent: Intent? = null,
+        onInteractionRequired: (PendingIntent) -> Unit
+    ) {
+        if (resumeIntent == null) {
+            pendingOpenPgpSign = sign
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(statusMessage = "正在连接 OpenKeychain…") }
+            bindOpenPgp(
+                onReady = { api ->
+                    viewModelScope.launch {
+                        val resolvedKeyId = pendingOpenPgpKeyId
+                        val shouldSign = pendingOpenPgpSign
+                        if (resolvedKeyId == null) {
+                            // Phase 1: resolve the signing key ID
+                            val keyResult = withContext(Dispatchers.IO) {
+                                OpenPgpBackupEngine.getSignKeyId(api, resumeIntent)
+                            }
+                            when (keyResult) {
+                                is OpenPgpOperationResult.UserInteractionRequired -> {
+                                    _uiState.update { it.copy(statusMessage = "请在 OpenKeychain 中选择密钥…") }
+                                    onInteractionRequired(keyResult.pendingIntent)
+                                }
+                                is OpenPgpOperationResult.Success -> {
+                                    val keyId = keyResult.resultIntent
+                                        ?.getLongExtra(OpenPgpApi.RESULT_SIGN_KEY_ID, 0L) ?: 0L
+                                    if (keyId == 0L) {
+                                        _uiState.update { it.copy(statusMessage = "未能获取有效的加密密钥 ID，请在 OpenKeychain 中确认密钥配置") }
+                                        return@launch
+                                    }
+                                    pendingOpenPgpKeyId = keyId
+                                    // Phase 1 succeeded — immediately proceed to Phase 2
+                                    doOpenPgpEncrypt(api, uri, sanitize, keyId, shouldSign, null, onInteractionRequired)
+                                }
+                                is OpenPgpOperationResult.Error -> {
+                                    pendingOpenPgpSign = false
+                                    _uiState.update { it.copy(statusMessage = "密钥获取失败: ${keyResult.message}") }
+                                }
+                            }
+                        } else {
+                            // Phase 2: key already resolved, go straight to encryption
+                            doOpenPgpEncrypt(api, uri, sanitize, resolvedKeyId, shouldSign, resumeIntent, onInteractionRequired)
+                        }
+                    }
+                },
+                onError = { err ->
+                    _uiState.update { it.copy(statusMessage = err) }
+                }
+            )
+        }
+    }
+
+    private suspend fun doOpenPgpEncrypt(
+        api: OpenPgpApi,
+        uri: Uri,
+        sanitize: Boolean,
+        keyId: Long,
+        sign: Boolean,
+        resumeIntent: Intent?,
+        onInteractionRequired: (PendingIntent) -> Unit
+    ) {
+        _uiState.update {
+            it.copy(
+                statusMessage = if (sign) "正在使用 OpenKeychain 签名并加密导出…" else "正在使用 OpenKeychain 加密导出…"
+            )
+        }
+        val result = withContext(Dispatchers.IO) {
+            runCatching {
+                val context = getApplication<Application>()
+                val payload = BackupManager.buildBackupPayload(context, sanitize)
+                val jsonBytes = payload.toJson().toByteArray(Charsets.UTF_8)
+                val inStream = ByteArrayInputStream(jsonBytes)
+                val outStream = context.contentResolver.openOutputStream(uri)
+                    ?: throw IOException("无法写入目标文件")
+                outStream.use { targetOut ->
+                    OpenPgpBackupEngine.executeEncrypt(
+                        api = api,
+                        rawInput = inStream,
+                        encryptedOutput = targetOut,
+                        keyIds = longArrayOf(keyId),
+                        signKeyId = if (sign) keyId else null,
+                        asciiArmor = true,
+                        resumeIntent = resumeIntent
                     )
                 }
-            } else {
-                _uiState.update {
-                    it.copy(statusMessage = result.errorMessage ?: "还原失败")
-                }
+            }.getOrElse { e ->
+                OpenPgpOperationResult.Error(e.message ?: "加密导出失败")
             }
+        }
+
+        when (result) {
+            is OpenPgpOperationResult.Success -> {
+                pendingOpenPgpKeyId = null
+                pendingOpenPgpSign = false
+                val msg = if (sign) "已通过 OpenKeychain 成功完成 OpenPGP 签名并加密导出！" else "已通过 OpenKeychain 成功完成 OpenPGP 加密导出！"
+                _uiState.update { it.copy(statusMessage = msg) }
+            }
+            is OpenPgpOperationResult.UserInteractionRequired -> {
+                _uiState.update { it.copy(statusMessage = "需要确认身份 (PIN / NFC 触碰)…") }
+                onInteractionRequired(result.pendingIntent)
+            }
+            is OpenPgpOperationResult.Error -> {
+                pendingOpenPgpKeyId = null
+                pendingOpenPgpSign = false
+                _uiState.update { it.copy(statusMessage = "OpenKeychain 加密失败: ${result.message}") }
+            }
+        }
+    }
+
+    /**
+     * Restores configuration backup decrypted via OpenKeychain.
+     */
+    fun restoreBackupWithOpenPgp(
+        uri: Uri,
+        resumeIntent: Intent? = null,
+        onInteractionRequired: (PendingIntent) -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(statusMessage = "正在调用 OpenKeychain 进行解密…") }
+            bindOpenPgp(
+                onReady = { api ->
+                    viewModelScope.launch {
+                        val decryptedStream = ByteArrayOutputStream()
+                        var operationResultIntent: Intent? = null
+                        val result = withContext(Dispatchers.IO) {
+                            runCatching {
+                                val context = getApplication<Application>()
+                                val inStream = context.contentResolver.openInputStream(uri)
+                                    ?: throw IOException("无法读取备份文件")
+                                inStream.use { rawIn ->
+                                    val opResult = OpenPgpBackupEngine.executeDecrypt(
+                                        api = api,
+                                        encryptedInput = rawIn,
+                                        decryptedOutput = decryptedStream,
+                                        resumeIntent = resumeIntent
+                                    )
+                                    if (opResult is OpenPgpOperationResult.Success) {
+                                        operationResultIntent = opResult.resultIntent
+                                    }
+                                    opResult
+                                }
+                            }.getOrElse { e ->
+                                OpenPgpOperationResult.Error(e.message ?: "解密失败")
+                            }
+                        }
+
+                        when (result) {
+                            is OpenPgpOperationResult.Success -> {
+                                val jsonStr = decryptedStream.toString(Charsets.UTF_8.name())
+                                val restoreResult = withContext(Dispatchers.IO) {
+                                    BackupManager.restoreFromJsonString(getApplication(), jsonStr)
+                                }
+                                val sigResult = operationResultIntent?.let { intent ->
+                                    androidx.core.content.IntentCompat.getParcelableExtra(
+                                        intent,
+                                        OpenPgpApi.RESULT_SIGNATURE,
+                                        org.openintents.openpgp.OpenPgpSignatureResult::class.java
+                                    )
+                                }
+                                val sigNotice = when (sigResult?.result) {
+                                    org.openintents.openpgp.OpenPgpSignatureResult.RESULT_VALID_KEY_CONFIRMED,
+                                    org.openintents.openpgp.OpenPgpSignatureResult.RESULT_VALID_KEY_UNCONFIRMED -> {
+                                        val user = sigResult.primaryUserId ?: java.lang.Long.toHexString(sigResult.keyId)
+                                        "[已验证签名: $user]"
+                                    }
+                                    org.openintents.openpgp.OpenPgpSignatureResult.RESULT_INVALID_SIGNATURE -> {
+                                        "[警告: OpenPGP 签名无效或已被篡改！]"
+                                    }
+                                    org.openintents.openpgp.OpenPgpSignatureResult.RESULT_KEY_MISSING -> {
+                                        "[已签名但缺少对应公钥]"
+                                    }
+                                    else -> null
+                                }
+                                handleRestoreResult(restoreResult, sigNotice)
+                            }
+                            is OpenPgpOperationResult.UserInteractionRequired -> {
+                                onInteractionRequired(result.pendingIntent)
+                            }
+                            is OpenPgpOperationResult.Error -> {
+                                _uiState.update { it.copy(statusMessage = "OpenKeychain 解密失败: ${result.message}") }
+                            }
+                        }
+                    }
+                },
+                onError = { err ->
+                    _uiState.update { it.copy(statusMessage = err) }
+                }
+            )
         }
     }
 
@@ -1766,6 +2065,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        openPgpConnection?.unbindFromService()
+        openPgpConnection = null
+        openPgpApi = null
+        pendingOpenPgpKeyId = null
+        pendingOpenPgpSign = false
+        isBindingInProgress = false
         prefs.unregisterOnSharedPreferenceChangeListener(prefChangeListener)
     }
 }

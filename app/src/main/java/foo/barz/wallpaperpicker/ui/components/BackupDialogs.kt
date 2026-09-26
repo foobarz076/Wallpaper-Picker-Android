@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,19 +44,31 @@ import androidx.compose.ui.unit.dp
 import foo.barz.wallpaperpicker.R
 
 /**
- * Dialog prompting user for encryption options, password, redaction, and SAF migration notices.
+ * Encryption modes available for configuration backup export.
+ */
+enum class BackupExportMode {
+    NATIVE_AES_GCM,
+    OPENPGP,
+    UNENCRYPTED
+}
+
+/**
+ * Dialog prompting user for encryption options (AES-GCM, OpenKeychain, or Plaintext),
+ * redaction options, and SAF migration notices.
  */
 @Composable
 fun BackupExportDialog(
     hasSensitiveData: Boolean,
+    isOpenPgpAvailable: Boolean,
     onDismissRequest: () -> Unit,
-    onConfirmExport: (password: String?, sanitize: Boolean) -> Unit
+    onConfirmExport: (mode: BackupExportMode, password: String?, sanitize: Boolean, sign: Boolean) -> Unit
 ) {
-    var isEncrypted by remember { mutableStateOf(true) }
+    var selectedMode by remember { mutableStateOf(BackupExportMode.NATIVE_AES_GCM) }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var sanitize by remember { mutableStateOf(true) }
+    var signOpenPgp by remember { mutableStateOf(false) }
     var validationError by remember { mutableStateOf<String?>(null) }
 
     val passwordEmptyError = stringResource(R.string.backup_export_password_empty)
@@ -80,108 +93,208 @@ fun BackupExportDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Encryption Checkbox
+                Text(
+                    text = stringResource(R.string.backup_export_mode_label),
+                    style = MaterialTheme.typography.titleSmall
+                )
+
+                // 1. Native AES-GCM
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { isEncrypted = !isEncrypted },
+                        .clickable { selectedMode = BackupExportMode.NATIVE_AES_GCM },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(
-                        checked = isEncrypted,
-                        onCheckedChange = { isEncrypted = it }
+                    RadioButton(
+                        selected = selectedMode == BackupExportMode.NATIVE_AES_GCM,
+                        onClick = { selectedMode = BackupExportMode.NATIVE_AES_GCM }
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = stringResource(R.string.backup_export_encrypted_checkbox),
+                        text = stringResource(R.string.backup_export_mode_native),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
 
-                if (isEncrypted) {
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            validationError = null
-                        },
-                        label = { Text(stringResource(R.string.backup_export_password_label)) },
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = null
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                // 2. OpenPGP (OpenKeychain)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = isOpenPgpAvailable) { selectedMode = BackupExportMode.OPENPGP },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = selectedMode == BackupExportMode.OPENPGP,
+                        onClick = { selectedMode = BackupExportMode.OPENPGP },
+                        enabled = isOpenPgpAvailable
                     )
-
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = {
-                            confirmPassword = it
-                            validationError = null
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isOpenPgpAvailable) {
+                            stringResource(R.string.backup_export_mode_openpgp)
+                        } else {
+                            stringResource(R.string.backup_export_mode_openpgp_unavailable)
                         },
-                        label = { Text(stringResource(R.string.backup_export_password_confirm)) },
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isOpenPgpAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
                     )
+                }
 
-                    if (validationError != null) {
+                // 3. Plaintext
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selectedMode = BackupExportMode.UNENCRYPTED },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = selectedMode == BackupExportMode.UNENCRYPTED,
+                        onClick = { selectedMode = BackupExportMode.UNENCRYPTED }
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.backup_export_mode_none),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                // Contextual sub-controls based on selected mode
+                when (selectedMode) {
+                    BackupExportMode.NATIVE_AES_GCM -> {
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = {
+                                password = it
+                                validationError = null
+                            },
+                            label = { Text(stringResource(R.string.backup_export_password_label)) },
+                            singleLine = true,
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                    Icon(
+                                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = null
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = {
+                                confirmPassword = it
+                                validationError = null
+                            },
+                            label = { Text(stringResource(R.string.backup_export_password_confirm)) },
+                            singleLine = true,
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (validationError != null) {
+                            Text(
+                                text = validationError!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
                         Text(
-                            text = validationError!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
+                            text = stringResource(R.string.backup_export_crypto_notice),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
                         )
                     }
 
-                    Text(
-                        text = stringResource(R.string.backup_export_crypto_notice),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                } else {
-                    if (hasSensitiveData) {
+                    BackupExportMode.OPENPGP -> {
                         Card(
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
+                            Column(modifier = Modifier.padding(10.dp)) {
                                 Row(verticalAlignment = Alignment.Top) {
                                     Icon(
-                                        Icons.Default.Warning,
+                                        Icons.Default.Info,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                                        modifier = Modifier.size(20.dp)
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = stringResource(R.string.backup_export_warning_sensitive),
+                                        text = stringResource(R.string.backup_export_openpgp_notice),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.clickable { sanitize = !sanitize }
+                                    modifier = Modifier.clickable { signOpenPgp = !signOpenPgp }
                                 ) {
                                     Checkbox(
-                                        checked = sanitize,
-                                        onCheckedChange = { sanitize = it }
+                                        checked = signOpenPgp,
+                                        onCheckedChange = { signOpenPgp = it }
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = stringResource(R.string.backup_export_sanitize_checkbox),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.backup_export_openpgp_sign_checkbox),
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.backup_export_openpgp_sign_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    BackupExportMode.UNENCRYPTED -> {
+                        if (hasSensitiveData) {
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(verticalAlignment = Alignment.Top) {
+                                        Icon(
+                                            Icons.Default.Warning,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = stringResource(R.string.backup_export_warning_sensitive),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.clickable { sanitize = !sanitize }
+                                    ) {
+                                        Checkbox(
+                                            checked = sanitize,
+                                            onCheckedChange = { sanitize = it }
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = stringResource(R.string.backup_export_sanitize_checkbox),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -218,18 +331,26 @@ fun BackupExportDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (isEncrypted) {
-                        if (password.isBlank()) {
-                            validationError = passwordEmptyError
-                            return@Button
+                    when (selectedMode) {
+                        BackupExportMode.NATIVE_AES_GCM -> {
+                            if (password.isBlank()) {
+                                validationError = passwordEmptyError
+                                return@Button
+                            }
+                            if (password != confirmPassword) {
+                                validationError = passwordMismatchError
+                                return@Button
+                            }
+                            onConfirmExport(BackupExportMode.NATIVE_AES_GCM, password, false, false)
                         }
-                        if (password != confirmPassword) {
-                            validationError = passwordMismatchError
-                            return@Button
+
+                        BackupExportMode.OPENPGP -> {
+                            onConfirmExport(BackupExportMode.OPENPGP, null, false, signOpenPgp)
                         }
-                        onConfirmExport(password, false)
-                    } else {
-                        onConfirmExport(null, if (hasSensitiveData) sanitize else false)
+
+                        BackupExportMode.UNENCRYPTED -> {
+                            onConfirmExport(BackupExportMode.UNENCRYPTED, null, if (hasSensitiveData) sanitize else false, false)
+                        }
                     }
                 }
             ) {

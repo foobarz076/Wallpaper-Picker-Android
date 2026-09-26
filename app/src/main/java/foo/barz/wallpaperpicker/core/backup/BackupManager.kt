@@ -28,6 +28,15 @@ data class RestoreResult(
 )
 
 /**
+ * Recognized backup encapsulation formats.
+ */
+enum class BackupFormat {
+    NATIVE_ENCRYPTED,
+    OPENPGP,
+    PLAINTEXT
+}
+
+/**
  * Central orchestrator for packaging, encrypting, inspecting, and restoring app configurations.
  */
 object BackupManager {
@@ -50,20 +59,23 @@ object BackupManager {
     }
 
     /**
-     * Builds and exports the application backup payload to the given OutputStream.
-     *
-     * @param context Application context.
-     * @param outputStream Destination stream (e.g., from SAF URI).
-     * @param password Optional password for AES-256-GCM encryption. If null or blank, exported unencrypted.
-     * @param sanitize If true, strips API keys and sensitive query tokens before export.
+     * Identifies the format of a backup file from its initial bytes.
      */
-    fun exportBackup(
-        context: Context,
-        outputStream: OutputStream,
-        password: String? = null,
-        sanitize: Boolean = false
-    ): BackupPayload {
-        AppLog.i(TAG, "Exporting backup (encrypted=${!password.isNullOrBlank()}, sanitize=$sanitize)")
+    fun detectBackupFormat(inputStream: InputStream): BackupFormat {
+        val buffered = if (inputStream.markSupported()) inputStream else BufferedInputStream(inputStream)
+        if (isEncryptedBackup(buffered)) {
+            return BackupFormat.NATIVE_ENCRYPTED
+        }
+        if (OpenPgpBackupEngine.isOpenPgpMessage(buffered)) {
+            return BackupFormat.OPENPGP
+        }
+        return BackupFormat.PLAINTEXT
+    }
+
+    /**
+     * Assembles the application configuration payload.
+     */
+    fun buildBackupPayload(context: Context, sanitize: Boolean = false): BackupPayload {
         val prefs = PreferencesManager(context)
         val sourcesDb = WallpaperSourcesDatabase(context)
         val rulesDb = ScheduleRulesDatabase(context)
@@ -102,6 +114,25 @@ object BackupManager {
             payload = payload.sanitize()
         }
 
+        return payload
+    }
+
+    /**
+     * Builds and exports the application backup payload to the given OutputStream.
+     *
+     * @param context Application context.
+     * @param outputStream Destination stream (e.g., from SAF URI).
+     * @param password Optional password for AES-256-GCM encryption. If null or blank, exported unencrypted.
+     * @param sanitize If true, strips API keys and sensitive query tokens before export.
+     */
+    fun exportBackup(
+        context: Context,
+        outputStream: OutputStream,
+        password: String? = null,
+        sanitize: Boolean = false
+    ): BackupPayload {
+        AppLog.i(TAG, "Exporting backup (encrypted=${!password.isNullOrBlank()}, sanitize=$sanitize)")
+        val payload = buildBackupPayload(context, sanitize)
         val jsonStr = payload.toJson()
 
         if (!password.isNullOrBlank()) {
@@ -117,7 +148,7 @@ object BackupManager {
             }
         }
 
-        AppLog.i(TAG, "Backup successfully exported with ${sources.size} sources and ${rules.size} rules")
+        AppLog.i(TAG, "Backup successfully exported with ${payload.sources.size} sources and ${payload.rules.size} rules")
         return payload
     }
 
@@ -152,6 +183,13 @@ object BackupManager {
             return RestoreResult(success = false, errorMessage = message)
         }
 
+        return restoreFromJsonString(context, jsonStr)
+    }
+
+    /**
+     * Restores application state from a raw JSON string (e.g. from OpenPGP decrypted output).
+     */
+    fun restoreFromJsonString(context: Context, jsonStr: String): RestoreResult {
         val payload = try {
             BackupPayload.fromJson(jsonStr)
         } catch (e: Exception) {
@@ -159,6 +197,13 @@ object BackupManager {
             return RestoreResult(success = false, errorMessage = "解析备份数据失败：JSON 格式无效")
         }
 
+        return restoreFromPayload(context, payload)
+    }
+
+    /**
+     * Restores application preferences, sources, schedule rules, and favorites from a BackupPayload.
+     */
+    fun restoreFromPayload(context: Context, payload: BackupPayload): RestoreResult {
         val prefs = PreferencesManager(context)
         val sourcesDb = WallpaperSourcesDatabase(context)
         val rulesDb = ScheduleRulesDatabase(context)

@@ -1,6 +1,8 @@
 package foo.barz.wallpaperpicker.ui.tabs
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -37,6 +39,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import foo.barz.wallpaperpicker.R
+import foo.barz.wallpaperpicker.core.backup.BackupFormat
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.ScheduleRule
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
@@ -101,9 +104,13 @@ fun SettingsTab(
     onToggleScheduleRuleEnabled: (String, Boolean) -> Unit = { _, _ -> },
     onPopulateDefaultRules: () -> Unit = {},
     hasSensitiveData: Boolean = false,
+    isOpenPgpAvailable: Boolean = false,
     onExportBackup: (android.net.Uri, String?, Boolean) -> Unit = { _, _, _ -> },
+    onExportBackupWithOpenPgp: (android.net.Uri, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _ -> },
+    onDetectBackupFormat: (android.net.Uri) -> BackupFormat = { BackupFormat.PLAINTEXT },
     onCheckIsEncryptedBackup: (android.net.Uri) -> Boolean = { false },
     onRestoreBackup: (android.net.Uri, String?) -> Unit = { _, _ -> },
+    onRestoreBackupWithOpenPgp: (android.net.Uri, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -227,9 +234,12 @@ fun SettingsTab(
                 onExportFavorites = onExportFavorites,
                 onOpenManageSpace = onOpenManageSpace,
                 hasSensitiveData = hasSensitiveData,
+                isOpenPgpAvailable = isOpenPgpAvailable,
                 onExportBackup = onExportBackup,
-                onCheckIsEncryptedBackup = onCheckIsEncryptedBackup,
-                onRestoreBackup = onRestoreBackup
+                onExportBackupWithOpenPgp = onExportBackupWithOpenPgp,
+                onDetectBackupFormat = onDetectBackupFormat,
+                onRestoreBackup = onRestoreBackup,
+                onRestoreBackupWithOpenPgp = onRestoreBackupWithOpenPgp
             )
 
             SettingsSubPage.ABOUT -> AboutSettingsSubPage(
