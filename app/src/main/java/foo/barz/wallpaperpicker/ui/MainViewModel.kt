@@ -1617,11 +1617,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun hasMediaPermission(): Boolean {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        }
-        return ContextCompat.checkSelfPermission(getApplication(), permission) == PackageManager.PERMISSION_GRANTED
+        return foo.barz.wallpaperpicker.core.source.MediaStoreSource.hasAnyPermission(getApplication())
     }
 }

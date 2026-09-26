@@ -56,6 +56,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,6 +69,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.documentfile.provider.DocumentFile
 import foo.barz.wallpaperpicker.core.database.LocalFolderFastScanner
 import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
@@ -242,24 +246,43 @@ private fun SourceConfigScreen(
 
         // Query favorites count
         favoritesCount = historyDb.getFavoritesList().size
+
+        // Pre-load MediaStore albums if permission is already available
+        if (MediaStoreSource.hasAnyPermission(context)) {
+            mediaStoreAlbums = MediaStoreSource.fetchAlbums(context)
+        }
     }
 
-    // Media permission
-    val mediaPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        Manifest.permission.READ_MEDIA_IMAGES
-    } else {
-        Manifest.permission.READ_EXTERNAL_STORAGE
+    // Media permission state
+    var hasFullMediaPermission by remember { mutableStateOf(MediaStoreSource.hasFullPermission(context)) }
+    var hasPartialMediaPermission by remember { mutableStateOf(MediaStoreSource.hasPartialPermission(context)) }
+    val hasAnyMediaPermission = hasFullMediaPermission || hasPartialMediaPermission
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasFullMediaPermission = MediaStoreSource.hasFullPermission(context)
+                hasPartialMediaPermission = MediaStoreSource.hasPartialPermission(context)
+                if (hasFullMediaPermission || hasPartialMediaPermission) {
+                    coroutineScope.launch {
+                        mediaStoreAlbums = MediaStoreSource.fetchAlbums(context)
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
-    var hasMediaPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, mediaPermission) == PackageManager.PERMISSION_GRANTED
-        )
-    }
+
     val mediaPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasMediaPermission = isGranted
-        if (isGranted) {
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        hasFullMediaPermission = MediaStoreSource.hasFullPermission(context)
+        hasPartialMediaPermission = MediaStoreSource.hasPartialPermission(context)
+        if (hasFullMediaPermission || hasPartialMediaPermission) {
             coroutineScope.launch {
                 mediaStoreAlbums = MediaStoreSource.fetchAlbums(context)
             }
@@ -359,6 +382,16 @@ private fun SourceConfigScreen(
                                         return@Button
                                     }
                                 }
+                                WallpaperSourceType.MEDIA_STORE -> {
+                                    if (!hasAnyMediaPermission) {
+                                        coroutineScope.launch { snackbarHostState.showSnackbar("请先授予相册访问权限或挑选照片") }
+                                        return@Button
+                                    }
+                                    if (hasPartialMediaPermission && (mediaStoreAlbums.firstOrNull()?.count ?: 0) == 0) {
+                                        coroutineScope.launch { snackbarHostState.showSnackbar("尚未挑选任何照片，请先点击挑选照片") }
+                                        return@Button
+                                    }
+                                }
                                 else -> {}
                             }
 
@@ -368,10 +401,18 @@ private fun SourceConfigScreen(
                                     folderName = folderName,
                                     imageCount = indexedImageCount
                                 ).toJson()
-                                WallpaperSourceType.MEDIA_STORE -> MediaStoreSourceConfig(
-                                    albumIds = mediaStoreAlbumIds,
-                                    albumNames = mediaStoreAlbumNames
-                                ).toJson()
+                                WallpaperSourceType.MEDIA_STORE -> {
+                                    val concreteAlbumNames = if (hasPartialMediaPermission) {
+                                        val count = mediaStoreAlbums.firstOrNull()?.count ?: 0
+                                        if (count > 0) "已选 $count 张照片" else "系统相册"
+                                    } else {
+                                        mediaStoreAlbumNames
+                                    }
+                                    MediaStoreSourceConfig(
+                                        albumIds = mediaStoreAlbumIds,
+                                        albumNames = concreteAlbumNames
+                                    ).toJson()
+                                }
                                 WallpaperSourceType.IMMICH -> ImmichSourceConfig(
                                     serverUrl = immichServerUrl,
                                     apiKey = immichApiKey,
@@ -531,18 +572,32 @@ private fun SourceConfigScreen(
                         }
 
                         WallpaperSourceType.MEDIA_STORE -> {
-                            if (!hasMediaPermission) {
+                            if (!hasAnyMediaPermission) {
                                 Text(
-                                    text = "需要读取相册权限以直接检索系统照片与相机相册",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
+                                    text = "尚未授权相册访问",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Button(
-                                    onClick = { mediaPermissionLauncher.launch(mediaPermission) },
+                                    onClick = { mediaPermissionLauncher.launch(MediaStoreSource.getRequiredPermissions()) },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("授予相册访问权限")
+                                    Text("选择相册或挑选照片")
+                                }
+                            } else if (hasPartialMediaPermission) {
+                                val selectedCount = mediaStoreAlbums.firstOrNull()?.count ?: 0
+                                Text(
+                                    text = if (selectedCount > 0) "系统相册 (已选 $selectedCount 张)" else "尚未选择照片",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = { mediaPermissionLauncher.launch(MediaStoreSource.getRequiredPermissions()) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (selectedCount > 0) "管理所选照片" else "挑选照片")
                                 }
                             } else {
                                 Text(

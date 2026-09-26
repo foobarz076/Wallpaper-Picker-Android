@@ -38,12 +38,7 @@ class MediaStoreSource(
 
     override suspend fun getNextWallpaper(): Result<WallpaperData> = withContext(Dispatchers.IO) {
         runCatching {
-            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                Manifest.permission.READ_MEDIA_IMAGES
-            } else {
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            }
-            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+            if (!hasAnyPermission(context)) {
                 throw SecurityException("缺少读取相册权限，请先授权")
             }
 
@@ -158,16 +153,62 @@ class MediaStoreSource(
 
     companion object {
         /**
+         * Returns permissions required to request photo access based on Android OS version.
+         * On Android 14+ (API 34+), includes READ_MEDIA_VISUAL_USER_SELECTED for Selected Photos Access.
+         */
+        fun getRequiredPermissions(): Array<String> {
+            return when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
+                    Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+                )
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
+                    Manifest.permission.READ_MEDIA_IMAGES
+                )
+                else -> arrayOf(
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                )
+            }
+        }
+
+        /**
+         * Checks whether the app has full access to the device photo library.
+         */
+        fun hasFullPermission(context: Context): Boolean {
+            return when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+                }
+                else -> {
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                }
+            }
+        }
+
+        /**
+         * Checks whether the user granted partial photo access (Selected Photos Access) on Android 14+.
+         */
+        fun hasPartialPermission(context: Context): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                !hasFullPermission(context) &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
+            } else {
+                false
+            }
+        }
+
+        /**
+         * Checks whether the app can read at least some photos from MediaStore (full or partial).
+         */
+        fun hasAnyPermission(context: Context): Boolean {
+            return hasFullPermission(context) || hasPartialPermission(context)
+        }
+
+        /**
          * Queries all image buckets/albums from the system MediaStore.
          */
         suspend fun fetchAlbums(context: Context): List<MediaStoreAlbum> = withContext(Dispatchers.IO) {
-            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                Manifest.permission.READ_MEDIA_IMAGES
-            } else {
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            }
-
-            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+            if (!hasAnyPermission(context)) {
                 return@withContext emptyList()
             }
 
