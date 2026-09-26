@@ -540,6 +540,14 @@
     <string name="backup_restore_confirm_title">确认还原配置？</string>
     <string name="backup_restore_confirm_msg">还原将使用备份覆盖现有的图源、轮播规则和全局偏好设置。未收藏的历史记录将保留。是否确认继续？</string>
     <string name="backup_restore_btn_overwrite">确认还原</string>
+    <string name="backup_export_include_favorites_checkbox">包含收藏壁纸原图文件</string>
+    <string name="backup_export_include_favorites_desc">将 %1$d 张收藏壁纸（约 %2$s）一起打包加密，实现离线完整迁移</string>
+    <string name="backup_restore_missing_fav_title">重新下载缺失的收藏原图？</string>
+    <string name="backup_restore_missing_fav_desc">检测到有 %1$d 张已恢复的收藏壁纸在本地缺少原图文件。是否立即通过网络一键批量重新下载？</string>
+    <string name="backup_restore_missing_fav_btn_download">立即一键下载</string>
+    <string name="backup_restore_missing_fav_btn_later">稍后再说</string>
+    <string name="storage_favorites_missing_badge">缺失本地原图 %1$d 张</string>
+    <string name="storage_favorites_btn_redownload">一键补全缺失收藏原图</string>
 
     <!-- About Settings SubPage &amp; About Activity -->
     <string name="about_battery_unrestricted_title">开启电池无限制以保障准时更换</string>

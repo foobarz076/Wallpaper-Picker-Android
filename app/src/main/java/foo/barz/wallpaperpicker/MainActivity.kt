@@ -127,6 +127,9 @@ class MainActivity : ComponentActivity() {
                     onCheckIsEncryptedBackup = viewModel::checkIsEncryptedBackup,
                     onRestoreBackup = viewModel::restoreBackup,
                     onRestoreBackupWithOpenPgp = viewModel::restoreBackupWithOpenPgp,
+                    onDismissMissingFavoritesPrompt = viewModel::dismissMissingFavoritesPrompt,
+                    onConfirmBatchDownloadMissingFavorites = viewModel::confirmBatchDownloadMissingFavorites,
+                    onBatchRedownloadMissingFavorites = viewModel::batchRedownloadMissingFavorites,
                     onChangeNow = viewModel::changeNow,
                     onClearStatus = viewModel::clearStatusMessage
                 )

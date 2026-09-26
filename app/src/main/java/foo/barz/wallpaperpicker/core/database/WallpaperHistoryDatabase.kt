@@ -573,7 +573,8 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         cropFocusX: Float?,
         cropFocusY: Float?,
         flipHorizontal: Boolean,
-        remoteUrl: String?
+        remoteUrl: String?,
+        favoriteFilePath: String? = null
     ) {
         val db = writableDatabase
         val existing = getItemByUri(sourceUri)
@@ -584,6 +585,7 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
             if (sourceTitle != null) put(COLUMN_SOURCE_TITLE, sourceTitle)
             put(COLUMN_IS_FAVORITE, if (isFavorite) 1 else 0)
             put(COLUMN_FAVORITE_TIMESTAMP, favoriteTimestamp)
+            if (favoriteFilePath != null) put(COLUMN_FAVORITE_FILE_PATH, favoriteFilePath)
             put(COLUMN_CUSTOM_SCROLL_MODE, customScrollMode?.name)
             put(COLUMN_CROP_FOCUS_X, cropFocusX)
             put(COLUMN_CROP_FOCUS_Y, cropFocusY)

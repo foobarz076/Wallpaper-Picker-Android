@@ -54,14 +54,16 @@ enum class BackupExportMode {
 
 /**
  * Dialog prompting user for encryption options (AES-GCM, OpenKeychain, or Plaintext),
- * redaction options, and SAF migration notices.
+ * redaction options, favorite images inclusion, and SAF migration notices.
  */
 @Composable
 fun BackupExportDialog(
     hasSensitiveData: Boolean,
     isOpenPgpAvailable: Boolean,
+    favoritesCount: Int = 0,
+    favoritesSizeBytes: Long = 0L,
     onDismissRequest: () -> Unit,
-    onConfirmExport: (mode: BackupExportMode, password: String?, sanitize: Boolean, sign: Boolean) -> Unit
+    onConfirmExport: (mode: BackupExportMode, password: String?, sanitize: Boolean, sign: Boolean, includeFavorites: Boolean) -> Unit
 ) {
     var selectedMode by remember { mutableStateOf(BackupExportMode.NATIVE_AES_GCM) }
     var password by remember { mutableStateOf("") }
@@ -69,6 +71,7 @@ fun BackupExportDialog(
     var passwordVisible by remember { mutableStateOf(false) }
     var sanitize by remember { mutableStateOf(true) }
     var signOpenPgp by remember { mutableStateOf(false) }
+    var includeFavorites by remember { mutableStateOf(favoritesCount > 0) }
     var validationError by remember { mutableStateOf<String?>(null) }
 
     val passwordEmptyError = stringResource(R.string.backup_export_password_empty)
@@ -301,6 +304,45 @@ fun BackupExportDialog(
                     }
                 }
 
+                // Favorite images packaging option
+                if (favoritesCount > 0) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { includeFavorites = !includeFavorites }
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = includeFavorites,
+                                onCheckedChange = { includeFavorites = it }
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.backup_export_include_favorites_checkbox),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = stringResource(
+                                        R.string.backup_export_include_favorites_desc,
+                                        favoritesCount,
+                                        foo.barz.wallpaperpicker.ui.tabs.settings.SettingsHelpers.formatFileSize(favoritesSizeBytes)
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // SAF Security notice
                 Card(
                     colors = CardDefaults.cardColors(
@@ -341,15 +383,15 @@ fun BackupExportDialog(
                                 validationError = passwordMismatchError
                                 return@Button
                             }
-                            onConfirmExport(BackupExportMode.NATIVE_AES_GCM, password, false, false)
+                            onConfirmExport(BackupExportMode.NATIVE_AES_GCM, password, false, false, includeFavorites)
                         }
 
                         BackupExportMode.OPENPGP -> {
-                            onConfirmExport(BackupExportMode.OPENPGP, null, false, signOpenPgp)
+                            onConfirmExport(BackupExportMode.OPENPGP, null, false, signOpenPgp, includeFavorites)
                         }
 
                         BackupExportMode.UNENCRYPTED -> {
-                            onConfirmExport(BackupExportMode.UNENCRYPTED, null, if (hasSensitiveData) sanitize else false, false)
+                            onConfirmExport(BackupExportMode.UNENCRYPTED, null, if (hasSensitiveData) sanitize else false, false, includeFavorites)
                         }
                     }
                 }
@@ -485,3 +527,44 @@ fun BackupRestoreConfirmDialog(
         }
     )
 }
+
+/**
+ * Dialog prompting user to batch download missing favorited wallpapers after restore.
+ */
+@Composable
+fun BackupRestoreMissingFavoritesDialog(
+    missingCount: Int,
+    onDismissRequest: () -> Unit,
+    onConfirmDownload: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        icon = {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(stringResource(R.string.backup_restore_missing_fav_title))
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.backup_restore_missing_fav_desc, missingCount),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(onClick = onConfirmDownload) {
+                Text(stringResource(R.string.backup_restore_missing_fav_btn_download))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(R.string.backup_restore_missing_fav_btn_later))
+            }
+        }
+    )
+}
+

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -52,6 +53,7 @@ import foo.barz.wallpaperpicker.ui.MainUiState
 import foo.barz.wallpaperpicker.ui.components.BackupExportDialog
 import foo.barz.wallpaperpicker.ui.components.BackupExportMode
 import foo.barz.wallpaperpicker.ui.components.BackupRestoreConfirmDialog
+import foo.barz.wallpaperpicker.ui.components.BackupRestoreMissingFavoritesDialog
 import foo.barz.wallpaperpicker.ui.components.BackupRestorePasswordDialog
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -70,11 +72,14 @@ fun StorageSettingsSubPage(
     onOpenManageSpace: () -> Unit,
     hasSensitiveData: Boolean = false,
     isOpenPgpAvailable: Boolean = false,
-    onExportBackup: (Uri, String?, Boolean) -> Unit = { _, _, _ -> },
-    onExportBackupWithOpenPgp: (Uri, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _ -> },
+    onExportBackup: (Uri, String?, Boolean, Boolean) -> Unit = { _, _, _, _ -> },
+    onExportBackupWithOpenPgp: (Uri, Boolean, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _, _ -> },
     onDetectBackupFormat: (Uri) -> BackupFormat = { BackupFormat.PLAINTEXT },
     onRestoreBackup: (Uri, String?) -> Unit = { _, _ -> },
     onRestoreBackupWithOpenPgp: (Uri, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _ -> },
+    onDismissMissingFavoritesPrompt: () -> Unit = {},
+    onConfirmBatchDownloadMissingFavorites: () -> Unit = {},
+    onBatchRedownloadMissingFavorites: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
@@ -82,6 +87,7 @@ fun StorageSettingsSubPage(
     var pendingExportPassword by remember { mutableStateOf<String?>(null) }
     var pendingExportSanitize by remember { mutableStateOf(false) }
     var pendingExportSign by remember { mutableStateOf(false) }
+    var pendingExportIncludeFavorites by remember { mutableStateOf(false) }
 
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
     var showRestorePasswordDialog by remember { mutableStateOf(false) }
@@ -98,10 +104,10 @@ fun StorageSettingsSubPage(
         pendingOpenPgpAction = null
     }
 
-    fun startOpenPgpExport(uri: Uri, sanitize: Boolean, sign: Boolean, resumeIntent: Intent? = null) {
-        onExportBackupWithOpenPgp(uri, sanitize, sign, resumeIntent) { pendingIntent ->
+    fun startOpenPgpExport(uri: Uri, sanitize: Boolean, sign: Boolean, includeFavorites: Boolean, resumeIntent: Intent? = null) {
+        onExportBackupWithOpenPgp(uri, sanitize, sign, includeFavorites, resumeIntent) { pendingIntent ->
             pendingOpenPgpAction = { returnedIntent ->
-                startOpenPgpExport(uri, sanitize, sign, returnedIntent)
+                startOpenPgpExport(uri, sanitize, sign, includeFavorites, returnedIntent)
             }
             openPgpIntentSenderLauncher.launch(
                 IntentSenderRequest.Builder(pendingIntent.intentSender).build()
@@ -126,10 +132,10 @@ fun StorageSettingsSubPage(
         if (uri != null) {
             when (pendingExportMode) {
                 BackupExportMode.NATIVE_AES_GCM, BackupExportMode.UNENCRYPTED -> {
-                    onExportBackup(uri, pendingExportPassword, pendingExportSanitize)
+                    onExportBackup(uri, pendingExportPassword, pendingExportSanitize, pendingExportIncludeFavorites)
                 }
                 BackupExportMode.OPENPGP -> {
-                    startOpenPgpExport(uri, pendingExportSanitize, pendingExportSign)
+                    startOpenPgpExport(uri, pendingExportSanitize, pendingExportSign, pendingExportIncludeFavorites)
                 }
             }
         }
@@ -197,6 +203,38 @@ fun StorageSettingsSubPage(
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
+                }
+
+                if (state.missingFavoritesCount > 0) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.storage_favorites_missing_badge, state.missingFavoritesCount),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        OutlinedButton(
+                            onClick = onBatchRedownloadMissingFavorites,
+                            enabled = !state.isBatchDownloadingFavorites,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            if (state.isBatchDownloadingFavorites) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(12.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                            Text(
+                                text = stringResource(R.string.storage_favorites_btn_redownload),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -354,18 +392,21 @@ fun StorageSettingsSubPage(
         BackupExportDialog(
             hasSensitiveData = hasSensitiveData,
             isOpenPgpAvailable = isOpenPgpAvailable,
+            favoritesCount = state.favoritesList.size,
+            favoritesSizeBytes = state.favoritesSizeBytes,
             onDismissRequest = { showExportDialog = false },
-            onConfirmExport = { mode, password, sanitize, sign ->
+            onConfirmExport = { mode, password, sanitize, sign, includeFavorites ->
                 showExportDialog = false
                 pendingExportMode = mode
                 pendingExportPassword = password
                 pendingExportSanitize = sanitize
                 pendingExportSign = sign
+                pendingExportIncludeFavorites = includeFavorites
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                 val filename = when (mode) {
                     BackupExportMode.NATIVE_AES_GCM -> "wallpaper_picker_$timestamp.wpbak"
                     BackupExportMode.OPENPGP -> "wallpaper_picker_$timestamp.asc"
-                    BackupExportMode.UNENCRYPTED -> "wallpaper_picker_$timestamp.json"
+                    BackupExportMode.UNENCRYPTED -> if (includeFavorites) "wallpaper_picker_$timestamp.zip" else "wallpaper_picker_$timestamp.json"
                 }
                 createDocumentLauncher.launch(filename)
             }
@@ -401,6 +442,14 @@ fun StorageSettingsSubPage(
                 }
                 pendingRestoreUri = null
             }
+        )
+    }
+
+    if (state.showMissingFavoritesPromptCount != null && state.showMissingFavoritesPromptCount > 0) {
+        BackupRestoreMissingFavoritesDialog(
+            missingCount = state.showMissingFavoritesPromptCount,
+            onDismissRequest = onDismissMissingFavoritesPrompt,
+            onConfirmDownload = onConfirmBatchDownloadMissingFavorites
         )
     }
 }

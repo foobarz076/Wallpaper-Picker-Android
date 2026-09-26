@@ -21,6 +21,7 @@ data class BackupHistoryOverride(
     val sourceTitle: String? = null,
     val isFavorite: Boolean = false,
     val favoriteTimestamp: Long? = null,
+    val favoriteFileName: String? = null,
     val customScrollMode: WallpaperScrollMode? = null,
     val cropFocusX: Float? = null,
     val cropFocusY: Float? = null,
@@ -34,6 +35,7 @@ data class BackupHistoryOverride(
         put("sourceTitle", sourceTitle)
         put("isFavorite", isFavorite)
         put("favoriteTimestamp", favoriteTimestamp ?: JSONObject.NULL)
+        put("favoriteFileName", favoriteFileName ?: JSONObject.NULL)
         put("customScrollMode", customScrollMode?.name ?: JSONObject.NULL)
         put("cropFocusX", cropFocusX?.let { it.toDouble() } ?: JSONObject.NULL)
         put("cropFocusY", cropFocusY?.let { it.toDouble() } ?: JSONObject.NULL)
@@ -52,6 +54,7 @@ data class BackupHistoryOverride(
                 sourceTitle = if (!json.isNull("sourceTitle")) json.optString("sourceTitle") else null,
                 isFavorite = json.optBoolean("isFavorite", false),
                 favoriteTimestamp = if (!json.isNull("favoriteTimestamp")) json.optLong("favoriteTimestamp") else null,
+                favoriteFileName = if (!json.isNull("favoriteFileName")) json.optString("favoriteFileName") else null,
                 customScrollMode = scrollModeStr?.let { runCatching { WallpaperScrollMode.valueOf(it) }.getOrNull() },
                 cropFocusX = if (!json.isNull("cropFocusX")) json.optDouble("cropFocusX").toFloat() else null,
                 cropFocusY = if (!json.isNull("cropFocusY")) json.optDouble("cropFocusY").toFloat() else null,

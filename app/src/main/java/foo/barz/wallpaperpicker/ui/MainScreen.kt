@@ -152,12 +152,15 @@ fun MainScreen(
     onPopulateDefaultRules: () -> Unit = {},
     hasSensitiveData: Boolean = false,
     isOpenPgpAvailable: Boolean = false,
-    onExportBackup: (Uri, String?, Boolean) -> Unit = { _, _, _ -> },
-    onExportBackupWithOpenPgp: (Uri, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _ -> },
+    onExportBackup: (Uri, String?, Boolean, Boolean) -> Unit = { _, _, _, _ -> },
+    onExportBackupWithOpenPgp: (Uri, Boolean, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _, _ -> },
     onDetectBackupFormat: (Uri) -> BackupFormat = { BackupFormat.PLAINTEXT },
     onCheckIsEncryptedBackup: (Uri) -> Boolean = { false },
     onRestoreBackup: (Uri, String?) -> Unit = { _, _ -> },
     onRestoreBackupWithOpenPgp: (Uri, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _ -> },
+    onDismissMissingFavoritesPrompt: () -> Unit = {},
+    onConfirmBatchDownloadMissingFavorites: () -> Unit = {},
+    onBatchRedownloadMissingFavorites: () -> Unit = {},
     targetTab: MainTab? = null,
     onTabNavigated: () -> Unit = {},
     onChangeNow: () -> Unit,
@@ -356,7 +359,10 @@ fun MainScreen(
                         onDetectBackupFormat = onDetectBackupFormat,
                         onCheckIsEncryptedBackup = onCheckIsEncryptedBackup,
                         onRestoreBackup = onRestoreBackup,
-                        onRestoreBackupWithOpenPgp = onRestoreBackupWithOpenPgp
+                        onRestoreBackupWithOpenPgp = onRestoreBackupWithOpenPgp,
+                        onDismissMissingFavoritesPrompt = onDismissMissingFavoritesPrompt,
+                        onConfirmBatchDownloadMissingFavorites = onConfirmBatchDownloadMissingFavorites,
+                        onBatchRedownloadMissingFavorites = onBatchRedownloadMissingFavorites
                     )
                 }
             }

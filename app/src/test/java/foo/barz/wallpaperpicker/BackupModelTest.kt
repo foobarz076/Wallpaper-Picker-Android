@@ -336,4 +336,77 @@ class BackupModelTest {
         val plaintextFormat = foo.barz.wallpaperpicker.core.backup.BackupManager.detectBackupFormat(ByteArrayInputStream(plainJson))
         assertEquals(foo.barz.wallpaperpicker.core.backup.BackupFormat.PLAINTEXT, plaintextFormat)
     }
+
+    @Test
+    fun testFavoriteFileNameRoundTrip() {
+        val overrideWithFile = BackupHistoryOverride(
+            sourceUri = "https://example.com/art.jpg",
+            title = "Offline Artwork",
+            sourceType = WallpaperSourceType.HTTP_API,
+            isFavorite = true,
+            favoriteFileName = "fav_123456789.jpg"
+        )
+        val json = overrideWithFile.toJson()
+        val parsed = BackupHistoryOverride.fromJson(json)
+        assertEquals("fav_123456789.jpg", parsed.favoriteFileName)
+        assertEquals("Offline Artwork", parsed.title)
+
+        val overrideWithoutFile = BackupHistoryOverride(
+            sourceUri = "https://example.com/art2.jpg",
+            title = "No File Artwork",
+            sourceType = WallpaperSourceType.HTTP_API,
+            isFavorite = true,
+            favoriteFileName = null
+        )
+        val jsonWithout = overrideWithoutFile.toJson()
+        val parsedWithout = BackupHistoryOverride.fromJson(jsonWithout)
+        assertEquals(null, parsedWithout.favoriteFileName)
+    }
+
+    @Test
+    fun testIsZipStreamDetection() {
+        // Valid ZIP magic header PK\x03\x04
+        val zipHeader = byteArrayOf(0x50, 0x4B, 0x03, 0x04, 0x14, 0x00)
+        assertTrue(foo.barz.wallpaperpicker.core.backup.BackupManager.isZipStream(ByteArrayInputStream(zipHeader)))
+
+        // Non-ZIP bytes
+        val nonZip = byteArrayOf(0x50, 0x4B, 0x05, 0x06)
+        assertFalse(foo.barz.wallpaperpicker.core.backup.BackupManager.isZipStream(ByteArrayInputStream(nonZip)))
+
+        val jsonBytes = "{\"schema\": 1}".toByteArray(Charsets.UTF_8)
+        assertFalse(foo.barz.wallpaperpicker.core.backup.BackupManager.isZipStream(ByteArrayInputStream(jsonBytes)))
+
+        val shortBytes = byteArrayOf(0x50, 0x4B)
+        assertFalse(foo.barz.wallpaperpicker.core.backup.BackupManager.isZipStream(ByteArrayInputStream(shortBytes)))
+    }
+
+    @Test
+    fun testZipArchiveStructure() {
+        val baos = ByteArrayOutputStream()
+        java.util.zip.ZipOutputStream(baos).use { zos ->
+            zos.putNextEntry(java.util.zip.ZipEntry("backup.json"))
+            zos.write("{\"schemaVersion\": 1}".toByteArray(Charsets.UTF_8))
+            zos.closeEntry()
+
+            zos.putNextEntry(java.util.zip.ZipEntry("favorites/test_fav.jpg"))
+            zos.write(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte()))
+            zos.closeEntry()
+        }
+
+        val zipBytes = baos.toByteArray()
+        val inStream = ByteArrayInputStream(zipBytes)
+        assertTrue(foo.barz.wallpaperpicker.core.backup.BackupManager.isZipStream(inStream))
+
+        // Verify entries
+        val entryNames = mutableListOf<String>()
+        java.util.zip.ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
+            var entry = zis.nextEntry
+            while (entry != null) {
+                entryNames.add(entry.name)
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+        }
+        assertEquals(listOf("backup.json", "favorites/test_fav.jpg"), entryNames)
+    }
 }

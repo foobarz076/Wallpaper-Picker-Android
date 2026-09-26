@@ -105,12 +105,15 @@ fun SettingsTab(
     onPopulateDefaultRules: () -> Unit = {},
     hasSensitiveData: Boolean = false,
     isOpenPgpAvailable: Boolean = false,
-    onExportBackup: (android.net.Uri, String?, Boolean) -> Unit = { _, _, _ -> },
-    onExportBackupWithOpenPgp: (android.net.Uri, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _ -> },
+    onExportBackup: (android.net.Uri, String?, Boolean, Boolean) -> Unit = { _, _, _, _ -> },
+    onExportBackupWithOpenPgp: (android.net.Uri, Boolean, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _, _ -> },
     onDetectBackupFormat: (android.net.Uri) -> BackupFormat = { BackupFormat.PLAINTEXT },
     onCheckIsEncryptedBackup: (android.net.Uri) -> Boolean = { false },
     onRestoreBackup: (android.net.Uri, String?) -> Unit = { _, _ -> },
     onRestoreBackupWithOpenPgp: (android.net.Uri, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _ -> },
+    onDismissMissingFavoritesPrompt: () -> Unit = {},
+    onConfirmBatchDownloadMissingFavorites: () -> Unit = {},
+    onBatchRedownloadMissingFavorites: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -239,7 +242,10 @@ fun SettingsTab(
                 onExportBackupWithOpenPgp = onExportBackupWithOpenPgp,
                 onDetectBackupFormat = onDetectBackupFormat,
                 onRestoreBackup = onRestoreBackup,
-                onRestoreBackupWithOpenPgp = onRestoreBackupWithOpenPgp
+                onRestoreBackupWithOpenPgp = onRestoreBackupWithOpenPgp,
+                onDismissMissingFavoritesPrompt = onDismissMissingFavoritesPrompt,
+                onConfirmBatchDownloadMissingFavorites = onConfirmBatchDownloadMissingFavorites,
+                onBatchRedownloadMissingFavorites = onBatchRedownloadMissingFavorites
             )
 
             SettingsSubPage.ABOUT -> AboutSettingsSubPage(

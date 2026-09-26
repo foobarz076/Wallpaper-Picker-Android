@@ -541,6 +541,14 @@
     <string name="backup_restore_confirm_title">Restore Configuration?</string>
     <string name="backup_restore_confirm_msg">Restoring will overwrite existing sources, schedule rules, and app preferences with the backup. Unfavorited history will be kept. Continue?</string>
     <string name="backup_restore_btn_overwrite">Confirm Restore</string>
+    <string name="backup_export_include_favorites_checkbox">Include favorite wallpaper images</string>
+    <string name="backup_export_include_favorites_desc">%1$d favorites (%2$s) will be encrypted into the backup package for offline preservation</string>
+    <string name="backup_restore_missing_fav_title">Redownload Missing Favorites?</string>
+    <string name="backup_restore_missing_fav_desc">Found %1$d favorited wallpapers without local cached files. Would you like to redownload them from the network now?</string>
+    <string name="backup_restore_missing_fav_btn_download">Redownload All</string>
+    <string name="backup_restore_missing_fav_btn_later">Later</string>
+    <string name="storage_favorites_missing_badge">%1$d offline images missing</string>
+    <string name="storage_favorites_btn_redownload">Redownload Missing Favorites</string>
 
     <!-- About Settings SubPage &amp; About Activity -->
     <string name="about_battery_unrestricted_title">Enable Unrestricted Battery for On-Time Rotation</string>

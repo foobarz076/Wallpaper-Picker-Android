@@ -125,6 +125,9 @@ data class MainUiState(
     val isCurrentFavorite: Boolean = false,
     val currentWallpaperItem: WallpaperHistoryItem? = null,
     val favoritesSizeBytes: Long = 0L,
+    val missingFavoritesCount: Int = 0,
+    val isBatchDownloadingFavorites: Boolean = false,
+    val showMissingFavoritesPromptCount: Int? = null,
     val isExportingFavorites: Boolean = false,
     val isRedownloadingHistoryId: Long? = null,
     val sourcesList: List<WallpaperSourceEntity> = emptyList(),
@@ -1126,13 +1129,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         val favDir = File(getApplication<Application>().filesDir, "favorites")
         val favSizeBytes = if (favDir.exists()) favDir.listFiles()?.sumOf { it.length() } ?: 0L else 0L
+        val missingCount = favorites.count { fav ->
+            val missing = fav.favoriteFilePath.isNullOrBlank() || !File(fav.favoriteFilePath).exists()
+            missing && fav.canRedownload
+        }
         _uiState.update {
             it.copy(
                 historyList = history,
                 favoritesList = favorites,
                 isCurrentFavorite = isFav,
                 currentWallpaperItem = currentItem,
-                favoritesSizeBytes = favSizeBytes
+                favoritesSizeBytes = favSizeBytes,
+                missingFavoritesCount = missingCount
             )
         }
     }
@@ -1309,6 +1317,94 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         statusMessage = "重新下载失败: $msg"
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Dismisses the prompt offering to batch download missing favorited wallpapers after restore.
+     */
+    fun dismissMissingFavoritesPrompt() {
+        _uiState.update { it.copy(showMissingFavoritesPromptCount = null) }
+    }
+
+    /**
+     * User confirmation callback to dismiss the prompt and initiate batch redownload.
+     */
+    fun confirmBatchDownloadMissingFavorites() {
+        dismissMissingFavoritesPrompt()
+        batchRedownloadMissingFavorites()
+    }
+
+    /**
+     * Sequentially redownloads all favorited wallpapers that are currently missing locally from cache.
+     */
+    @OptIn(coil.annotation.ExperimentalCoilApi::class)
+    fun batchRedownloadMissingFavorites() {
+        if (_uiState.value.isBatchDownloadingFavorites) return
+        viewModelScope.launch {
+            val favoritesToDownload = withContext(Dispatchers.IO) {
+                historyDb.getFavoritesList().filter { item ->
+                    val localMissing = item.favoriteFilePath.isNullOrBlank() || !File(item.favoriteFilePath).exists()
+                    localMissing && item.canRedownload
+                }
+            }
+            if (favoritesToDownload.isEmpty()) {
+                _uiState.update { it.copy(statusMessage = "没有需要下载的网络收藏壁纸") }
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    isBatchDownloadingFavorites = true,
+                    statusMessage = "准备恢复 ${favoritesToDownload.size} 张收藏壁纸…"
+                )
+            }
+
+            var successCount = 0
+            var failCount = 0
+            favoritesToDownload.forEachIndexed { index, item ->
+                _uiState.update {
+                    it.copy(
+                        statusMessage = "正在恢复收藏原图 (${index + 1}/${favoritesToDownload.size})「${item.title ?: "壁纸"}」…"
+                    )
+                }
+                val res = withContext(Dispatchers.IO) {
+                    runCatching {
+                        executeRedownload(item)
+                    }
+                }
+                res.onSuccess { restoredFile ->
+                    val newUri = Uri.fromFile(restoredFile).toString()
+                    val newFavPath = promoteToPermanentFavorite(Uri.fromFile(restoredFile))
+                    val now = System.currentTimeMillis()
+                    historyDb.updateSourceUri(
+                        id = item.id,
+                        sourceUri = newUri,
+                        remoteUrl = item.remoteUrl ?: if (item.sourceUri.startsWith("http")) item.sourceUri else null,
+                        favoriteFilePath = newFavPath,
+                        downloadTimestamp = now
+                    )
+                    runCatching {
+                        val loader = coil.Coil.imageLoader(getApplication())
+                        loader.diskCache?.remove(newUri)
+                        loader.memoryCache?.remove(coil.memory.MemoryCache.Key(newUri))
+                    }
+                    successCount++
+                }.onFailure {
+                    failCount++
+                }
+            }
+
+            refreshHistoryAndFavorites()
+            _uiState.update {
+                it.copy(
+                    isBatchDownloadingFavorites = false,
+                    statusMessage = buildString {
+                        append("收藏壁纸恢复完成：成功下载 $successCount 张")
+                        if (failCount > 0) append("，失败 $failCount 张")
+                    }
+                )
             }
         }
     }
@@ -1684,7 +1780,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Exports configuration backup to the destination URI.
      */
-    fun exportBackup(uri: Uri, password: String?, sanitize: Boolean) {
+    /**
+     * Exports configuration backup to the destination URI.
+     */
+    fun exportBackup(uri: Uri, password: String?, sanitize: Boolean, includeFavoriteImages: Boolean = false) {
         viewModelScope.launch {
             _uiState.update { it.copy(statusMessage = "正在打包导出配置备份…") }
             val result = withContext(Dispatchers.IO) {
@@ -1692,7 +1791,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val context = getApplication<Application>()
                     val outputStream = context.contentResolver.openOutputStream(uri)
                         ?: throw IOException("无法写入目标文件")
-                    BackupManager.exportBackup(context, outputStream, password, sanitize)
+                    BackupManager.exportBackup(context, outputStream, password, sanitize, includeFavoriteImages)
                 }
             }
             if (result.isSuccess) {
@@ -1776,8 +1875,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     fairShuffleCapacity = prefs.fairShuffleCapacity,
                     cacheSizeTier = prefs.cacheSizeTier,
                     widgetScaleType = prefs.widgetScaleType,
+                    showMissingFavoritesPromptCount = if (result.missingFavoritesCount > 0) result.missingFavoritesCount else null,
                     statusMessage = buildString {
                         append("配置还原成功！已恢复 ${result.restoredSourcesCount} 个图源、${result.restoredRulesCount} 条规则、${result.restoredFavoritesCount} 项偏好记忆。")
+                        if (result.missingFavoritesCount > 0) {
+                            append("（有 ${result.missingFavoritesCount} 个收藏原图未在本地，可一键重新下载）")
+                        }
                         if (extraNotice != null) {
                             append(" ")
                             append(extraNotice)
@@ -1824,6 +1927,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     private var pendingOpenPgpKeyId: Long? = null
     private var pendingOpenPgpSign: Boolean = false
+    private var pendingOpenPgpIncludeFavoriteImages: Boolean = false
 
     /**
      * Guard flag to prevent concurrent bind attempts from overwriting each other's connection.
@@ -1888,11 +1992,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         uri: Uri,
         sanitize: Boolean,
         sign: Boolean = false,
+        includeFavoriteImages: Boolean = false,
         resumeIntent: Intent? = null,
         onInteractionRequired: (PendingIntent) -> Unit
     ) {
         if (resumeIntent == null) {
             pendingOpenPgpSign = sign
+            pendingOpenPgpIncludeFavoriteImages = includeFavoriteImages
         }
         viewModelScope.launch {
             _uiState.update { it.copy(statusMessage = "正在连接 OpenKeychain…") }
@@ -1901,6 +2007,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     viewModelScope.launch {
                         val resolvedKeyId = pendingOpenPgpKeyId
                         val shouldSign = pendingOpenPgpSign
+                        val shouldIncludeFavs = pendingOpenPgpIncludeFavoriteImages
                         if (resolvedKeyId == null) {
                             // Phase 1: resolve the signing key ID
                             val keyResult = withContext(Dispatchers.IO) {
@@ -1920,16 +2027,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     }
                                     pendingOpenPgpKeyId = keyId
                                     // Phase 1 succeeded — immediately proceed to Phase 2
-                                    doOpenPgpEncrypt(api, uri, sanitize, keyId, shouldSign, null, onInteractionRequired)
+                                    doOpenPgpEncrypt(api, uri, sanitize, keyId, shouldSign, shouldIncludeFavs, null, onInteractionRequired)
                                 }
                                 is OpenPgpOperationResult.Error -> {
                                     pendingOpenPgpSign = false
+                                    pendingOpenPgpIncludeFavoriteImages = false
                                     _uiState.update { it.copy(statusMessage = "密钥获取失败: ${keyResult.message}") }
                                 }
                             }
                         } else {
                             // Phase 2: key already resolved, go straight to encryption
-                            doOpenPgpEncrypt(api, uri, sanitize, resolvedKeyId, shouldSign, resumeIntent, onInteractionRequired)
+                            doOpenPgpEncrypt(api, uri, sanitize, resolvedKeyId, shouldSign, shouldIncludeFavs, resumeIntent, onInteractionRequired)
                         }
                     }
                 },
@@ -1946,6 +2054,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         sanitize: Boolean,
         keyId: Long,
         sign: Boolean,
+        includeFavoriteImages: Boolean,
         resumeIntent: Intent?,
         onInteractionRequired: (PendingIntent) -> Unit
     ) {
@@ -1957,21 +2066,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val result = withContext(Dispatchers.IO) {
             runCatching {
                 val context = getApplication<Application>()
-                val payload = BackupManager.buildBackupPayload(context, sanitize)
-                val jsonBytes = payload.toJson().toByteArray(Charsets.UTF_8)
-                val inStream = ByteArrayInputStream(jsonBytes)
+                val payload = BackupManager.buildBackupPayload(context, sanitize, includeFavoriteImages)
                 val outStream = context.contentResolver.openOutputStream(uri)
                     ?: throw IOException("无法写入目标文件")
                 outStream.use { targetOut ->
-                    OpenPgpBackupEngine.executeEncrypt(
-                        api = api,
-                        rawInput = inStream,
-                        encryptedOutput = targetOut,
-                        keyIds = longArrayOf(keyId),
-                        signKeyId = if (sign) keyId else null,
-                        asciiArmor = true,
-                        resumeIntent = resumeIntent
-                    )
+                    if (includeFavoriteImages) {
+                        val tempZip = File.createTempFile("openpgp_backup_", ".zip", context.cacheDir)
+                        try {
+                            tempZip.outputStream().use { fos ->
+                                BackupManager.writeBackupZip(context, fos, payload)
+                            }
+                            tempZip.inputStream().use { inStream ->
+                                OpenPgpBackupEngine.executeEncrypt(
+                                    api = api,
+                                    rawInput = inStream,
+                                    encryptedOutput = targetOut,
+                                    keyIds = longArrayOf(keyId),
+                                    signKeyId = if (sign) keyId else null,
+                                    asciiArmor = true,
+                                    resumeIntent = resumeIntent
+                                )
+                            }
+                        } finally {
+                            tempZip.delete()
+                        }
+                    } else {
+                        val jsonBytes = payload.toJson().toByteArray(Charsets.UTF_8)
+                        val inStream = ByteArrayInputStream(jsonBytes)
+                        OpenPgpBackupEngine.executeEncrypt(
+                            api = api,
+                            rawInput = inStream,
+                            encryptedOutput = targetOut,
+                            keyIds = longArrayOf(keyId),
+                            signKeyId = if (sign) keyId else null,
+                            asciiArmor = true,
+                            resumeIntent = resumeIntent
+                        )
+                    }
                 }
             }.getOrElse { e ->
                 OpenPgpOperationResult.Error(e.message ?: "加密导出失败")
@@ -1982,6 +2113,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is OpenPgpOperationResult.Success -> {
                 pendingOpenPgpKeyId = null
                 pendingOpenPgpSign = false
+                pendingOpenPgpIncludeFavoriteImages = false
                 val msg = if (sign) "已通过 OpenKeychain 成功完成 OpenPGP 签名并加密导出！" else "已通过 OpenKeychain 成功完成 OpenPGP 加密导出！"
                 _uiState.update { it.copy(statusMessage = msg) }
             }
@@ -1992,6 +2124,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is OpenPgpOperationResult.Error -> {
                 pendingOpenPgpKeyId = null
                 pendingOpenPgpSign = false
+                pendingOpenPgpIncludeFavoriteImages = false
                 _uiState.update { it.copy(statusMessage = "OpenKeychain 加密失败: ${result.message}") }
             }
         }
@@ -2036,9 +2169,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                         when (result) {
                             is OpenPgpOperationResult.Success -> {
-                                val jsonStr = decryptedStream.toString(Charsets.UTF_8.name())
+                                val decryptedBytes = decryptedStream.toByteArray()
                                 val restoreResult = withContext(Dispatchers.IO) {
-                                    BackupManager.restoreFromJsonString(getApplication(), jsonStr)
+                                    BackupManager.restoreFromDecryptedStream(getApplication(), ByteArrayInputStream(decryptedBytes))
                                 }
                                 val sigResult = operationResultIntent?.let { intent ->
                                     androidx.core.content.IntentCompat.getParcelableExtra(
@@ -2090,6 +2223,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         openPgpApi = null
         pendingOpenPgpKeyId = null
         pendingOpenPgpSign = false
+        pendingOpenPgpIncludeFavoriteImages = false
         isBindingInProgress = false
         prefs.unregisterOnSharedPreferenceChangeListener(prefChangeListener)
     }
