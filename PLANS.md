@@ -201,6 +201,15 @@
   3. **合规审计与包体成本过高**：需要集成庞大的 GMS/OAuth 依赖（老旧 Android 6.0/精简 ROM 易不兼容），且个人开发者极难通过 Google 的受限敏感权限第三方安全审计（CASA Tier 2）。
   4. **公开分享相册网页爬取不可靠**：解析 `photos.app.goo.gl` 共享网页极易受 Google 前端混淆变更、反爬限流（429）、动态 RPC 截断影响，稳定性极差。
 
+### 5.2 端侧生成式大模型 (On-Device Generative AI / Diffusion Models)
+- **结论**：**永久放弃端侧 AI 文生图模型原生接入**。替代方案统一收拢至 **Phase 2 (通用 HTTP API 图源)** 接入远程云端生图接口。
+- **核心阻碍与废弃理由**：
+  1. **低配设备内存爆炸 (OOM 必发)**：现代移动端扩散模型（如 Mobile Diffusion / On-Device Stable Diffusion）即使经过极限轻量量化，模型权重与运行时显存/内存峰值通常仍需数百 MB 至数 GB，直接击穿本项目基线设备（Android 6.0、1GB~2GB RAM）的物理限制。
+  2. **后台功耗与温升不可承受**：端侧单次推理耗时常达数十秒甚至分钟级，全核 CPU/GPU/NPU 满载。若由 `WorkManager` 或 `AlarmManager` 在后台静默唤醒触发，会导致设备严重发烫与异常掉电，彻底违背本项目“极低功耗、长效稳定静默保活”的核心宗旨。
+  3. **硬件加速跨代断层**：老旧 Android 系统（API 23~28）缺失现代 NNAPI 或 Vulkan 算子支持，模型移植与运行时依赖库体积膨胀剧烈。
+- **云端接入指引**：若用户有 AI 生成图片诉求，完全无需端侧算力承担，直接在 Phase 2 的 `HttpApiSource` 中配置云端生图端点（如自建 ComfyUI / SD-WebUI，或免鉴权 AI 图源如 Pollinations.ai `https://image.pollinations.ai/prompt/...`），由设备发起轻量 HTTP 请求流式下载即可。
+
+
 ---
 
 ## 6. 远期生态与多渠道分发规划 (Phase 5: Future Ecosystem, Distribution & Store Readiness)
@@ -385,4 +394,35 @@
        - 云端缩略图预览与离线缓存一键清理。
    - **向前兼容矩阵预留**：
      - 抽象层保留对 **Synology Photos (群晖相册 API)** 以及通用 **WebDAV 挂载源** 的即插即用扩展槽位，未来新增私有云类型仅需实现元数据提取器。
+
+---
+
+### 6.7 阶段 5.7：程序化生成与算法几何艺术源 (Procedural & Generative Geometric Art Source)
+
+致敬 Android 经典壁纸神器 Tapet。通过纯数学公式、矢量几何与程序化算法，直接在设备端实时生成高品质壁纸，构建无需任何外部素材与网络的“终极自足”图源。
+
+1. **核心价值与设计哲学 (Core Philosophy: Tapet-Style)**：
+   - **0 外部依赖与 0 流量消耗**：不依赖任何网络连接、不占用外部存储，彻底摆脱断网与服务器停机困扰。
+   - **无限分辨率与零 OOM 风险**：纯原生 2D 绘图引擎（`android.graphics.Canvas` / `Paint` / `Path`）驱动，根据设备屏幕物理分辨率（`DisplayMetrics`）精准 1:1 动态光栅化生成，天然避免了大图解码时的内存膨胀与二次裁切损耗。
+   - **极致轻量与极低功耗**：毫秒级渲染完成，包体增量几乎为零，从 Android 6.0 到最新系统绝对通杀。
+   - **数学意义上的无穷组合**：结合随机种子（PRNG Seed）与调色板生成算法，实现理论上永不重复的壁纸流。
+
+2. **视觉风格体系与算法规划 (Generative Styles)**：
+   - **网格渐变 (Mesh Gradient)**：
+     - 在 3x3 或 4x4 网格上随机分布色标控制点，基于双三次样条插值（Bicubic Interpolation）生成柔和、现代的高级弥散渐变，支持联动 Android 12+ Material You 动态壁纸提取色或夜间低饱和度调色板。
+   - **多边形晶格与低多边形 (Low-Poly / Voronoi 泰森多边形)**：
+     - 基于 Delaunay 三角剖分与 Voronoi 图算法，在平面随机扰动撒点并赋予光影梯度，生成极具科技感与立体感的折纸/晶格纹理。
+   - **流体噪声与丝绸波纹 (Perlin / Simplex Noise Flow)**：
+     - 利用二维柏林噪声生成平滑流场，绘制多层半透明丝绸状色带与波浪渐变，呈现极简有机流动视觉。
+   - **孟菲斯与包豪斯几何平铺 (Memphis & Bauhaus Tessellation)**：
+     - 基于网格排布圆形、多边形、折线与条纹图元，引入波普艺术风格的高对比度撞色与几何对称。
+
+3. **运行时管线与架构整合 (Architecture Integration)**：
+   - **实现 `ProceduralGeometrySource` 继承自 `WallpaperSource`**：
+     - 覆写壁纸拉取契约，直接在内部动态创建目标分辨率 Bitmap 并执行 Canvas 绘制流程。
+     - 输出内存流或私有轻量临时文件包装为标准 `WallpaperData`，对现有 `WallpaperProcessor` 与 `WallpaperApplier` 保持 100% 契合与透明。
+   - **双重角色定位**：
+     - **独立激活源**：用户可主动选择为系统壁纸源，配置偏好风格、复杂度因子与明暗基调。
+     - **离线容灾“保底自愈”引擎 (Self-Healing Fallback)**：当配置为网络图源（Immich / HTTP / 私有云）但设备处于飞行模式/断网、且本地 LRU 缓存池已耗尽时，系统可配置自动触发程序化几何源即时生成一张保底壁纸，确保后台定时轮换逻辑永不空转报错。
+
 
