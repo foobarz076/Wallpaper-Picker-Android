@@ -3,6 +3,7 @@ package foo.barz.wallpaperpicker.core.backup
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ResolveInfo
 import foo.barz.wallpaperpicker.core.util.AppLog
 import org.openintents.openpgp.IOpenPgpService2
 import org.openintents.openpgp.OpenPgpError
@@ -35,29 +36,35 @@ object OpenPgpBackupEngine {
      * Checks if OpenKeychain or any compatible OpenPGP provider is installed on the device.
      */
     fun isProviderInstalled(context: Context): Boolean {
-        val intent = Intent(OpenPgpApi.SERVICE_INTENT_2)
-        intent.setPackage(OPENKEYCHAIN_PACKAGE)
-        val packageManager = context.packageManager
-        val list = packageManager.queryIntentServices(intent, 0)
-        if (list.isNotEmpty()) {
-            return true
-        }
-        // Fallback check for any OpenPGP API v2 compatible service
-        val genericList = packageManager.queryIntentServices(Intent(OpenPgpApi.SERVICE_INTENT_2), 0)
-        return genericList.isNotEmpty()
+        return runCatching {
+            val intent = Intent(OpenPgpApi.SERVICE_INTENT_2)
+            intent.setPackage(OPENKEYCHAIN_PACKAGE)
+            val packageManager = context.packageManager
+            val list: List<ResolveInfo>? = packageManager.queryIntentServices(intent, 0)
+            if (!list.isNullOrEmpty()) {
+                return@runCatching true
+            }
+            // Fallback check for any OpenPGP API v2 compatible service
+            val genericList: List<ResolveInfo>? = packageManager.queryIntentServices(Intent(OpenPgpApi.SERVICE_INTENT_2), 0)
+            !genericList.isNullOrEmpty()
+        }.getOrDefault(false)
     }
 
     /**
      * Resolves the primary OpenPGP provider package name.
      */
     fun getProviderPackageName(context: Context): String? {
-        val intent = Intent(OpenPgpApi.SERVICE_INTENT_2)
-        intent.setPackage(OPENKEYCHAIN_PACKAGE)
-        if (context.packageManager.queryIntentServices(intent, 0).isNotEmpty()) {
-            return OPENKEYCHAIN_PACKAGE
-        }
-        val genericList = context.packageManager.queryIntentServices(Intent(OpenPgpApi.SERVICE_INTENT_2), 0)
-        return genericList.firstOrNull()?.serviceInfo?.packageName
+        return runCatching {
+            val intent = Intent(OpenPgpApi.SERVICE_INTENT_2)
+            intent.setPackage(OPENKEYCHAIN_PACKAGE)
+            val packageManager = context.packageManager
+            val list: List<ResolveInfo>? = packageManager.queryIntentServices(intent, 0)
+            if (!list.isNullOrEmpty()) {
+                return@runCatching OPENKEYCHAIN_PACKAGE
+            }
+            val genericList: List<ResolveInfo>? = packageManager.queryIntentServices(Intent(OpenPgpApi.SERVICE_INTENT_2), 0)
+            genericList?.firstOrNull()?.serviceInfo?.packageName
+        }.getOrNull()
     }
 
     /**
