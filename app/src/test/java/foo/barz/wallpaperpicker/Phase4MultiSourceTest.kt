@@ -5,6 +5,14 @@ import foo.barz.wallpaperpicker.core.model.ImmichConfig
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
 import foo.barz.wallpaperpicker.core.model.WallpaperData
+import foo.barz.wallpaperpicker.core.model.CustomPhotosSourceConfig
+import foo.barz.wallpaperpicker.core.model.FavoritesSourceConfig
+import foo.barz.wallpaperpicker.core.model.HttpApiSourceConfig
+import foo.barz.wallpaperpicker.core.model.HttpPresetType
+import foo.barz.wallpaperpicker.core.model.LocalFolderSourceConfig
+import foo.barz.wallpaperpicker.core.model.MediaStoreSourceConfig
+import foo.barz.wallpaperpicker.core.model.WallpaperSourceEntity
+import foo.barz.wallpaperpicker.core.model.isDefaultPreset
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.source.WallpaperSource
 import foo.barz.wallpaperpicker.ui.MainUiState
@@ -299,5 +307,121 @@ class Phase4MultiSourceTest {
         assertEquals(2, parsed.fileNames.size)
         assertEquals("photo1.jpg", parsed.fileNames[0])
         assertEquals("photo2.png", parsed.fileNames[1])
+    }
+
+    @Test
+    fun testIsDefaultPresetDetection() {
+        val defaultMediaStore = WallpaperSourceEntity(
+            type = WallpaperSourceType.MEDIA_STORE,
+            title = "系统相册",
+            isEnabled = false,
+            configJson = MediaStoreSourceConfig(emptySet(), "全部照片 (全库随机)").toJson()
+        )
+        assertTrue(defaultMediaStore.isDefaultPreset())
+
+        val customMediaStore = WallpaperSourceEntity(
+            type = WallpaperSourceType.MEDIA_STORE,
+            title = "相机胶卷",
+            isEnabled = true,
+            configJson = MediaStoreSourceConfig(setOf("bucket_camera"), "相机").toJson()
+        )
+        assertFalse(customMediaStore.isDefaultPreset())
+
+        val defaultBing = WallpaperSourceEntity(
+            type = WallpaperSourceType.HTTP_API,
+            title = "Bing 每日壁纸",
+            isEnabled = false,
+            configJson = HttpApiSourceConfig(preset = HttpPresetType.BING).toJson()
+        )
+        assertTrue(defaultBing.isDefaultPreset())
+
+        val customHttp = WallpaperSourceEntity(
+            type = WallpaperSourceType.HTTP_API,
+            title = "Custom API",
+            isEnabled = true,
+            configJson = HttpApiSourceConfig(preset = HttpPresetType.CUSTOM, customUrl = "https://api.example.com").toJson()
+        )
+        assertFalse(customHttp.isDefaultPreset())
+
+        val defaultFavorites = WallpaperSourceEntity(
+            type = WallpaperSourceType.FAVORITES,
+            title = "我的收藏",
+            isEnabled = false,
+            configJson = FavoritesSourceConfig().toJson()
+        )
+        assertTrue(defaultFavorites.isDefaultPreset())
+
+        val localFolder = WallpaperSourceEntity(
+            type = WallpaperSourceType.LOCAL_FOLDER,
+            title = "Wallpapers",
+            isEnabled = true,
+            configJson = LocalFolderSourceConfig("content://sample/folder", "Wallpapers").toJson()
+        )
+        assertFalse(localFolder.isDefaultPreset())
+
+        val customPhotos = WallpaperSourceEntity(
+            type = WallpaperSourceType.CUSTOM_PHOTOS,
+            title = "My Photos",
+            isEnabled = true,
+            configJson = CustomPhotosSourceConfig().toJson()
+        )
+        assertFalse(customPhotos.isDefaultPreset())
+    }
+
+    @Test
+    fun testFreshInstallOnboardingVisibility() {
+        val defaultPresets = listOf(
+            WallpaperSourceEntity(
+                type = WallpaperSourceType.MEDIA_STORE,
+                title = "系统相册",
+                isEnabled = false,
+                configJson = MediaStoreSourceConfig().toJson()
+            ),
+            WallpaperSourceEntity(
+                type = WallpaperSourceType.HTTP_API,
+                title = "Bing 每日壁纸",
+                isEnabled = false,
+                configJson = HttpApiSourceConfig(preset = HttpPresetType.BING).toJson()
+            ),
+            WallpaperSourceEntity(
+                type = WallpaperSourceType.FAVORITES,
+                title = "我的收藏",
+                isEnabled = false,
+                configJson = FavoritesSourceConfig().toJson()
+            )
+        )
+
+        // Case 1: Fresh install state with unconfigured, disabled default presets
+        val freshState = MainUiState(
+            sourcesList = defaultPresets,
+            lastWallpaperUri = null,
+            folderUri = null,
+            hasUserAddedSource = false
+        )
+        assertTrue(freshState.isOnboardingRestoreVisible)
+
+        // Case 2: User enables one of the presets
+        val presetEnabledState = freshState.copy(
+            sourcesList = defaultPresets.mapIndexed { idx, src ->
+                if (idx == 1) src.copy(isEnabled = true) else src
+            }
+        )
+        assertFalse(presetEnabledState.isOnboardingRestoreVisible)
+
+        // Case 3: User adds a custom source
+        val addedSource = WallpaperSourceEntity(
+            type = WallpaperSourceType.LOCAL_FOLDER,
+            title = "Local",
+            isEnabled = true,
+            configJson = LocalFolderSourceConfig("uri", "Local").toJson()
+        )
+        val customSourceState = freshState.copy(
+            sourcesList = defaultPresets + addedSource
+        )
+        assertFalse(customSourceState.isOnboardingRestoreVisible)
+
+        // Case 4: hasUserAddedSource is explicitly flagged
+        val flaggedState = freshState.copy(hasUserAddedSource = true)
+        assertFalse(flaggedState.isOnboardingRestoreVisible)
     }
 }

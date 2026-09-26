@@ -505,6 +505,7 @@ private fun SourceConfigScreen(
                                     configJson = configJson
                                 )
                                 db.insertSource(newSource)
+                                foo.barz.wallpaperpicker.data.PreferencesManager(context).hasUserAddedSource = true
                             }
                             onFinish()
                         },

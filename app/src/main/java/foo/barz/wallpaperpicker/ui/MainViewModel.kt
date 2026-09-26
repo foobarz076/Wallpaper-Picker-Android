@@ -45,6 +45,7 @@ import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
 import foo.barz.wallpaperpicker.core.model.WidgetScaleType
+import foo.barz.wallpaperpicker.core.model.isDefaultPreset
 import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
 import foo.barz.wallpaperpicker.core.source.ImmichSource
 import foo.barz.wallpaperpicker.core.source.MediaStoreSource
@@ -164,8 +165,22 @@ data class MainUiState(
     val scheduleRules: List<ScheduleRule> = emptyList(),
     val isRuleDialogOpen: Boolean = false,
     val editingRule: ScheduleRule? = null,
-    val statusMessage: String? = null
-)
+    val statusMessage: String? = null,
+    val hasUserAddedSource: Boolean = false
+) {
+    /**
+     * Determines whether the app is in fresh-install onboarding state.
+     * Hidden once user has added a source, enabled a source, configured a folder,
+     * or switched their first wallpaper.
+     */
+    val isOnboardingRestoreVisible: Boolean
+        get() = !hasUserAddedSource &&
+            lastWallpaperUri == null &&
+            folderUri == null &&
+            sourcesList.none { it.isEnabled } &&
+            sourcesList.all { it.isDefaultPreset() } &&
+            sourcesList.size <= 3
+}
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -233,7 +248,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             quietHoursEndMinute = prefs.quietHoursEndMinute,
             cooldownSuppressionEnabled = prefs.cooldownSuppressionEnabled,
             cooldownMinutes = prefs.cooldownMinutes,
-            ruleEngineEnabled = prefs.ruleEngineEnabled
+            ruleEngineEnabled = prefs.ruleEngineEnabled,
+            hasUserAddedSource = prefs.hasUserAddedSource
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -288,7 +304,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val list = withContext(Dispatchers.IO) {
                 sourcesDb.getAllSources()
             }
-            _uiState.update { it.copy(sourcesList = list) }
+            val hasAdded = prefs.hasUserAddedSource || list.any { !it.isDefaultPreset() } || list.size > 3
+            if (hasAdded && !prefs.hasUserAddedSource) {
+                prefs.hasUserAddedSource = true
+            }
+            _uiState.update { it.copy(sourcesList = list, hasUserAddedSource = hasAdded) }
         }
     }
 
@@ -1863,11 +1883,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun handleRestoreResult(result: RestoreResult, extraNotice: String? = null) {
         if (result.success) {
+            prefs.hasUserAddedSource = true
             reloadSources()
             loadScheduleRules()
             refreshHistoryAndFavorites()
             _uiState.update {
                 it.copy(
+                    hasUserAddedSource = true,
                     sourceType = prefs.sourceType,
                     target = prefs.target,
                     scrollMode = prefs.scrollMode,

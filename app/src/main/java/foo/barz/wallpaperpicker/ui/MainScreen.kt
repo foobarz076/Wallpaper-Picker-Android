@@ -1,9 +1,17 @@
 package foo.barz.wallpaperpicker.ui
 
+import android.app.Activity
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import foo.barz.wallpaperpicker.core.backup.BackupFormat
+import foo.barz.wallpaperpicker.ui.components.BackupRestoreConfirmDialog
+import foo.barz.wallpaperpicker.ui.components.BackupRestoreMissingFavoritesDialog
+import foo.barz.wallpaperpicker.ui.components.BackupRestorePasswordDialog
+import foo.barz.wallpaperpicker.ui.components.BackupRestoreSummaryDialog
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -172,6 +180,54 @@ fun MainScreen(
     var settingsSubPage by rememberSaveable { mutableStateOf<SettingsSubPage?>(null) }
     var isHistorySheetOpen by remember { mutableStateOf(false) }
 
+    var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
+    var showRestorePasswordDialog by remember { mutableStateOf(false) }
+    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
+    var pendingOpenPgpRestoreAction by remember { mutableStateOf<((Intent?) -> Unit)?>(null) }
+
+    val openPgpRestoreIntentSenderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { activityResult ->
+        if (activityResult.resultCode == Activity.RESULT_OK) {
+            pendingOpenPgpRestoreAction?.invoke(activityResult.data)
+        }
+        pendingOpenPgpRestoreAction = null
+    }
+
+    fun startOpenPgpRestore(uri: Uri, resumeIntent: Intent? = null) {
+        onRestoreBackupWithOpenPgp(uri, resumeIntent) { pendingIntent ->
+            pendingOpenPgpRestoreAction = { returnedIntent ->
+                startOpenPgpRestore(uri, returnedIntent)
+            }
+            openPgpRestoreIntentSenderLauncher.launch(
+                IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+            )
+        }
+    }
+
+    val openDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            pendingRestoreUri = uri
+            when (onDetectBackupFormat(uri)) {
+                BackupFormat.NATIVE_ENCRYPTED -> {
+                    showRestorePasswordDialog = true
+                }
+                BackupFormat.OPENPGP -> {
+                    startOpenPgpRestore(uri)
+                }
+                BackupFormat.PLAINTEXT -> {
+                    showRestoreConfirmDialog = true
+                }
+            }
+        }
+    }
+
+    val requestRestoreBackup: () -> Unit = {
+        openDocumentLauncher.launch(arrayOf("*/*"))
+    }
+
     LaunchedEffect(targetTab) {
         if (targetTab != null) {
             selectedTab = targetTab
@@ -286,7 +342,12 @@ fun MainScreen(
                         onSaveToGallery = onSaveToGallery,
                         onToggleFavoriteCurrent = onToggleFavoriteCurrent,
                         onUpdateCurrentWallpaperPreferences = onUpdateCurrentWallpaperPreferences,
-                        onChangeNow = onChangeNow
+                        onChangeNow = onChangeNow,
+                        onNavigateToSources = {
+                            selectedTab = MainTab.SOURCES
+                            settingsSubPage = null
+                        },
+                        onRequestRestoreBackup = requestRestoreBackup
                     )
 
                     MainTab.HISTORY -> HistoryTab(
@@ -368,10 +429,64 @@ fun MainScreen(
                         onNavigateToSources = {
                             selectedTab = MainTab.SOURCES
                             settingsSubPage = null
-                        }
+                        },
+                        onRequestRestoreBackup = requestRestoreBackup
                     )
                 }
             }
         }
+    }
+
+    if (showRestorePasswordDialog) {
+        BackupRestorePasswordDialog(
+            onDismissRequest = {
+                showRestorePasswordDialog = false
+                pendingRestoreUri = null
+            },
+            onConfirmRestore = { password ->
+                showRestorePasswordDialog = false
+                pendingRestoreUri?.let { uri ->
+                    onRestoreBackup(uri, password)
+                }
+                pendingRestoreUri = null
+            }
+        )
+    }
+
+    if (showRestoreConfirmDialog) {
+        BackupRestoreConfirmDialog(
+            onDismissRequest = {
+                showRestoreConfirmDialog = false
+                pendingRestoreUri = null
+            },
+            onConfirmRestore = {
+                showRestoreConfirmDialog = false
+                pendingRestoreUri?.let { uri ->
+                    onRestoreBackup(uri, null)
+                }
+                pendingRestoreUri = null
+            }
+        )
+    }
+
+    if (state.restoreSummary != null) {
+        BackupRestoreSummaryDialog(
+            summary = state.restoreSummary,
+            onDismissRequest = onDismissRestoreSummary,
+            onNavigateToSources = {
+                onDismissRestoreSummary()
+                selectedTab = MainTab.SOURCES
+                settingsSubPage = null
+            },
+            onBatchDownloadFavorites = {
+                onConfirmBatchDownloadMissingFavorites()
+            }
+        )
+    } else if (state.showMissingFavoritesPromptCount != null && state.showMissingFavoritesPromptCount > 0) {
+        BackupRestoreMissingFavoritesDialog(
+            missingCount = state.showMissingFavoritesPromptCount,
+            onDismissRequest = onDismissMissingFavoritesPrompt,
+            onConfirmDownload = onConfirmBatchDownloadMissingFavorites
+        )
     }
 }

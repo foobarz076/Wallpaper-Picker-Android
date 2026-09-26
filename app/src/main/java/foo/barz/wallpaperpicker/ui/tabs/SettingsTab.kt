@@ -116,6 +116,7 @@ fun SettingsTab(
     onBatchRedownloadMissingFavorites: () -> Unit = {},
     onDismissRestoreSummary: () -> Unit = {},
     onNavigateToSources: () -> Unit = {},
+    onRequestRestoreBackup: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -184,7 +185,8 @@ fun SettingsTab(
             null -> SettingsRootContent(
                 state = state,
                 isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
-                onNavigateToSubPage = navigate
+                onNavigateToSubPage = navigate,
+                onRequestRestoreBackup = onRequestRestoreBackup
             )
 
             SettingsSubPage.DISPLAY -> DisplaySettingsSubPage(
@@ -249,7 +251,8 @@ fun SettingsTab(
                 onConfirmBatchDownloadMissingFavorites = onConfirmBatchDownloadMissingFavorites,
                 onBatchRedownloadMissingFavorites = onBatchRedownloadMissingFavorites,
                 onDismissRestoreSummary = onDismissRestoreSummary,
-                onNavigateToSources = onNavigateToSources
+                onNavigateToSources = onNavigateToSources,
+                onRequestRestoreBackup = onRequestRestoreBackup
             )
 
             SettingsSubPage.ABOUT -> AboutSettingsSubPage(

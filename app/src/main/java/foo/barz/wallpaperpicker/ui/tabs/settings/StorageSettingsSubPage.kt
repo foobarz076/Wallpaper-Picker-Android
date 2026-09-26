@@ -53,10 +53,6 @@ import foo.barz.wallpaperpicker.ui.MainUiState
 import foo.barz.wallpaperpicker.ui.components.BackupExportDialog
 import foo.barz.wallpaperpicker.ui.components.BackupExportMode
 import foo.barz.wallpaperpicker.ui.components.BackupExportSheet
-import foo.barz.wallpaperpicker.ui.components.BackupRestoreConfirmDialog
-import foo.barz.wallpaperpicker.ui.components.BackupRestoreMissingFavoritesDialog
-import foo.barz.wallpaperpicker.ui.components.BackupRestorePasswordDialog
-import foo.barz.wallpaperpicker.ui.components.BackupRestoreSummaryDialog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -84,6 +80,7 @@ fun StorageSettingsSubPage(
     onBatchRedownloadMissingFavorites: () -> Unit = {},
     onDismissRestoreSummary: () -> Unit = {},
     onNavigateToSources: () -> Unit = {},
+    onRequestRestoreBackup: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
@@ -92,10 +89,6 @@ fun StorageSettingsSubPage(
     var pendingExportSanitize by remember { mutableStateOf(false) }
     var pendingExportSign by remember { mutableStateOf(false) }
     var pendingExportIncludeFavorites by remember { mutableStateOf(false) }
-
-    var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
-    var showRestorePasswordDialog by remember { mutableStateOf(false) }
-    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
 
     var pendingOpenPgpAction by remember { mutableStateOf<((Intent?) -> Unit)?>(null) }
 
@@ -119,17 +112,6 @@ fun StorageSettingsSubPage(
         }
     }
 
-    fun startOpenPgpRestore(uri: Uri, resumeIntent: Intent? = null) {
-        onRestoreBackupWithOpenPgp(uri, resumeIntent) { pendingIntent ->
-            pendingOpenPgpAction = { returnedIntent ->
-                startOpenPgpRestore(uri, returnedIntent)
-            }
-            openPgpIntentSenderLauncher.launch(
-                IntentSenderRequest.Builder(pendingIntent.intentSender).build()
-            )
-        }
-    }
-
     val createDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
@@ -140,25 +122,6 @@ fun StorageSettingsSubPage(
                 }
                 BackupExportMode.OPENPGP -> {
                     startOpenPgpExport(uri, pendingExportSanitize, pendingExportSign, pendingExportIncludeFavorites)
-                }
-            }
-        }
-    }
-
-    val openDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            pendingRestoreUri = uri
-            when (onDetectBackupFormat(uri)) {
-                BackupFormat.NATIVE_ENCRYPTED -> {
-                    showRestorePasswordDialog = true
-                }
-                BackupFormat.OPENPGP -> {
-                    startOpenPgpRestore(uri)
-                }
-                BackupFormat.PLAINTEXT -> {
-                    showRestoreConfirmDialog = true
                 }
             }
         }
@@ -373,7 +336,7 @@ fun StorageSettingsSubPage(
                     }
 
                     OutlinedButton(
-                        onClick = { openDocumentLauncher.launch(arrayOf("*/*")) },
+                        onClick = onRequestRestoreBackup,
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
                     ) {
@@ -414,58 +377,6 @@ fun StorageSettingsSubPage(
                 }
                 createDocumentLauncher.launch(filename)
             }
-        )
-    }
-
-    if (showRestorePasswordDialog) {
-        BackupRestorePasswordDialog(
-            onDismissRequest = {
-                showRestorePasswordDialog = false
-                pendingRestoreUri = null
-            },
-            onConfirmRestore = { password ->
-                showRestorePasswordDialog = false
-                pendingRestoreUri?.let { uri ->
-                    onRestoreBackup(uri, password)
-                }
-                pendingRestoreUri = null
-            }
-        )
-    }
-
-    if (showRestoreConfirmDialog) {
-        BackupRestoreConfirmDialog(
-            onDismissRequest = {
-                showRestoreConfirmDialog = false
-                pendingRestoreUri = null
-            },
-            onConfirmRestore = {
-                showRestoreConfirmDialog = false
-                pendingRestoreUri?.let { uri ->
-                    onRestoreBackup(uri, null)
-                }
-                pendingRestoreUri = null
-            }
-        )
-    }
-
-    if (state.restoreSummary != null) {
-        BackupRestoreSummaryDialog(
-            summary = state.restoreSummary,
-            onDismissRequest = onDismissRestoreSummary,
-            onNavigateToSources = {
-                onDismissRestoreSummary()
-                onNavigateToSources()
-            },
-            onBatchDownloadFavorites = {
-                onConfirmBatchDownloadMissingFavorites()
-            }
-        )
-    } else if (state.showMissingFavoritesPromptCount != null && state.showMissingFavoritesPromptCount > 0) {
-        BackupRestoreMissingFavoritesDialog(
-            missingCount = state.showMissingFavoritesPromptCount,
-            onDismissRequest = onDismissMissingFavoritesPrompt,
-            onConfirmDownload = onConfirmBatchDownloadMissingFavorites
         )
     }
 }

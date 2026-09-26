@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,6 +43,7 @@ fun SettingsRootContent(
     state: MainUiState,
     isIgnoringBatteryOptimizations: Boolean,
     onNavigateToSubPage: (SettingsSubPage) -> Unit,
+    onRequestRestoreBackup: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -52,6 +54,48 @@ fun SettingsRootContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Spacer(modifier = Modifier.height(4.dp))
+
+        // Fresh install onboarding banner to guide user to restore backup
+        if (state.isOnboardingRestoreVisible) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onRequestRestoreBackup() },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.SettingsBackupRestore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.settings_onboarding_restore_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_onboarding_restore_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
 
         // Compact Battery Warning Banner if optimizations are not yet exempted
         if (!isIgnoringBatteryOptimizations) {

@@ -563,6 +563,12 @@
     <string name="backup_restore_fav_missing_desc">Original images are missing locally. You can batch redownload them from the network now to ensure full offline access.</string>
     <string name="backup_restore_fav_btn_batch_download">Redownload All</string>
     <string name="backup_restore_btn_done">Done</string>
+    <string name="dash_onboarding_title">Welcome to Wallpaper Carousel</string>
+    <string name="dash_onboarding_desc">Moving to a new phone? Restore your configuration and favorite wallpapers, or add your first source to get started.</string>
+    <string name="dash_onboarding_btn_restore">Restore Backup</string>
+    <string name="dash_onboarding_btn_add_source">Add Source</string>
+    <string name="settings_onboarding_restore_title">Moving to a new device?</string>
+    <string name="settings_onboarding_restore_desc">One-tap restore your wallpaper sources, rules, and preferences from a backup file.</string>
 
     <!-- About Settings SubPage &amp; About Activity -->
     <string name="about_battery_unrestricted_title">Enable Unrestricted Battery for On-Time Rotation</string>

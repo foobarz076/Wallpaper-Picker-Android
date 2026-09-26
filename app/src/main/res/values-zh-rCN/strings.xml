@@ -562,6 +562,12 @@
     <string name="backup_restore_fav_missing_desc">本地暂无原图缓存。建议立即从网络图源批量重新拉取，以保障离线完整查看。</string>
     <string name="backup_restore_fav_btn_batch_download">一键批量下载</string>
     <string name="backup_restore_btn_done">完成</string>
+    <string name="dash_onboarding_title">欢迎使用壁纸轮播</string>
+    <string name="dash_onboarding_desc">新设备换机？可直接导入旧手机的配置与收藏备份，或添加您的第一个壁纸源开始体验。</string>
+    <string name="dash_onboarding_btn_restore">从备份还原</string>
+    <string name="dash_onboarding_btn_add_source">添加图源</string>
+    <string name="settings_onboarding_restore_title">在新设备上使用？</string>
+    <string name="settings_onboarding_restore_desc">可从已有备份文件一键恢复所有图源、轮播规则与收藏偏好。</string>
 
     <!-- About Settings SubPage &amp; About Activity -->
     <string name="about_battery_unrestricted_title">开启电池无限制以保障准时更换</string>

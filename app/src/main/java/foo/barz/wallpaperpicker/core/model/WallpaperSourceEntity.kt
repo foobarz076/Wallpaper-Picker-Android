@@ -231,3 +231,21 @@ data class CustomPhotosSourceConfig(
         }
     }
 }
+
+/**
+ * Determines whether this source represents an unconfigured, default system preset populated on fresh install.
+ */
+fun WallpaperSourceEntity.isDefaultPreset(): Boolean {
+    return when (type) {
+        WallpaperSourceType.FAVORITES -> true
+        WallpaperSourceType.HTTP_API -> {
+            val config = HttpApiSourceConfig.fromJson(configJson)
+            config.preset == HttpPresetType.BING && config.customUrl.isBlank()
+        }
+        WallpaperSourceType.MEDIA_STORE -> {
+            val config = MediaStoreSourceConfig.fromJson(configJson)
+            config.albumIds.isEmpty()
+        }
+        else -> false
+    }
+}

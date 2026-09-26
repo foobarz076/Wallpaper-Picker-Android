@@ -426,6 +426,10 @@ class PreferencesManager(context: Context) {
         ruleEngineEnabled = bp.ruleEngineEnabled
     }
 
+    var hasUserAddedSource: Boolean
+        get() = prefs.getBoolean(KEY_HAS_USER_ADDED_SOURCE, false)
+        set(value) = prefs.edit().putBoolean(KEY_HAS_USER_ADDED_SOURCE, value).apply()
+
     fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         prefs.registerOnSharedPreferenceChangeListener(listener)
     }
@@ -490,6 +494,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_SCREEN_OFF_TRIGGER_ENABLED = "screen_off_trigger_enabled"
         private const val KEY_SCREEN_OFF_DELAY_SECONDS = "screen_off_delay_seconds"
         private const val KEY_RULE_ENGINE_ENABLED = "rule_engine_enabled"
+        private const val KEY_HAS_USER_ADDED_SOURCE = "has_user_added_source"
     }
 }
 
