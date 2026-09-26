@@ -36,7 +36,9 @@ import foo.barz.wallpaperpicker.core.model.WallpaperSourceEntity
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
+import foo.barz.wallpaperpicker.core.model.ImmichSourceConfig
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
+import foo.barz.wallpaperpicker.core.network.HttpClientProvider
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
@@ -1312,11 +1314,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun executeRedownload(item: WallpaperHistoryItem): File {
-        val client = OkHttpClient.Builder()
-            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
-
         val remoteUrl = item.remoteUrl ?: item.sourceUri
 
         if (remoteUrl.startsWith("immich://") || item.sourceType == WallpaperSourceType.IMMICH) {
@@ -1333,11 +1330,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val quality = runCatching { ImmichQuality.valueOf(qualityParam) }
                 .getOrDefault(ImmichQuality.ORIGINAL)
 
-            val baseUrl = prefs.immichServerUrl.trim().removeSuffix("/")
-            val apiKey = prefs.immichApiKey.trim()
-            if (baseUrl.isBlank()) {
-                throw IllegalStateException("未配置 Immich 服务器地址，请在设置中配置后再试")
+            // Resolve Immich configuration from WallpaperSourcesDatabase first, then fallback to PreferencesManager
+            val immichSources = sourcesDb.getAllSources().filter { it.type == WallpaperSourceType.IMMICH }
+            val matchedEntity = immichSources.firstOrNull {
+                !item.sourceTitle.isNullOrBlank() && it.title.equals(item.sourceTitle, ignoreCase = true)
+            } ?: immichSources.firstOrNull { it.isEnabled } ?: immichSources.firstOrNull()
+
+            val immichConfig = matchedEntity?.let {
+                ImmichSourceConfig.fromJson(it.configJson)
             }
+
+            val baseUrl = (immichConfig?.serverUrl?.takeIf { it.isNotBlank() } ?: prefs.immichServerUrl)
+                .trim().removeSuffix("/")
+            val apiKey = (immichConfig?.apiKey?.takeIf { it.isNotBlank() } ?: prefs.immichApiKey)
+                .trim()
+            val ignoreSsl = immichConfig?.ignoreSsl ?: prefs.immichIgnoreSsl
+
+            if (baseUrl.isBlank()) {
+                throw IllegalStateException("未配置 Immich 服务器地址，请在图源管理或设置中配置后再试")
+            }
+
+            val client = HttpClientProvider.getClient(ignoreSsl)
 
             val url = if (quality == ImmichQuality.ORIGINAL) {
                 "$baseUrl/api/assets/$assetId/original"
@@ -1356,11 +1369,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (!response.isSuccessful) {
                 response.close()
                 val fallbackUrl = "$baseUrl/api/assets/$assetId/original"
-                val fallbackResp = client.newCall(buildReq(fallbackUrl)).execute()
+                var fallbackResp = client.newCall(buildReq(fallbackUrl)).execute()
+                if (!fallbackResp.isSuccessful && fallbackResp.code == 404) {
+                    fallbackResp.close()
+                    val legacyUrl = "$baseUrl/api/asset/file/$assetId"
+                    fallbackResp = client.newCall(buildReq(legacyUrl)).execute()
+                }
                 if (!fallbackResp.isSuccessful) {
                     val code = fallbackResp.code
+                    val errMsg = fallbackResp.body?.string()?.take(200)
                     fallbackResp.close()
-                    throw IOException("从 Immich 下载原图失败: HTTP $code")
+                    throw IOException("从 Immich 下载原图失败: HTTP $code ($errMsg)")
                 }
                 response = fallbackResp
             }
@@ -1373,6 +1392,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         } else if (remoteUrl.startsWith("http://") || remoteUrl.startsWith("https://")) {
+            val client = HttpClientProvider.client
             val request = Request.Builder()
                 .url(remoteUrl)
                 .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
