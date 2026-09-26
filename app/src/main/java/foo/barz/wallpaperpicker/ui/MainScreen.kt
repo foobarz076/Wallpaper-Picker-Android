@@ -12,8 +12,11 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -47,6 +50,7 @@ import foo.barz.wallpaperpicker.ui.tabs.HistoryTab
 import foo.barz.wallpaperpicker.ui.tabs.MainTab
 import foo.barz.wallpaperpicker.ui.tabs.SettingsTab
 import foo.barz.wallpaperpicker.ui.tabs.SourcesTab
+import foo.barz.wallpaperpicker.ui.tabs.settings.SettingsSubPage
 
 /**
  * Root screen orchestrating top-level scaffold, top app bar, navigation bar, and tab routing.
@@ -149,11 +153,13 @@ fun MainScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.DASHBOARD) }
+    var settingsSubPage by rememberSaveable { mutableStateOf<SettingsSubPage?>(null) }
     var isHistorySheetOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(targetTab) {
         if (targetTab != null) {
             selectedTab = targetTab
+            settingsSubPage = null
             onTabNavigated()
         }
     }
@@ -170,8 +176,13 @@ fun MainScreen(
         topBar = {
             TopAppBar(
                 title = {
+                    val currentTitle = if (selectedTab == MainTab.SETTINGS && settingsSubPage != null) {
+                        settingsSubPage!!.title
+                    } else {
+                        selectedTab.title
+                    }
                     AnimatedContent(
-                        targetState = selectedTab.title,
+                        targetState = currentTitle,
                         transitionSpec = {
                             fadeIn(animationSpec = tween(durationMillis = 200)) togetherWith
                                 fadeOut(animationSpec = tween(durationMillis = 150))
@@ -179,6 +190,16 @@ fun MainScreen(
                         label = "TopAppBarTitleAnimation"
                     ) { title ->
                         Text(title)
+                    }
+                },
+                navigationIcon = {
+                    if (selectedTab == MainTab.SETTINGS && settingsSubPage != null) {
+                        IconButton(onClick = { settingsSubPage = null }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回设置"
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -193,7 +214,12 @@ fun MainScreen(
                 MainTab.values().forEach { tab ->
                     NavigationBarItem(
                         selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
+                        onClick = {
+                            selectedTab = tab
+                            if (tab != MainTab.SETTINGS) {
+                                settingsSubPage = null
+                            }
+                        },
                         icon = { Icon(tab.icon, contentDescription = tab.title) },
                         label = { Text(tab.title) }
                     )
@@ -272,6 +298,8 @@ fun MainScreen(
 
                     MainTab.SETTINGS -> SettingsTab(
                         state = state,
+                        currentSubPage = settingsSubPage,
+                        onNavigateToSubPage = { settingsSubPage = it },
                         onTargetSelected = onTargetSelected,
                         onCropModeSelected = onCropModeSelected,
                         onScrollModeSelected = onScrollModeSelected,
