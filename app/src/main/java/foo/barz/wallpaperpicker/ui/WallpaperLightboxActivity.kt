@@ -231,7 +231,7 @@ class WallpaperLightboxActivity : ComponentActivity() {
                                         if (applyImmediately) {
                                             val processor = WallpaperProcessor(applicationContext)
                                             val applier = WallpaperApplier(applicationContext)
-                                            val processResult = processor.process(
+                                            val processResult = processor.processForTarget(
                                                 openStream = {
                                                     if (uri.scheme == "file") {
                                                         FileInputStream(File(uri.path!!))
@@ -240,14 +240,16 @@ class WallpaperLightboxActivity : ComponentActivity() {
                                                             ?: throw FileNotFoundException("无法打开图片流: $uri")
                                                     }
                                                 },
+                                                target = prefs.target,
                                                 scrollMode = customScrollMode ?: prefs.scrollMode,
                                                 cropMode = prefs.cropMode,
                                                 cropFocusX = cropFocusX ?: 0.5f,
                                                 cropFocusY = cropFocusY ?: 0.5f,
-                                                flipHorizontal = flipHorizontal
+                                                flipHorizontal = flipHorizontal,
+                                                lockScreenStrategy = prefs.lockScreenStrategy
                                             )
                                             if (processResult.isSuccess) {
-                                                applier.apply(processResult.getOrThrow(), prefs.target)
+                                                applier.apply(processResult.getOrThrow())
                                             }
                                         }
                                     }

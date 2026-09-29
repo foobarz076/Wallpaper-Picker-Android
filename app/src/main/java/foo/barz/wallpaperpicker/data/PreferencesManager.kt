@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
+import foo.barz.wallpaperpicker.core.model.LockScreenStrategy
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
 import foo.barz.wallpaperpicker.core.worker.CompositeTriggerHelper
@@ -45,6 +46,13 @@ class PreferencesManager(context: Context) {
                 .getOrDefault(foo.barz.wallpaperpicker.core.model.WallpaperCropMode.FIT_HEIGHT)
         }
         set(value) = prefs.edit().putString(KEY_CROP_MODE, value.name).apply()
+
+    var lockScreenStrategy: LockScreenStrategy
+        get() {
+            val name = prefs.getString(KEY_LOCK_SCREEN_STRATEGY, LockScreenStrategy.INDEPENDENT_CENTERED.name)
+            return runCatching { LockScreenStrategy.valueOf(name!!) }.getOrDefault(LockScreenStrategy.INDEPENDENT_CENTERED)
+        }
+        set(value) = prefs.edit().putString(KEY_LOCK_SCREEN_STRATEGY, value.name).apply()
 
     var reapplyOnScrollChange: Boolean
         get() = prefs.getBoolean(KEY_REAPPLY_ON_SCROLL_CHANGE, true)
@@ -336,6 +344,7 @@ class PreferencesManager(context: Context) {
             target = target.name,
             scrollMode = scrollMode.name,
             cropMode = cropMode.name,
+            lockScreenStrategy = lockScreenStrategy.name,
             reapplyOnScrollChange = reapplyOnScrollChange,
             isScheduled = isScheduled,
             widgetScaleType = widgetScaleType.name,
@@ -384,6 +393,7 @@ class PreferencesManager(context: Context) {
         target = runCatching { foo.barz.wallpaperpicker.core.model.WallpaperTarget.valueOf(bp.target) }.getOrDefault(foo.barz.wallpaperpicker.core.model.WallpaperTarget.BOTH)
         scrollMode = runCatching { foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.valueOf(bp.scrollMode) }.getOrDefault(foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.AUTO)
         cropMode = runCatching { foo.barz.wallpaperpicker.core.model.WallpaperCropMode.valueOf(bp.cropMode) }.getOrDefault(foo.barz.wallpaperpicker.core.model.WallpaperCropMode.FIT_HEIGHT)
+        lockScreenStrategy = runCatching { LockScreenStrategy.valueOf(bp.lockScreenStrategy) }.getOrDefault(LockScreenStrategy.INDEPENDENT_CENTERED)
         reapplyOnScrollChange = bp.reapplyOnScrollChange
         isScheduled = bp.isScheduled
         widgetScaleType = runCatching { foo.barz.wallpaperpicker.core.model.WidgetScaleType.valueOf(bp.widgetScaleType) }.getOrDefault(foo.barz.wallpaperpicker.core.model.WidgetScaleType.CROP)
@@ -445,6 +455,7 @@ class PreferencesManager(context: Context) {
         const val KEY_TARGET = "target"
         const val KEY_SCROLL_MODE = "scroll_mode"
         const val KEY_CROP_MODE = "crop_mode"
+        const val KEY_LOCK_SCREEN_STRATEGY = "lock_screen_strategy"
         const val KEY_REAPPLY_ON_SCROLL_CHANGE = "reapply_on_scroll_change"
         const val KEY_IS_SCHEDULED = "is_scheduled"
         const val KEY_LAST_TIMESTAMP = "last_timestamp"

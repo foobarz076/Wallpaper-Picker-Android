@@ -73,6 +73,7 @@ data class BackupPreferences(
     val target: String = "BOTH",
     val scrollMode: String = "AUTO",
     val cropMode: String = "FIT_HEIGHT",
+    val lockScreenStrategy: String = "INDEPENDENT_CENTERED",
     val reapplyOnScrollChange: Boolean = true,
     val isScheduled: Boolean = false,
     val widgetScaleType: String = "CROP",
@@ -119,6 +120,7 @@ data class BackupPreferences(
         put("target", target)
         put("scrollMode", scrollMode)
         put("cropMode", cropMode)
+        put("lockScreenStrategy", lockScreenStrategy)
         put("reapplyOnScrollChange", reapplyOnScrollChange)
         put("isScheduled", isScheduled)
         put("widgetScaleType", widgetScaleType)
@@ -177,6 +179,7 @@ data class BackupPreferences(
                 target = json.optString("target", "BOTH"),
                 scrollMode = json.optString("scrollMode", "AUTO"),
                 cropMode = json.optString("cropMode", "FIT_HEIGHT"),
+                lockScreenStrategy = json.optString("lockScreenStrategy", "INDEPENDENT_CENTERED"),
                 reapplyOnScrollChange = json.optBoolean("reapplyOnScrollChange", true),
                 isScheduled = json.optBoolean("isScheduled", false),
                 widgetScaleType = json.optString("widgetScaleType", "CROP"),

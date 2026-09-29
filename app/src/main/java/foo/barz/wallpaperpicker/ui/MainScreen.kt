@@ -50,6 +50,7 @@ import foo.barz.wallpaperpicker.core.model.CacheSizeTier
 import foo.barz.wallpaperpicker.core.model.HttpPresetType
 import foo.barz.wallpaperpicker.core.model.ImmichAlbum
 import foo.barz.wallpaperpicker.core.model.ImmichQuality
+import foo.barz.wallpaperpicker.core.model.LockScreenStrategy
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
@@ -102,6 +103,7 @@ fun MainScreen(
     onTargetSelected: (WallpaperTarget) -> Unit,
     onCropModeSelected: (WallpaperCropMode) -> Unit,
     onScrollModeSelected: (WallpaperScrollMode) -> Unit,
+    onLockScreenStrategySelected: (LockScreenStrategy) -> Unit = {},
     onToggleReapplyOnScrollChange: (Boolean) -> Unit,
     onReapplyCurrentWallpaper: () -> Unit,
     onToggleSchedule: (Boolean) -> Unit,
@@ -381,6 +383,7 @@ fun MainScreen(
                         onTargetSelected = onTargetSelected,
                         onCropModeSelected = onCropModeSelected,
                         onScrollModeSelected = onScrollModeSelected,
+                        onLockScreenStrategySelected = onLockScreenStrategySelected,
                         onToggleReapplyOnScrollChange = onToggleReapplyOnScrollChange,
                         onReapplyCurrentWallpaper = onReapplyCurrentWallpaper,
                         onToggleSchedule = onToggleSchedule,

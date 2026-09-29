@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
@@ -32,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import foo.barz.wallpaperpicker.R
+import foo.barz.wallpaperpicker.core.model.LockScreenStrategy
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperTarget
@@ -47,6 +49,7 @@ fun DisplaySettingsSubPage(
     onTargetSelected: (WallpaperTarget) -> Unit,
     onCropModeSelected: (WallpaperCropMode) -> Unit,
     onScrollModeSelected: (WallpaperScrollMode) -> Unit,
+    onLockScreenStrategySelected: (LockScreenStrategy) -> Unit,
     onToggleReapplyOnScrollChange: (Boolean) -> Unit,
     onReapplyCurrentWallpaper: () -> Unit,
     modifier: Modifier = Modifier
@@ -59,6 +62,7 @@ fun DisplaySettingsSubPage(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Spacer(modifier = Modifier.height(4.dp))
+        val canSeparateTarget = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
 
         // 1. Target Screen Card
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -74,7 +78,6 @@ fun DisplaySettingsSubPage(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val canSeparateTarget = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
                 if (!canSeparateTarget) {
                     Text(
                         text = stringResource(R.string.display_target_legacy_notice),
@@ -228,6 +231,56 @@ fun DisplaySettingsSubPage(
                     ) {
                         Text(stringResource(R.string.display_btn_reapply_now))
                     }
+                }
+            }
+        }
+
+        // 4. Lock Screen Parallax Strategy Card (Android 7.0+)
+        if (canSeparateTarget) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.lock_strategy_card_title), style = MaterialTheme.typography.titleMedium)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            LockScreenStrategy.INDEPENDENT_CENTERED,
+                            LockScreenStrategy.FOLLOW_DESKTOP
+                        ).forEach { strategy ->
+                            FilterChip(
+                                selected = state.lockScreenStrategy == strategy,
+                                onClick = { onLockScreenStrategySelected(strategy) },
+                                label = { Text(stringResource(strategy.labelRes)) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(state.lockScreenStrategy.descriptionRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.display_lock_strategy_tip),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
                 }
             }
         }

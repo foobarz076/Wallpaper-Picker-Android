@@ -39,6 +39,7 @@ import foo.barz.wallpaperpicker.core.model.ImmichQuality
 import foo.barz.wallpaperpicker.core.model.ImmichSourceConfig
 import foo.barz.wallpaperpicker.core.model.MediaStoreAlbum
 import foo.barz.wallpaperpicker.core.network.HttpClientProvider
+import foo.barz.wallpaperpicker.core.model.LockScreenStrategy
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
@@ -120,6 +121,7 @@ data class MainUiState(
     val target: WallpaperTarget = WallpaperTarget.BOTH,
     val scrollMode: WallpaperScrollMode = WallpaperScrollMode.AUTO,
     val cropMode: WallpaperCropMode = WallpaperCropMode.FIT_HEIGHT,
+    val lockScreenStrategy: LockScreenStrategy = LockScreenStrategy.INDEPENDENT_CENTERED,
     val reapplyOnScrollChange: Boolean = true,
     val isScheduled: Boolean = false,
     val isChanging: Boolean = false,
@@ -221,6 +223,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             target = prefs.target,
             scrollMode = prefs.scrollMode,
             cropMode = prefs.cropMode,
+            lockScreenStrategy = prefs.lockScreenStrategy,
             reapplyOnScrollChange = prefs.reapplyOnScrollChange,
             isScheduled = prefs.isScheduled,
             lastWallpaperTitle = prefs.lastWallpaperTitle,
@@ -696,6 +699,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onLockScreenStrategySelected(strategy: LockScreenStrategy) {
+        prefs.lockScreenStrategy = strategy
+        _uiState.update { it.copy(lockScreenStrategy = strategy) }
+        if (prefs.reapplyOnScrollChange && _uiState.value.lastWallpaperUri != null) {
+            reapplyCurrentWallpaper()
+        }
+    }
+
     fun onToggleReapplyOnScrollChange(enabled: Boolean) {
         prefs.reapplyOnScrollChange = enabled
         _uiState.update { it.copy(reapplyOnScrollChange = enabled) }
@@ -788,7 +799,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     statusMessage = "正在按「${prefs.cropMode.label} + ${effectiveScrollMode.label}」重新应用壁纸…"
                 )
             }
-            val processResult = processor.process(
+            val processResult = processor.processForTarget(
                 openStream = {
                     if (uri.scheme == "file") {
                         java.io.FileInputStream(java.io.File(uri.path!!))
@@ -797,11 +808,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             ?: throw java.io.FileNotFoundException("无法打开图片流: $uri")
                     }
                 },
+                target = prefs.target,
                 scrollMode = effectiveScrollMode,
                 cropMode = prefs.cropMode,
                 cropFocusX = effectiveCropFocusX,
                 cropFocusY = effectiveCropFocusY,
-                flipHorizontal = effectiveFlipHorizontal
+                flipHorizontal = effectiveFlipHorizontal,
+                lockScreenStrategy = prefs.lockScreenStrategy
             )
 
             if (processResult.isFailure) {
@@ -810,8 +823,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            val bitmap = processResult.getOrThrow()
-            val applyResult = applier.apply(bitmap, prefs.target)
+            val processed = processResult.getOrThrow()
+            val applyResult = applier.apply(processed)
 
             if (applyResult.isFailure) {
                 val error = applyResult.exceptionOrNull()?.message ?: "设置壁纸失败"
@@ -1574,15 +1587,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val effectiveCropFocusY = latest.cropFocusY ?: 0.5f
                     val effectiveFlipHorizontal = latest.flipHorizontal
 
-                    val bitmap = processor.process(
+                    val processed = processor.processForTarget(
                         openStream = streamProvider,
+                        target = prefs.target,
                         scrollMode = effectiveScrollMode,
                         cropMode = prefs.cropMode,
                         cropFocusX = effectiveCropFocusX,
                         cropFocusY = effectiveCropFocusY,
-                        flipHorizontal = effectiveFlipHorizontal
+                        flipHorizontal = effectiveFlipHorizontal,
+                        lockScreenStrategy = prefs.lockScreenStrategy
                     ).getOrThrow()
-                    applier.apply(bitmap, prefs.target).getOrThrow()
+                    applier.apply(processed).getOrThrow()
                 }
             }
             if (result.isSuccess) {

@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.backup.BackupFormat
 import foo.barz.wallpaperpicker.core.model.CacheSizeTier
+import foo.barz.wallpaperpicker.core.model.LockScreenStrategy
 import foo.barz.wallpaperpicker.core.model.ScheduleRule
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
@@ -70,6 +71,7 @@ fun SettingsTab(
     onTargetSelected: (WallpaperTarget) -> Unit,
     onCropModeSelected: (WallpaperCropMode) -> Unit,
     onScrollModeSelected: (WallpaperScrollMode) -> Unit,
+    onLockScreenStrategySelected: (LockScreenStrategy) -> Unit = {},
     onToggleReapplyOnScrollChange: (Boolean) -> Unit,
     onReapplyCurrentWallpaper: () -> Unit,
     onToggleSchedule: (Boolean) -> Unit,
@@ -194,6 +196,7 @@ fun SettingsTab(
                 onTargetSelected = onTargetSelected,
                 onCropModeSelected = onCropModeSelected,
                 onScrollModeSelected = onScrollModeSelected,
+                onLockScreenStrategySelected = onLockScreenStrategySelected,
                 onToggleReapplyOnScrollChange = onToggleReapplyOnScrollChange,
                 onReapplyCurrentWallpaper = onReapplyCurrentWallpaper
             )

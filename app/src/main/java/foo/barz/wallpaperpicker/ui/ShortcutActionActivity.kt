@@ -69,22 +69,24 @@ class ShortcutActionActivity : Activity() {
 
                 val wallpaperData = wallpaperResult.getOrThrow()
                 val processor = WallpaperProcessor(applicationContext)
-                val bitmapResult = processor.process(
+                val processResult = processor.processForTarget(
                     openStream = wallpaperData.openStream,
+                    target = prefs.target,
                     scrollMode = prefs.scrollMode,
-                    cropMode = prefs.cropMode
+                    cropMode = prefs.cropMode,
+                    lockScreenStrategy = prefs.lockScreenStrategy
                 )
-                if (bitmapResult.isFailure) {
-                    val errorMsg = bitmapResult.exceptionOrNull()?.localizedMessage ?: "图片解码失败"
+                if (processResult.isFailure) {
+                    val errorMsg = processResult.exceptionOrNull()?.localizedMessage ?: "图片解码失败"
                     withContext(Dispatchers.Main) {
                         Toast.makeText(applicationContext, "更换失败: $errorMsg", Toast.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
 
-                val bitmap = bitmapResult.getOrThrow()
+                val processed = processResult.getOrThrow()
                 val applier = WallpaperApplier(applicationContext)
-                val applyResult = applier.apply(bitmap, prefs.target)
+                val applyResult = applier.apply(processed)
                 if (applyResult.isFailure) {
                     val errorMsg = applyResult.exceptionOrNull()?.localizedMessage ?: "设置壁纸失败"
                     withContext(Dispatchers.Main) {

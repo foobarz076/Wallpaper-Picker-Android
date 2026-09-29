@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
                     onTargetSelected = viewModel::onTargetSelected,
                     onCropModeSelected = viewModel::onCropModeSelected,
                     onScrollModeSelected = viewModel::onScrollModeSelected,
+                    onLockScreenStrategySelected = viewModel::onLockScreenStrategySelected,
                     onToggleReapplyOnScrollChange = viewModel::onToggleReapplyOnScrollChange,
                     onReapplyCurrentWallpaper = viewModel::reapplyCurrentWallpaper,
                     onToggleSchedule = viewModel::toggleSchedule,

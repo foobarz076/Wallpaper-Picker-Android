@@ -28,6 +28,7 @@ class BackupModelTest {
             target = "HOME",
             scrollMode = "ALWAYS",
             cropMode = "FILL_SCREEN",
+            lockScreenStrategy = "FOLLOW_DESKTOP",
             reapplyOnScrollChange = false,
             isScheduled = true,
             fairShuffleCapacity = 100,
@@ -104,6 +105,7 @@ class BackupModelTest {
         assertEquals(originalPayload.appVersionCode, parsedPayload.appVersionCode)
         assertEquals(originalPayload.preferences.intervalMinutes, parsedPayload.preferences.intervalMinutes)
         assertEquals(originalPayload.preferences.target, parsedPayload.preferences.target)
+        assertEquals("FOLLOW_DESKTOP", parsedPayload.preferences.lockScreenStrategy)
         assertEquals(originalPayload.preferences.immichApiKey, parsedPayload.preferences.immichApiKey)
         assertEquals(originalPayload.preferences.dailyAnchorTimes, parsedPayload.preferences.dailyAnchorTimes)
 

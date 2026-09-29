@@ -10,8 +10,10 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Build
 import android.view.WindowManager
+import foo.barz.wallpaperpicker.core.model.LockScreenStrategy
 import foo.barz.wallpaperpicker.core.model.WallpaperCropMode
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
+import foo.barz.wallpaperpicker.core.model.WallpaperTarget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.InputStream
@@ -23,6 +25,24 @@ import kotlin.math.min
  * and adaptive parallax scrolling width calculation.
  */
 class WallpaperProcessor(private val context: Context) {
+
+    /**
+     * Processed wallpaper outputs ready to be passed to WallpaperApplier.
+     */
+    sealed class ProcessResult {
+        data class Single(val bitmap: Bitmap, val target: WallpaperTarget) : ProcessResult()
+        data class Dual(val systemBitmap: Bitmap, val lockBitmap: Bitmap) : ProcessResult()
+
+        fun recycle() {
+            when (this) {
+                is Single -> if (!bitmap.isRecycled) bitmap.recycle()
+                is Dual -> {
+                    if (!systemBitmap.isRecycled) systemBitmap.recycle()
+                    if (!lockBitmap.isRecycled) lockBitmap.recycle()
+                }
+            }
+        }
+    }
 
     /**
      * Decodes and scales an image stream according to target screen dimensions,
@@ -67,6 +87,92 @@ class WallpaperProcessor(private val context: Context) {
 
             // Step 5: Render scaled and cropped bitmap onto canvas
             renderScaledBitmap(downsampled, targetWidth, targetHeight, cropMode, cropFocusX, cropFocusY, flipHorizontal)
+        }
+    }
+
+    /**
+     * Processes wallpaper tailored to target screen and lock screen strategy.
+     * When target is BOTH and lockScreenStrategy is INDEPENDENT_CENTERED with a wide image,
+     * this yields dual bitmaps (wide parallax bitmap for launcher, centered single-screen bitmap for lock screen).
+     */
+    suspend fun processForTarget(
+        openStream: () -> InputStream,
+        target: WallpaperTarget,
+        scrollMode: WallpaperScrollMode = WallpaperScrollMode.AUTO,
+        cropMode: WallpaperCropMode = WallpaperCropMode.FIT_HEIGHT,
+        cropFocusX: Float = 0.5f,
+        cropFocusY: Float = 0.5f,
+        flipHorizontal: Boolean = false,
+        lockScreenStrategy: LockScreenStrategy = LockScreenStrategy.INDEPENDENT_CENTERED
+    ): Result<ProcessResult> = withContext(Dispatchers.IO) {
+        runCatching {
+            when (target) {
+                WallpaperTarget.LOCK -> {
+                    // Lock screen is strictly single-screen (never scrolls)
+                    val bitmap = process(
+                        openStream = openStream,
+                        scrollMode = WallpaperScrollMode.NEVER,
+                        cropMode = cropMode,
+                        cropFocusX = cropFocusX,
+                        cropFocusY = cropFocusY,
+                        flipHorizontal = flipHorizontal
+                    ).getOrThrow()
+                    ProcessResult.Single(bitmap, WallpaperTarget.LOCK)
+                }
+                WallpaperTarget.SYSTEM -> {
+                    val bitmap = process(
+                        openStream = openStream,
+                        scrollMode = scrollMode,
+                        cropMode = cropMode,
+                        cropFocusX = cropFocusX,
+                        cropFocusY = cropFocusY,
+                        flipHorizontal = flipHorizontal
+                    ).getOrThrow()
+                    ProcessResult.Single(bitmap, WallpaperTarget.SYSTEM)
+                }
+                WallpaperTarget.BOTH -> {
+                    if (lockScreenStrategy == LockScreenStrategy.FOLLOW_DESKTOP || scrollMode == WallpaperScrollMode.NEVER) {
+                        val bitmap = process(
+                            openStream = openStream,
+                            scrollMode = scrollMode,
+                            cropMode = cropMode,
+                            cropFocusX = cropFocusX,
+                            cropFocusY = cropFocusY,
+                            flipHorizontal = flipHorizontal
+                        ).getOrThrow()
+                        ProcessResult.Single(bitmap, WallpaperTarget.BOTH)
+                    } else {
+                        val systemBitmap = process(
+                            openStream = openStream,
+                            scrollMode = scrollMode,
+                            cropMode = cropMode,
+                            cropFocusX = cropFocusX,
+                            cropFocusY = cropFocusY,
+                            flipHorizontal = flipHorizontal
+                        ).getOrThrow()
+
+                        val (screenWidth, _) = getScreenDimensions()
+                        if (systemBitmap.width <= screenWidth) {
+                            // Portrait or single-screen image requires no separate lock bitmap
+                            ProcessResult.Single(systemBitmap, WallpaperTarget.BOTH)
+                        } else {
+                            val lockBitmapResult = process(
+                                openStream = openStream,
+                                scrollMode = WallpaperScrollMode.NEVER,
+                                cropMode = cropMode,
+                                cropFocusX = cropFocusX,
+                                cropFocusY = cropFocusY,
+                                flipHorizontal = flipHorizontal
+                            )
+                            if (lockBitmapResult.isFailure) {
+                                if (!systemBitmap.isRecycled) systemBitmap.recycle()
+                                throw lockBitmapResult.exceptionOrNull() ?: Exception("Failed to process lock screen bitmap")
+                            }
+                            ProcessResult.Dual(systemBitmap = systemBitmap, lockBitmap = lockBitmapResult.getOrThrow())
+                        }
+                    }
+                }
+            }
         }
     }
 

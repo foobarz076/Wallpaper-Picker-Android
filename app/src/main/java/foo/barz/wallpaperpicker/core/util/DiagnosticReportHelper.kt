@@ -88,6 +88,7 @@ object DiagnosticReportHelper {
         sb.appendLine("壁纸应用目标: ${prefs.target.name}")
         sb.appendLine("裁切对齐策略: ${prefs.cropMode.name}")
         sb.appendLine("桌面视差滚动: ${prefs.scrollMode.name}")
+        sb.appendLine("锁屏视差适配: ${prefs.lockScreenStrategy.name}")
         sb.appendLine("上次更换时间: $lastChangedStr")
         sb.appendLine("上次壁纸标题: ${prefs.lastWallpaperTitle ?: "无"}")
         sb.appendLine("上次执行状态: ${prefs.lastExecutionStatus ?: "无"}")

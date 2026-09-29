@@ -69,4 +69,12 @@ class Phase3Test {
         assertEquals("锁定居中", foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.NEVER.label)
         assertEquals("强制视差", foo.barz.wallpaperpicker.core.model.WallpaperScrollMode.ALWAYS.label)
     }
+
+    @Test
+    fun testLockScreenStrategies() {
+        val strategies = foo.barz.wallpaperpicker.core.model.LockScreenStrategy.values()
+        assertEquals(2, strategies.size)
+        assertEquals("独立单屏居中", foo.barz.wallpaperpicker.core.model.LockScreenStrategy.INDEPENDENT_CENTERED.label)
+        assertEquals("与桌面完全联动", foo.barz.wallpaperpicker.core.model.LockScreenStrategy.FOLLOW_DESKTOP.label)
+    }
 }

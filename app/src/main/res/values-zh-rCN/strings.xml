@@ -378,6 +378,14 @@
     <string name="scroll_always_label">强制视差</string>
     <string name="scroll_always_desc">生成超宽幅壁纸，适合原生 Pixel/AOSP 等多屏平移桌面</string>
 
+    <!-- Lock Screen Parallax Strategy -->
+    <string name="lock_strategy_card_title">锁屏视差适配策略</string>
+    <string name="lock_strategy_centered_label">独立单屏居中</string>
+    <string name="lock_strategy_centered_desc">锁屏始终保持单屏居中，不随桌面生成超宽视差图，防止切断主体或解锁横移（推荐）</string>
+    <string name="lock_strategy_follow_label">与桌面完全联动</string>
+    <string name="lock_strategy_follow_desc">锁屏与桌面共享视差宽图（Pixel 原生风格，主屏在最左侧时解锁无缝衔接）</string>
+    <string name="display_lock_strategy_tip">说明：此策略仅在应用目标为「桌面与锁屏」且壁纸支持视差平移时生效；当处于「锁定居中」或桌面启动器不支持壁纸滑动平移时，两种策略表现一致。</string>
+
     <!-- Widget Scale Type -->
     <string name="widget_scale_crop_label">铺满裁切</string>
     <string name="widget_scale_crop_desc">按微件大小居中铺满，无留白，视觉感饱满</string>

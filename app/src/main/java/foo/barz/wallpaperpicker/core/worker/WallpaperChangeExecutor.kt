@@ -162,15 +162,19 @@ object WallpaperChangeExecutor {
         val effectiveCropFocusY = customPref?.cropFocusY ?: 0.5f
         val effectiveFlipHorizontal = customPref?.flipHorizontal ?: false
 
-        // 8. Process bitmap with sub-sampling and cropping
+        val effectiveTarget = matchingRule?.targetScreen ?: prefs.target
+
+        // 8. Process bitmap with sub-sampling, target-specific cropping and parallax strategy
         val processor = WallpaperProcessor(context)
-        val processResult = processor.process(
+        val processResult = processor.processForTarget(
             openStream = wallpaperData.openStream,
+            target = effectiveTarget,
             scrollMode = effectiveScrollMode,
             cropMode = prefs.cropMode,
             cropFocusX = effectiveCropFocusX,
             cropFocusY = effectiveCropFocusY,
-            flipHorizontal = effectiveFlipHorizontal
+            flipHorizontal = effectiveFlipHorizontal,
+            lockScreenStrategy = prefs.lockScreenStrategy
         )
         if (processResult.isFailure) {
             return recordFailure(
@@ -179,12 +183,13 @@ object WallpaperChangeExecutor {
             )
         }
 
-        val bitmap = processResult.getOrThrow()
+        val processed = processResult.getOrThrow()
 
         // 9. Re-check interactive deferral before applying to prevent screen stutter
         if (!isManualTrigger && prefs.deferDuringInteraction) {
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
             if (powerManager?.isInteractive == true) {
+                processed.recycle()
                 val reason = "设备正在使用中，已推迟更换"
                 AppLog.i("WallpaperChangeExecutor", "Execution skipped: $reason")
                 prefs.lastExecutionStatus = reason
@@ -195,8 +200,7 @@ object WallpaperChangeExecutor {
 
         // 10. Apply wallpaper to system (rule-specific target if defined, otherwise global preference)
         val applier = WallpaperApplier(context)
-        val effectiveTarget = matchingRule?.targetScreen ?: prefs.target
-        val applyResult = applier.apply(bitmap, effectiveTarget)
+        val applyResult = applier.apply(processed)
         if (applyResult.isFailure) {
             return recordFailure(
                 prefs,

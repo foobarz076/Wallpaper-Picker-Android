@@ -379,6 +379,14 @@
     <string name="scroll_always_label">Force Parallax</string>
     <string name="scroll_always_desc">Generates super wide canvas, suitable for launchers like Pixel/AOSP</string>
 
+    <!-- Lock Screen Parallax Strategy -->
+    <string name="lock_strategy_card_title">Lock Screen Parallax Strategy</string>
+    <string name="lock_strategy_centered_label">Centered Single Screen</string>
+    <string name="lock_strategy_centered_desc">Keep lock screen centered on a single screen without wide parallax, preventing off-center clipping and unlock jitter (Recommended)</string>
+    <string name="lock_strategy_follow_label">Sync with Desktop</string>
+    <string name="lock_strategy_follow_desc">Lock screen shares wide parallax wallpaper with desktop (Pixel native style, seamless unlock when home is leftmost page)</string>
+    <string name="display_lock_strategy_tip">Note: This strategy only takes effect when targeting both Home &amp; Lock screen and wallpaper parallax scrolling is active. When set to Locked Center or using a launcher without parallax support, both strategies behave identically.</string>
+
     <!-- Widget Scale Type -->
     <string name="widget_scale_crop_label">Fill &amp; Crop</string>
     <string name="widget_scale_crop_desc">Center crop to fill widget with no whitespace</string>
