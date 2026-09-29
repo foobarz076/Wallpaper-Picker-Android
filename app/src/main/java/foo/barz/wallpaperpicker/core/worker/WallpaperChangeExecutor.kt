@@ -64,8 +64,8 @@ object WallpaperChangeExecutor {
             }
         }
 
-        // 2. Composite Trigger: Cooldown Suppression check (bypassed if manual trigger)
-        if (!isManualTrigger && prefs.cooldownSuppressionEnabled) {
+        // 2. Composite Trigger: Cooldown Suppression check (bypassed if manual or screen-off trigger)
+        if (!isManualTrigger && eventContext != TriggerEventContext.SCREEN_OFF && prefs.cooldownSuppressionEnabled) {
             if (CompositeTriggerHelper.isCooldownSuppressed(
                     now,
                     prefs.lastChangedTimestamp,

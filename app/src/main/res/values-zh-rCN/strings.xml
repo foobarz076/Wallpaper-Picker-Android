@@ -341,7 +341,7 @@
     <string name="rule_interval_2h">2小时</string>
     <string name="rule_interval_4h">4小时</string>
     <string name="rule_interval_6h">6小时</string>
-    <string name="rule_screen_off_delay_label">熄屏防抖延迟：</string>
+    <string name="rule_screen_off_delay_label">熄屏切换延迟：</string>
     <string name="rule_delay_seconds_format">%d秒</string>
     <string name="rule_binding_section">专属图源绑定</string>
     <string name="rule_binding_select_label">选择绑定的图源实例：</string>

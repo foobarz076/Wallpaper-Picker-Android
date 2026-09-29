@@ -68,7 +68,7 @@ In Phase 1, the wallpaper rotation lifecycle was entirely bound to Jetpack `Work
 
 4. **Three-Layer Composite Suppression Funnel**:
    * **Quiet Hours**: Bypassed for manual requests; checks whether current time falls within `[quietHoursStart, quietHoursEnd]`.
-   * **Cooldown Suppression**: Skips execution if `now - lastChangedTimestamp < cooldownMinutes`, preventing rapid back-to-back switching.
+   * **Cooldown Suppression**: Skips execution if `now - lastChangedTimestamp < cooldownMinutes`, preventing rapid back-to-back switching (bypassed for manual requests and screen-off triggers, which are independently governed by the switching delay).
    * **Interactive Deferral**: Queries `PowerManager.isInteractive`. If the user is actively using the screen, background rotation is deferred until the screen turns off.
    * **Deduplication**: If the chosen candidate matches the current wallpaper URI and title, redundant decoding and re-application are aborted early.
 
@@ -140,7 +140,7 @@ In Phase 1, the wallpaper rotation lifecycle was entirely bound to Jetpack `Work
 
 4. **三层前置防碰撞复合漏斗**：
    * **夜间免打扰（Quiet Hours）**：时段命中则静默跳过，免除夜间无谓唤醒耗电。
-   * **冷却时间抑制（Cooldown Suppression）**：检查 `now - lastChangedTimestamp < cooldownMinutes`，时间间隔过近主动拦截，规避高密刷新。
+   * **冷却时间抑制（Cooldown Suppression）**：检查 `now - lastChangedTimestamp < cooldownMinutes`，时间间隔过近主动拦截，规避高密刷新（注：手动触发与即时熄屏切换豁免此限制，避免与后台大冷却打架，由独立切换延迟保护）。
    * **交互避让（Interactive Deferral）**：查询 `PowerManager.isInteractive`，若用户正在亮屏交互，推迟后台轮换直至熄屏。
    * **内容幂等去重（Deduplication）**：抽选到的壁纸若与当前正在生效的壁纸 URI 和标题一致，提前中止后续解码与系统设置，节约 CPU 算力。
 
