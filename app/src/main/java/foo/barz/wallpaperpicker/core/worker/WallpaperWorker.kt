@@ -43,8 +43,7 @@ class WallpaperWorker(
         fun schedule(context: Context, intervalMinutes: Long) {
             val prefs = PreferencesManager(context)
 
-            // If scheduling is off or neither interval nor daily anchor is enabled, cancel periodic work
-            if (!prefs.isScheduled || (!prefs.intervalScheduleEnabled && !prefs.dailyAnchorEnabled)) {
+            if (!prefs.isScheduled) {
                 cancel(context)
                 return
             }
@@ -54,6 +53,36 @@ class WallpaperWorker(
             val constraints = Constraints.Builder()
                 .setRequiresBatteryNotLow(true)
                 .build()
+
+            // Mode 1: Schedule Rule Engine
+            if (prefs.ruleEngineEnabled) {
+                val rulesDb = foo.barz.wallpaperpicker.core.database.ScheduleRulesDatabase(context)
+                val enabledRules = rulesDb.getEnabledRules()
+                if (enabledRules.isEmpty()) {
+                    cancel(context)
+                    return
+                }
+
+                // Minimum WorkManager periodic interval is 15 minutes
+                val heartbeatInterval = 15L.coerceAtLeast(intervalMinutes)
+                val builder = PeriodicWorkRequestBuilder<WallpaperWorker>(
+                    heartbeatInterval, TimeUnit.MINUTES
+                ).setConstraints(constraints)
+
+                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                    WORK_NAME,
+                    ExistingPeriodicWorkPolicy.UPDATE,
+                    builder.build()
+                )
+                return
+            }
+
+            // Mode 2: Master-Slave Composite Mode
+            // If neither interval nor daily anchor is enabled, cancel periodic work
+            if (!prefs.intervalScheduleEnabled && !prefs.dailyAnchorEnabled) {
+                cancel(context)
+                return
+            }
 
             // If interval is disabled but daily anchor is enabled, repeat daily (1440 minutes)
             val effectiveInterval = if (prefs.intervalScheduleEnabled) intervalMinutes else 1440L

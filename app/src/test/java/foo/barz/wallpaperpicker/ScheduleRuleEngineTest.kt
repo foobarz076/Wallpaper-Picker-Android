@@ -149,6 +149,30 @@ class ScheduleRuleEngineTest {
     }
 
     @Test
+    fun testComputeNextWindowTriggerRespectsInterval() {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 11)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val now = calendar.timeInMillis
+        val lastChanged = now - 15 * 60 * 1000L // 15 minutes ago
+        val rule = ScheduleRule(
+            name = "Work Window",
+            triggerType = ScheduleRuleTriggerType.TIME_WINDOW,
+            windowStartTime = "09:00",
+            windowEndTime = "18:00",
+            intervalMinutes = 60L
+        )
+
+        // Interval is 60 min, changed 15 min ago -> next trigger is at 11:45 (45 min from now)
+        val nextTrigger = ScheduleRuleEngine.computeNextWindowTrigger(now, lastChanged, rule)
+        assertNotNull(nextTrigger)
+        assertEquals(lastChanged + 60 * 60 * 1000L, nextTrigger)
+    }
+
+    @Test
     fun testTriggerTypeDisplayNames() {
         assertEquals("每日定点打卡", ScheduleRuleTriggerType.DAILY_TIME.displayName)
         assertEquals("时段周期轮播", ScheduleRuleTriggerType.TIME_WINDOW.displayName)

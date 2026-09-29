@@ -94,7 +94,15 @@ object WallpaperChangeExecutor {
 
         // 4. Resolve active schedule rule (Phase 4.2 Schedule Rule Engine)
         val matchingRule = if (!isManualTrigger && prefs.ruleEngineEnabled) {
-            ScheduleRuleEngine.findMatchingRule(context, now, eventContext, ruleId)
+            val rule = ScheduleRuleEngine.findMatchingRule(context, now, eventContext, ruleId)
+            if (rule == null) {
+                val reason = "当前无匹配的生效日程规则，已跳过更换"
+                AppLog.i("WallpaperChangeExecutor", "Execution skipped: $reason")
+                prefs.lastExecutionStatus = reason
+                prefs.lastExecutionTimestamp = now
+                return WallpaperExecutionResult.Skipped(reason)
+            }
+            rule
         } else null
 
         // 5. Create active source (bound to rule or global)

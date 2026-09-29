@@ -70,9 +70,18 @@ object ScheduleRuleEngine {
                 if (matchingDailyRule != null) return matchingDailyRule
 
                 // 2. Check TIME_WINDOW rules if current time falls within window
+                val prefs = PreferencesManager(context)
                 val matchingWindowRule = enabledRules.firstOrNull { rule ->
                     if (rule.triggerType == ScheduleRuleTriggerType.TIME_WINDOW) {
-                        isWithinTimeWindow(currentMinuteOfDay, rule.windowStartTime, rule.windowEndTime)
+                        if (isWithinTimeWindow(currentMinuteOfDay, rule.windowStartTime, rule.windowEndTime)) {
+                            // If triggered via fallback PeriodicWorker, verify interval has passed since last change
+                            if (eventContext == TriggerEventContext.PERIODIC_WORKER && prefs.lastChangedTimestamp > 0L) {
+                                val intervalMs = rule.intervalMinutes.coerceAtLeast(5L) * 60 * 1000L
+                                (now - prefs.lastChangedTimestamp) >= (intervalMs - 60_000L)
+                            } else {
+                                true
+                            }
+                        } else false
                     } else false
                 }
                 if (matchingWindowRule != null) return matchingWindowRule

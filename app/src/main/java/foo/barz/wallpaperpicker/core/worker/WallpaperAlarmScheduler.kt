@@ -28,18 +28,14 @@ object WallpaperAlarmScheduler {
             return
         }
 
-        if (!prefs.exactTimerEnabled) {
-            cancel(context)
-            WallpaperWorker.schedule(context, prefs.intervalMinutes)
-            return
-        }
-
-        // Cancel WorkManager periodic work to avoid duplicate executions
-        WallpaperWorker.cancel(context)
-
         val now = System.currentTimeMillis()
 
+        // Mode 1: Schedule Rule Engine
         if (prefs.ruleEngineEnabled) {
+            if (!prefs.exactTimerEnabled) {
+                cancel(context)
+                return
+            }
             val nextSchedule = ScheduleRuleEngine.computeNextTriggerMillis(context, now)
             if (nextSchedule != null) {
                 val (triggerAtMillis, rule) = nextSchedule
@@ -49,6 +45,16 @@ object WallpaperAlarmScheduler {
             }
             return
         }
+
+        // Mode 2: Master-Slave Composite Mode
+        if (!prefs.exactTimerEnabled) {
+            cancel(context)
+            WallpaperWorker.schedule(context, prefs.intervalMinutes)
+            return
+        }
+
+        // Cancel WorkManager periodic work to avoid duplicate executions in composite mode
+        WallpaperWorker.cancel(context)
 
         val intervalMs = prefs.intervalMinutes * 60 * 1000L
 
