@@ -69,7 +69,7 @@ import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
-import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentSheet
+import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentScreen
 import foo.barz.wallpaperpicker.ui.components.WallpaperLightboxViewer
 
 /**
@@ -96,7 +96,7 @@ fun DashboardTab(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var showAdjustmentSheet by remember { mutableStateOf(false) }
+    var showAdjustmentScreen by remember { mutableStateOf(false) }
     var showLightbox by remember { mutableStateOf(false) }
 
     // Write external storage permission for legacy Android versions (API <= 28)
@@ -309,7 +309,7 @@ fun DashboardTab(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { showAdjustmentSheet = true },
+                    onClick = { showAdjustmentScreen = true },
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                 ) {
@@ -538,23 +538,23 @@ fun DashboardTab(
             onShareWallpaper = onShareWallpaper,
             onOpenAdjustment = {
                 showLightbox = false
-                showAdjustmentSheet = true
+                showAdjustmentScreen = true
             }
         )
     }
 
-    // Composition and scroll tuning bottom sheet
-    if (showAdjustmentSheet && state.lastWallpaperUri != null) {
+    // Composition and scroll tuning fullscreen screen
+    if (showAdjustmentScreen && state.lastWallpaperUri != null) {
         val targetItem = state.currentWallpaperItem ?: WallpaperHistoryItem(
             sourceUri = state.lastWallpaperUri.toString(),
             title = state.lastWallpaperTitle,
             sourceType = WallpaperSourceType.LOCAL_FOLDER,
             appliedTimestamp = System.currentTimeMillis()
         )
-        WallpaperAdjustmentSheet(
+        WallpaperAdjustmentScreen(
             item = targetItem,
             globalScrollMode = state.scrollMode,
-            onDismiss = { showAdjustmentSheet = false },
+            onDismiss = { showAdjustmentScreen = false },
             onSave = { customScrollMode, cropFocusX, cropFocusY, flipHorizontal, applyImmediately ->
                 onUpdateCurrentWallpaperPreferences(
                     customScrollMode,

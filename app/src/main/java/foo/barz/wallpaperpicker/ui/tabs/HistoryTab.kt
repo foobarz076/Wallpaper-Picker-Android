@@ -81,7 +81,7 @@ import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
 import foo.barz.wallpaperpicker.ui.components.TopFloatingPillNotification
-import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentSheet
+import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentScreen
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -351,9 +351,9 @@ fun HistoryTab(
         }
     }
 
-    // Per-image personalized attribute adjustment sheet
+    // Per-image personalized attribute adjustment screen
     selectedItemForAdjustment?.let { item ->
-        WallpaperAdjustmentSheet(
+        WallpaperAdjustmentScreen(
             item = item,
             globalScrollMode = state.scrollMode,
             onDismiss = { selectedItemForAdjustment = null },

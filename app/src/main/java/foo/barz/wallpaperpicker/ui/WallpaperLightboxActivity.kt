@@ -34,7 +34,7 @@ import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
 import foo.barz.wallpaperpicker.data.PreferencesManager
-import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentSheet
+import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentScreen
 import foo.barz.wallpaperpicker.ui.components.WallpaperLightboxViewer
 import foo.barz.wallpaperpicker.ui.theme.WallpaperPickerTheme
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +82,7 @@ class WallpaperLightboxActivity : ComponentActivity() {
                 }
                 var isSaving by remember { mutableStateOf(false) }
                 var showLightbox by remember { mutableStateOf(true) }
-                var showAdjustmentSheet by remember { mutableStateOf(false) }
+                var showAdjustmentScreen by remember { mutableStateOf(false) }
 
                 val writeStorageLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestPermission()
@@ -145,8 +145,8 @@ class WallpaperLightboxActivity : ComponentActivity() {
                 }
 
                 BackHandler {
-                    if (showAdjustmentSheet) {
-                        showAdjustmentSheet = false
+                    if (showAdjustmentScreen) {
+                        showAdjustmentScreen = false
                         showLightbox = true
                     } else {
                         finish()
@@ -199,23 +199,23 @@ class WallpaperLightboxActivity : ComponentActivity() {
                             },
                             onOpenAdjustment = {
                                 showLightbox = false
-                                showAdjustmentSheet = true
+                                showAdjustmentScreen = true
                             }
                         )
                     }
 
-                    if (showAdjustmentSheet) {
+                    if (showAdjustmentScreen) {
                         val historyItem = historyDb.getItemByUri(uri.toString()) ?: WallpaperHistoryItem(
                             sourceUri = uri.toString(),
                             title = initialTitle,
                             sourceType = prefs.lastWallpaperSourceType ?: WallpaperSourceType.LOCAL_FOLDER,
                             appliedTimestamp = prefs.lastChangedTimestamp
                         )
-                        WallpaperAdjustmentSheet(
+                        WallpaperAdjustmentScreen(
                             item = historyItem,
                             globalScrollMode = prefs.scrollMode,
                             onDismiss = {
-                                showAdjustmentSheet = false
+                                showAdjustmentScreen = false
                                 showLightbox = true
                             },
                             onSave = { customScrollMode, cropFocusX, cropFocusY, flipHorizontal, applyImmediately ->
@@ -255,7 +255,7 @@ class WallpaperLightboxActivity : ComponentActivity() {
                                     }
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_composition_saved), Toast.LENGTH_SHORT).show()
-                                        showAdjustmentSheet = false
+                                        showAdjustmentScreen = false
                                         showLightbox = true
                                     }
                                 }
