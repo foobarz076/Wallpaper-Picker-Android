@@ -18,10 +18,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -61,16 +59,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import coil.compose.AsyncImage
 import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
@@ -104,30 +98,6 @@ fun WallpaperAdjustmentScreen(
     var focusY by remember(item) { mutableFloatStateOf(item.cropFocusY ?: 0.5f) }
     var flipHorizontal by remember(item) { mutableStateOf(item.flipHorizontal) }
 
-    // System window insets handling for edge-to-edge dialog presentation
-    val composeNavBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val composeStatusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val view = LocalView.current
-    val density = LocalDensity.current
-    val navBarsPadding = remember(view, density, composeNavBarBottom) {
-        val rootInsets = ViewCompat.getRootWindowInsets(view.rootView)
-        val bottomPx = rootInsets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
-        if (bottomPx > 0) {
-            with(density) { bottomPx.toDp() }
-        } else {
-            composeNavBarBottom
-        }
-    }
-    val statusBarsPadding = remember(view, density, composeStatusBarTop) {
-        val rootInsets = ViewCompat.getRootWindowInsets(view.rootView)
-        val topPx = rootInsets?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: 0
-        if (topPx > 0) {
-            with(density) { topPx.toDp() }
-        } else {
-            composeStatusBarTop
-        }
-    }
-
     // Dynamic physical device aspect ratio
     val configuration = LocalConfiguration.current
     val screenWidthDp = configuration.screenWidthDp.toFloat()
@@ -141,6 +111,8 @@ fun WallpaperAdjustmentScreen(
             decorFitsSystemWindows = false
         )
     ) {
+        val dialogInsets = rememberEdgeToEdgeDialog(isLightBars = false)
+
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -148,7 +120,7 @@ fun WallpaperAdjustmentScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = statusBarsPadding)
+                    .padding(top = dialogInsets.statusBarTop)
             ) {
                 // 1. Top App Bar Header
                 Row(
@@ -201,11 +173,11 @@ fun WallpaperAdjustmentScreen(
                     }
                 }
 
-                // 2. Top Preview Section (~56% height weight)
+                // 2. Top Preview Section
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1.15f)
+                        .weight(1f)
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -302,11 +274,11 @@ fun WallpaperAdjustmentScreen(
                     }
                 }
 
-                // 3. Bottom Control Panel (~44% height weight)
+                // 3. Bottom Control Panel
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(0.95f),
+                        .weight(1.15f),
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                     color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 6.dp,
@@ -315,7 +287,12 @@ fun WallpaperAdjustmentScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = navBarsPadding + 8.dp)
+                            .padding(
+                                top = 16.dp,
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = dialogInsets.navBarBottom + 16.dp
+                            )
                     ) {
                         // Scrollable control parameters
                         Column(

@@ -12,17 +12,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -93,29 +87,6 @@ fun WallpaperLightboxViewer(
     var offset by remember { mutableStateOf(Offset.Zero) }
     var showControls by remember { mutableStateOf(true) }
 
-    val composeNavBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val composeStatusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val view = LocalView.current
-    val density = LocalDensity.current
-    val navBarsPadding = remember(view, density, composeNavBarBottom) {
-        val rootInsets = ViewCompat.getRootWindowInsets(view.rootView)
-        val bottomPx = rootInsets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
-        if (bottomPx > 0) {
-            with(density) { bottomPx.toDp() }
-        } else {
-            composeNavBarBottom
-        }
-    }
-    val statusBarsPadding = remember(view, density, composeStatusBarTop) {
-        val rootInsets = ViewCompat.getRootWindowInsets(view.rootView)
-        val topPx = rootInsets?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: 0
-        if (topPx > 0) {
-            with(density) { topPx.toDp() }
-        } else {
-            composeStatusBarTop
-        }
-    }
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -123,6 +94,8 @@ fun WallpaperLightboxViewer(
             decorFitsSystemWindows = false
         )
     ) {
+        val dialogInsets = rememberEdgeToEdgeDialog(isLightBars = false)
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -189,8 +162,12 @@ fun WallpaperLightboxViewer(
                                 colors = listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent)
                             )
                         )
-                        .padding(top = maxOf(statusBarsPadding, 32.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(
+                            top = dialogInsets.statusBarTop + 8.dp,
+                            start = 12.dp,
+                            end = 12.dp,
+                            bottom = 8.dp
+                        )
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -265,10 +242,10 @@ fun WallpaperLightboxViewer(
                             )
                         )
                         .padding(
-                            bottom = maxOf(navBarsPadding, 48.dp) + 28.dp,
+                            bottom = dialogInsets.navBarBottom + 24.dp,
                             start = 16.dp,
                             end = 16.dp,
-                            top = 28.dp
+                            top = 20.dp
                         ),
                     contentAlignment = Alignment.Center
                 ) {
