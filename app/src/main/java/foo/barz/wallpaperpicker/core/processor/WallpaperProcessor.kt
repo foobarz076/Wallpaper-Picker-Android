@@ -103,9 +103,14 @@ class WallpaperProcessor(private val context: Context) {
         cropFocusX: Float = 0.5f,
         cropFocusY: Float = 0.5f,
         flipHorizontal: Boolean = false,
-        lockScreenStrategy: LockScreenStrategy = LockScreenStrategy.INDEPENDENT_CENTERED
+        lockScreenStrategy: LockScreenStrategy = LockScreenStrategy.INDEPENDENT_CENTERED,
+        lockCropFocusX: Float? = null,
+        lockCropFocusY: Float? = null
     ): Result<ProcessResult> = withContext(Dispatchers.IO) {
         runCatching {
+            val effectiveLockFocusX = lockCropFocusX ?: cropFocusX
+            val effectiveLockFocusY = lockCropFocusY ?: cropFocusY
+
             when (target) {
                 WallpaperTarget.LOCK -> {
                     // Lock screen is strictly single-screen (never scrolls)
@@ -113,8 +118,8 @@ class WallpaperProcessor(private val context: Context) {
                         openStream = openStream,
                         scrollMode = WallpaperScrollMode.NEVER,
                         cropMode = cropMode,
-                        cropFocusX = cropFocusX,
-                        cropFocusY = cropFocusY,
+                        cropFocusX = effectiveLockFocusX,
+                        cropFocusY = effectiveLockFocusY,
                         flipHorizontal = flipHorizontal
                     ).getOrThrow()
                     ProcessResult.Single(bitmap, WallpaperTarget.LOCK)
@@ -131,7 +136,8 @@ class WallpaperProcessor(private val context: Context) {
                     ProcessResult.Single(bitmap, WallpaperTarget.SYSTEM)
                 }
                 WallpaperTarget.BOTH -> {
-                    if (lockScreenStrategy == LockScreenStrategy.FOLLOW_DESKTOP || scrollMode == WallpaperScrollMode.NEVER) {
+                    val hasDistinctLockFocus = lockCropFocusX != null || lockCropFocusY != null
+                    if (!hasDistinctLockFocus && (lockScreenStrategy == LockScreenStrategy.FOLLOW_DESKTOP || scrollMode == WallpaperScrollMode.NEVER)) {
                         val bitmap = process(
                             openStream = openStream,
                             scrollMode = scrollMode,
@@ -152,16 +158,16 @@ class WallpaperProcessor(private val context: Context) {
                         ).getOrThrow()
 
                         val (screenWidth, _) = getScreenDimensions()
-                        if (systemBitmap.width <= screenWidth) {
-                            // Portrait or single-screen image requires no separate lock bitmap
+                        if (!hasDistinctLockFocus && systemBitmap.width <= screenWidth) {
+                            // Portrait or single-screen image with identical focus requires no separate lock bitmap
                             ProcessResult.Single(systemBitmap, WallpaperTarget.BOTH)
                         } else {
                             val lockBitmapResult = process(
                                 openStream = openStream,
                                 scrollMode = WallpaperScrollMode.NEVER,
                                 cropMode = cropMode,
-                                cropFocusX = cropFocusX,
-                                cropFocusY = cropFocusY,
+                                cropFocusX = effectiveLockFocusX,
+                                cropFocusY = effectiveLockFocusY,
                                 flipHorizontal = flipHorizontal
                             )
                             if (lockBitmapResult.isFailure) {

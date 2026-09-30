@@ -791,6 +791,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val effectiveScrollMode = customPref?.customScrollMode ?: prefs.scrollMode
             val effectiveCropFocusX = customPref?.cropFocusX ?: 0.5f
             val effectiveCropFocusY = customPref?.cropFocusY ?: 0.5f
+            val effectiveLockCropFocusX = customPref?.lockCropFocusX
+            val effectiveLockCropFocusY = customPref?.lockCropFocusY
             val effectiveFlipHorizontal = customPref?.flipHorizontal ?: false
 
             _uiState.update {
@@ -814,7 +816,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 cropFocusX = effectiveCropFocusX,
                 cropFocusY = effectiveCropFocusY,
                 flipHorizontal = effectiveFlipHorizontal,
-                lockScreenStrategy = prefs.lockScreenStrategy
+                lockScreenStrategy = prefs.lockScreenStrategy,
+                lockCropFocusX = effectiveLockCropFocusX,
+                lockCropFocusY = effectiveLockCropFocusY
             )
 
             if (processResult.isFailure) {
@@ -1585,6 +1589,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val effectiveScrollMode = latest.customScrollMode ?: prefs.scrollMode
                     val effectiveCropFocusX = latest.cropFocusX ?: 0.5f
                     val effectiveCropFocusY = latest.cropFocusY ?: 0.5f
+                    val effectiveLockCropFocusX = latest.lockCropFocusX
+                    val effectiveLockCropFocusY = latest.lockCropFocusY
                     val effectiveFlipHorizontal = latest.flipHorizontal
 
                     val processed = processor.processForTarget(
@@ -1595,7 +1601,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         cropFocusX = effectiveCropFocusX,
                         cropFocusY = effectiveCropFocusY,
                         flipHorizontal = effectiveFlipHorizontal,
-                        lockScreenStrategy = prefs.lockScreenStrategy
+                        lockScreenStrategy = prefs.lockScreenStrategy,
+                        lockCropFocusX = effectiveLockCropFocusX,
+                        lockCropFocusY = effectiveLockCropFocusY
                     ).getOrThrow()
                     applier.apply(processed).getOrThrow()
                 }
@@ -1653,7 +1661,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         cropFocusX: Float?,
         cropFocusY: Float?,
         flipHorizontal: Boolean,
-        applyImmediately: Boolean = false
+        applyImmediately: Boolean = false,
+        lockCropFocusX: Float? = null,
+        lockCropFocusY: Float? = null
     ) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -1678,7 +1688,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     customScrollMode = customScrollMode,
                     cropFocusX = cropFocusX,
                     cropFocusY = cropFocusY,
-                    flipHorizontal = flipHorizontal
+                    flipHorizontal = flipHorizontal,
+                    lockCropFocusX = lockCropFocusX,
+                    lockCropFocusY = lockCropFocusY
                 )
             }
             refreshHistoryAndFavorites()
@@ -1690,6 +1702,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     customScrollMode = customScrollMode,
                     cropFocusX = cropFocusX,
                     cropFocusY = cropFocusY,
+                    lockCropFocusX = lockCropFocusX,
+                    lockCropFocusY = lockCropFocusY,
                     flipHorizontal = flipHorizontal
                 ))
             }
@@ -1704,7 +1718,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         cropFocusX: Float?,
         cropFocusY: Float?,
         flipHorizontal: Boolean,
-        applyImmediately: Boolean = true
+        applyImmediately: Boolean = true,
+        lockCropFocusX: Float? = null,
+        lockCropFocusY: Float? = null
     ) {
         val currentUri = prefs.lastWallpaperUri ?: return
         viewModelScope.launch {
@@ -1729,7 +1745,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         customScrollMode = customScrollMode,
                         cropFocusX = cropFocusX,
                         cropFocusY = cropFocusY,
-                        flipHorizontal = flipHorizontal
+                        flipHorizontal = flipHorizontal,
+                        lockCropFocusX = lockCropFocusX,
+                        lockCropFocusY = lockCropFocusY
                     )
                 }
             }

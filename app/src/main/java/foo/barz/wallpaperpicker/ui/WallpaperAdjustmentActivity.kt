@@ -71,7 +71,7 @@ class WallpaperAdjustmentActivity : ComponentActivity() {
                     item = item,
                     globalScrollMode = prefs.scrollMode,
                     onDismiss = { finish() },
-                    onSave = { customScrollMode, cropFocusX, cropFocusY, flipHorizontal, applyImmediately ->
+                    onSave = { customScrollMode, cropFocusX, cropFocusY, flipHorizontal, applyImmediately, lockCropFocusX, lockCropFocusY ->
                         lifecycleScope.launch {
                             withContext(Dispatchers.IO) {
                                 val existingItem = historyDb.getItemByUri(uri.toString())
@@ -88,7 +88,9 @@ class WallpaperAdjustmentActivity : ComponentActivity() {
                                     customScrollMode = customScrollMode,
                                     cropFocusX = cropFocusX,
                                     cropFocusY = cropFocusY,
-                                    flipHorizontal = flipHorizontal
+                                    flipHorizontal = flipHorizontal,
+                                    lockCropFocusX = lockCropFocusX,
+                                    lockCropFocusY = lockCropFocusY
                                 )
 
                                 if (applyImmediately) {
@@ -109,7 +111,9 @@ class WallpaperAdjustmentActivity : ComponentActivity() {
                                         cropFocusX = cropFocusX ?: 0.5f,
                                         cropFocusY = cropFocusY ?: 0.5f,
                                         flipHorizontal = flipHorizontal,
-                                        lockScreenStrategy = prefs.lockScreenStrategy
+                                        lockScreenStrategy = prefs.lockScreenStrategy,
+                                        lockCropFocusX = lockCropFocusX,
+                                        lockCropFocusY = lockCropFocusY
                                     )
                                     if (processResult.isSuccess) {
                                         applier.apply(processResult.getOrThrow())

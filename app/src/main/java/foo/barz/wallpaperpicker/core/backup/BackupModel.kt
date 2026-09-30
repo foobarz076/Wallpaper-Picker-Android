@@ -25,6 +25,8 @@ data class BackupHistoryOverride(
     val customScrollMode: WallpaperScrollMode? = null,
     val cropFocusX: Float? = null,
     val cropFocusY: Float? = null,
+    val lockCropFocusX: Float? = null,
+    val lockCropFocusY: Float? = null,
     val flipHorizontal: Boolean = false,
     val remoteUrl: String? = null
 ) {
@@ -39,6 +41,8 @@ data class BackupHistoryOverride(
         put("customScrollMode", customScrollMode?.name ?: JSONObject.NULL)
         put("cropFocusX", cropFocusX?.let { it.toDouble() } ?: JSONObject.NULL)
         put("cropFocusY", cropFocusY?.let { it.toDouble() } ?: JSONObject.NULL)
+        put("lockCropFocusX", lockCropFocusX?.let { it.toDouble() } ?: JSONObject.NULL)
+        put("lockCropFocusY", lockCropFocusY?.let { it.toDouble() } ?: JSONObject.NULL)
         put("flipHorizontal", flipHorizontal)
         put("remoteUrl", remoteUrl ?: JSONObject.NULL)
     }
@@ -58,6 +62,8 @@ data class BackupHistoryOverride(
                 customScrollMode = scrollModeStr?.let { runCatching { WallpaperScrollMode.valueOf(it) }.getOrNull() },
                 cropFocusX = if (!json.isNull("cropFocusX")) json.optDouble("cropFocusX").toFloat() else null,
                 cropFocusY = if (!json.isNull("cropFocusY")) json.optDouble("cropFocusY").toFloat() else null,
+                lockCropFocusX = if (!json.isNull("lockCropFocusX")) json.optDouble("lockCropFocusX").toFloat() else null,
+                lockCropFocusY = if (!json.isNull("lockCropFocusY")) json.optDouble("lockCropFocusY").toFloat() else null,
                 flipHorizontal = json.optBoolean("flipHorizontal", false),
                 remoteUrl = if (!json.isNull("remoteUrl")) json.optString("remoteUrl") else null
             )

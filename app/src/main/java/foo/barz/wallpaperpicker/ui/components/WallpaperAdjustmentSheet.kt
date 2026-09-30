@@ -28,6 +28,8 @@ fun WallpaperAdjustmentSheet(
         item = item,
         globalScrollMode = globalScrollMode,
         onDismiss = onDismiss,
-        onSave = onSave
+        onSave = { scroll, x, y, flip, apply, _, _ ->
+            onSave(scroll, x, y, flip, apply)
+        }
     )
 }

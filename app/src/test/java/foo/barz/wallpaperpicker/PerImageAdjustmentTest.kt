@@ -24,32 +24,40 @@ class PerImageAdjustmentTest {
             appliedTimestamp = 1700000000000L
         )
 
-        // Default state: no override, flip false
+        // Default state: no override, flip false, lockCropFocus null
         assertNull(defaultItem.customScrollMode)
         assertNull(defaultItem.cropFocusX)
         assertNull(defaultItem.cropFocusY)
+        assertNull(defaultItem.lockCropFocusX)
+        assertNull(defaultItem.lockCropFocusY)
         assertFalse(defaultItem.flipHorizontal)
 
-        // Custom adjusted state
+        // Custom adjusted state with independent lock crop focus
         val adjustedItem = defaultItem.copy(
             customScrollMode = WallpaperScrollMode.NEVER,
             cropFocusX = 0.25f,
             cropFocusY = 0.15f,
-            flipHorizontal = true
+            flipHorizontal = true,
+            lockCropFocusX = 0.75f,
+            lockCropFocusY = 0.85f
         )
 
         assertEquals(WallpaperScrollMode.NEVER, adjustedItem.customScrollMode)
         assertEquals(0.25f, adjustedItem.cropFocusX)
         assertEquals(0.15f, adjustedItem.cropFocusY)
+        assertEquals(0.75f, adjustedItem.lockCropFocusX)
+        assertEquals(0.85f, adjustedItem.lockCropFocusY)
         assertTrue(adjustedItem.flipHorizontal)
     }
 
     @Test
-    fun testDatabaseConstantsIncludeFlipHorizontal() {
+    fun testDatabaseConstantsIncludeFlipHorizontalAndLockCropFocus() {
         assertEquals("flip_horizontal", WallpaperHistoryDatabase.COLUMN_FLIP_HORIZONTAL)
         assertEquals("custom_scroll_mode", WallpaperHistoryDatabase.COLUMN_CUSTOM_SCROLL_MODE)
         assertEquals("crop_focus_x", WallpaperHistoryDatabase.COLUMN_CROP_FOCUS_X)
         assertEquals("crop_focus_y", WallpaperHistoryDatabase.COLUMN_CROP_FOCUS_Y)
+        assertEquals("lock_crop_focus_x", WallpaperHistoryDatabase.COLUMN_LOCK_CROP_FOCUS_X)
+        assertEquals("lock_crop_focus_y", WallpaperHistoryDatabase.COLUMN_LOCK_CROP_FOCUS_Y)
     }
 
     @Test
@@ -148,5 +156,59 @@ class PerImageAdjustmentTest {
         assertEquals(0.7f, updated.currentWallpaperItem?.cropFocusX)
         assertEquals(0.2f, updated.currentWallpaperItem?.cropFocusY)
         assertTrue(updated.currentWallpaperItem?.flipHorizontal == true)
+    }
+
+    @Test
+    fun testIndependentLockAndHomeCropOffsets() {
+        val targetWidth = 1080
+        val targetHeight = 1920
+
+        val scaledWidth = 1440
+        val scaledHeight = 1920
+        val excessWidth = scaledWidth - targetWidth // 360
+
+        // Home screen focus at 0.2 (left-skewed)
+        val homeFocusX = 0.2f
+        val homeOffsetX = -(excessWidth * homeFocusX.coerceIn(0f, 1f)).toInt()
+        assertEquals(-72, homeOffsetX)
+
+        // Lock screen focus at 0.8 (right-skewed)
+        val lockFocusX = 0.8f
+        val lockOffsetX = -(excessWidth * lockFocusX.coerceIn(0f, 1f)).toInt()
+        assertEquals(-288, lockOffsetX)
+
+        // Ensure offsets are independent and distinct
+        kotlin.test.assertNotEquals(homeOffsetX, lockOffsetX)
+    }
+
+    @Test
+    fun testLockCropFocusLinkingFallback() {
+        // When lockCropFocusX is null (linked mode), fallback to cropFocusX
+        val linkedItem = WallpaperHistoryItem(
+            id = 10L,
+            sourceUri = "file:///dummy.jpg",
+            title = "Dummy",
+            sourceType = WallpaperSourceType.LOCAL_FOLDER,
+            appliedTimestamp = 1000L,
+            cropFocusX = 0.35f,
+            cropFocusY = 0.45f,
+            lockCropFocusX = null,
+            lockCropFocusY = null
+        )
+
+        val effectiveLockFocusX = linkedItem.lockCropFocusX ?: linkedItem.cropFocusX ?: 0.5f
+        val effectiveLockFocusY = linkedItem.lockCropFocusY ?: linkedItem.cropFocusY ?: 0.5f
+        assertEquals(0.35f, effectiveLockFocusX)
+        assertEquals(0.45f, effectiveLockFocusY)
+
+        // When lockCropFocusX is specified (unlinked mode), use the custom lock crop focus
+        val unlinkedItem = linkedItem.copy(
+            lockCropFocusX = 0.90f,
+            lockCropFocusY = 0.10f
+        )
+        val customLockFocusX = unlinkedItem.lockCropFocusX ?: unlinkedItem.cropFocusX ?: 0.5f
+        val customLockFocusY = unlinkedItem.lockCropFocusY ?: unlinkedItem.cropFocusY ?: 0.5f
+        assertEquals(0.90f, customLockFocusX)
+        assertEquals(0.10f, customLockFocusY)
     }
 }

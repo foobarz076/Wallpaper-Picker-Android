@@ -102,6 +102,11 @@
     <string name="adjust_scroll_auto_desc">AUTO: Parallax scroll wide images, lock portrait to single screen</string>
     <string name="adjust_scroll_always_desc">ALWAYS: Force double-width canvas scrolling with launcher</string>
     <string name="adjust_scroll_never_desc">NEVER: Strictly lock to single screen, no panning</string>
+    <string name="adjust_tab_home">Home Screen</string>
+    <string name="adjust_tab_lock">Lock Screen</string>
+    <string name="adjust_lock_link_title">Link with Home Screen</string>
+    <string name="adjust_lock_link_desc">Use the same framing as the home screen for the lock screen</string>
+    <string name="adjust_lock_custom_hint">Independent Lock Screen Framing Active</string>
     <string name="adjust_reset_global">Reset to Global Default</string>
     <string name="adjust_save_memory_only">Save Preference Only</string>
     <string name="adjust_save_and_apply">Save &amp; Apply</string>

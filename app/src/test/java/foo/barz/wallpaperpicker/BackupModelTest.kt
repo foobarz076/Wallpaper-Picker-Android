@@ -83,7 +83,9 @@ class BackupModelTest {
                 customScrollMode = WallpaperScrollMode.NEVER,
                 cropFocusX = 0.25f,
                 cropFocusY = 0.75f,
-                flipHorizontal = true
+                flipHorizontal = true,
+                lockCropFocusX = 0.80f,
+                lockCropFocusY = 0.20f
             )
         )
 
@@ -127,6 +129,8 @@ class BackupModelTest {
         assertEquals(0.25f, override.cropFocusX)
         assertEquals(0.75f, override.cropFocusY)
         assertTrue(override.flipHorizontal)
+        assertEquals(0.80f, override.lockCropFocusX)
+        assertEquals(0.20f, override.lockCropFocusY)
     }
 
     @Test

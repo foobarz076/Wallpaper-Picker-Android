@@ -18,6 +18,8 @@ data class WallpaperHistoryItem(
     val customScrollMode: WallpaperScrollMode? = null,
     val cropFocusX: Float? = null,
     val cropFocusY: Float? = null,
+    val lockCropFocusX: Float? = null,
+    val lockCropFocusY: Float? = null,
     val flipHorizontal: Boolean = false,
     val sourceTitle: String? = null,
     val remoteUrl: String? = null,

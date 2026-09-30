@@ -160,6 +160,8 @@ object WallpaperChangeExecutor {
         val effectiveScrollMode = customPref?.customScrollMode ?: prefs.scrollMode
         val effectiveCropFocusX = customPref?.cropFocusX ?: 0.5f
         val effectiveCropFocusY = customPref?.cropFocusY ?: 0.5f
+        val effectiveLockCropFocusX = customPref?.lockCropFocusX
+        val effectiveLockCropFocusY = customPref?.lockCropFocusY
         val effectiveFlipHorizontal = customPref?.flipHorizontal ?: false
 
         val effectiveTarget = matchingRule?.targetScreen ?: prefs.target
@@ -174,7 +176,9 @@ object WallpaperChangeExecutor {
             cropFocusX = effectiveCropFocusX,
             cropFocusY = effectiveCropFocusY,
             flipHorizontal = effectiveFlipHorizontal,
-            lockScreenStrategy = prefs.lockScreenStrategy
+            lockScreenStrategy = prefs.lockScreenStrategy,
+            lockCropFocusX = effectiveLockCropFocusX,
+            lockCropFocusY = effectiveLockCropFocusY
         )
         if (processResult.isFailure) {
             return recordFailure(

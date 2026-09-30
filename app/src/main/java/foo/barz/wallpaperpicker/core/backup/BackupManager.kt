@@ -133,6 +133,8 @@ object BackupManager {
                 customScrollMode = item.customScrollMode,
                 cropFocusX = item.cropFocusX,
                 cropFocusY = item.cropFocusY,
+                lockCropFocusX = item.lockCropFocusX,
+                lockCropFocusY = item.lockCropFocusY,
                 flipHorizontal = item.flipHorizontal,
                 remoteUrl = item.remoteUrl
             )
@@ -397,7 +399,9 @@ object BackupManager {
                 cropFocusY = override.cropFocusY,
                 flipHorizontal = override.flipHorizontal,
                 remoteUrl = override.remoteUrl,
-                favoriteFilePath = favPath
+                favoriteFilePath = favPath,
+                lockCropFocusX = override.lockCropFocusX,
+                lockCropFocusY = override.lockCropFocusY
             )
 
             // Detect whether this favorite wallpaper lacks a local file but can be redownloaded

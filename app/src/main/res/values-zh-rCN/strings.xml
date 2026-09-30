@@ -101,6 +101,11 @@
     <string name="adjust_scroll_auto_desc">AUTO: 宽图视差平移，竖图锁定单屏不拉伸</string>
     <string name="adjust_scroll_always_desc">ALWAYS: 强制生成双倍屏宽画布随桌面滚动</string>
     <string name="adjust_scroll_never_desc">NEVER: 严格锁定单屏显示，禁止任何平移</string>
+    <string name="adjust_tab_home">主屏幕</string>
+    <string name="adjust_tab_lock">锁屏幕</string>
+    <string name="adjust_lock_link_title">与主屏幕联动</string>
+    <string name="adjust_lock_link_desc">锁屏使用与主屏幕完全相同的焦点构图</string>
+    <string name="adjust_lock_custom_hint">已开启锁屏独立构图</string>
     <string name="adjust_reset_global">重置为全局默认</string>
     <string name="adjust_save_memory_only">仅保存记忆</string>
     <string name="adjust_save_and_apply">保存并应用</string>
