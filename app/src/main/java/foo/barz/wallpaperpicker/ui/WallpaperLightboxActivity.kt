@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,21 +27,14 @@ import androidx.core.content.ContextCompat
 import foo.barz.wallpaperpicker.MainActivity
 import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.action.WallpaperActionManager
-import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
 import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
-import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
-import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
 import foo.barz.wallpaperpicker.data.PreferencesManager
-import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentScreen
 import foo.barz.wallpaperpicker.ui.components.WallpaperLightboxViewer
 import foo.barz.wallpaperpicker.ui.theme.WallpaperPickerTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileNotFoundException
 
 /**
  * Fullscreen activity displaying the immersive wallpaper lightbox viewer.
@@ -81,8 +73,6 @@ class WallpaperLightboxActivity : ComponentActivity() {
                     mutableStateOf(historyDb.getItemByUri(uri.toString())?.isFavorite ?: false)
                 }
                 var isSaving by remember { mutableStateOf(false) }
-                var showLightbox by remember { mutableStateOf(true) }
-                var showAdjustmentScreen by remember { mutableStateOf(false) }
 
                 val writeStorageLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestPermission()
@@ -144,124 +134,59 @@ class WallpaperLightboxActivity : ComponentActivity() {
                     }
                 }
 
-                BackHandler {
-                    if (showAdjustmentScreen) {
-                        showAdjustmentScreen = false
-                        showLightbox = true
-                    } else {
-                        finish()
-                    }
-                }
-
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.Black)
                 ) {
-                    if (showLightbox) {
-                        WallpaperLightboxViewer(
-                            imageUri = uri,
-                            title = initialTitle,
-                            sourceBadge = initialSourceTitle,
-                            isFavorite = isFavorite,
-                            isSaving = isSaving,
-                            onDismiss = { finish() },
-                            onToggleFavorite = {
-                                val newFav = !isFavorite
-                                isFavorite = newFav
-                                scope.launch(Dispatchers.IO) {
-                                    historyDb.updateFavoriteByUri(uri.toString(), newFav)
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(
-                                            this@WallpaperLightboxActivity,
-                                            if (newFav) getString(R.string.lightbox_added_favorite) else getString(R.string.lightbox_removed_favorite),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
-                            },
-                            onOpenInGallery = {
-                                scope.launch {
-                                    val result = WallpaperActionManager.openInGallery(this@WallpaperLightboxActivity, uri)
-                                    if (result.isFailure) {
-                                        Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_cannot_open_gallery), Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
-                            onSaveToGallery = handleSaveClick,
-                            onShareWallpaper = {
-                                scope.launch {
-                                    val result = WallpaperActionManager.shareWallpaper(this@WallpaperLightboxActivity, uri, initialTitle)
-                                    if (result.isFailure) {
-                                        Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_share_failed), Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
-                            onOpenAdjustment = {
-                                showLightbox = false
-                                showAdjustmentScreen = true
-                            }
-                        )
-                    }
-
-                    if (showAdjustmentScreen) {
-                        val historyItem = historyDb.getItemByUri(uri.toString()) ?: WallpaperHistoryItem(
-                            sourceUri = uri.toString(),
-                            title = initialTitle,
-                            sourceType = prefs.lastWallpaperSourceType ?: WallpaperSourceType.LOCAL_FOLDER,
-                            appliedTimestamp = prefs.lastChangedTimestamp
-                        )
-                        WallpaperAdjustmentScreen(
-                            item = historyItem,
-                            globalScrollMode = prefs.scrollMode,
-                            onDismiss = {
-                                showAdjustmentScreen = false
-                                showLightbox = true
-                            },
-                            onSave = { customScrollMode, cropFocusX, cropFocusY, flipHorizontal, applyImmediately ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        historyDb.updateCustomPreferencesByUri(
-                                            sourceUri = uri.toString(),
-                                            customScrollMode = customScrollMode,
-                                            cropFocusX = cropFocusX,
-                                            cropFocusY = cropFocusY,
-                                            flipHorizontal = flipHorizontal
-                                        )
-                                        if (applyImmediately) {
-                                            val processor = WallpaperProcessor(applicationContext)
-                                            val applier = WallpaperApplier(applicationContext)
-                                            val processResult = processor.processForTarget(
-                                                openStream = {
-                                                    if (uri.scheme == "file") {
-                                                        FileInputStream(File(uri.path!!))
-                                                    } else {
-                                                        contentResolver.openInputStream(uri)
-                                                            ?: throw FileNotFoundException("无法打开图片流: $uri")
-                                                    }
-                                                },
-                                                target = prefs.target,
-                                                scrollMode = customScrollMode ?: prefs.scrollMode,
-                                                cropMode = prefs.cropMode,
-                                                cropFocusX = cropFocusX ?: 0.5f,
-                                                cropFocusY = cropFocusY ?: 0.5f,
-                                                flipHorizontal = flipHorizontal,
-                                                lockScreenStrategy = prefs.lockScreenStrategy
-                                            )
-                                            if (processResult.isSuccess) {
-                                                applier.apply(processResult.getOrThrow())
-                                            }
-                                        }
-                                    }
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_composition_saved), Toast.LENGTH_SHORT).show()
-                                        showAdjustmentScreen = false
-                                        showLightbox = true
-                                    }
+                    WallpaperLightboxViewer(
+                        imageUri = uri,
+                        title = initialTitle,
+                        sourceBadge = initialSourceTitle,
+                        isFavorite = isFavorite,
+                        isSaving = isSaving,
+                        onDismiss = { finish() },
+                        onToggleFavorite = {
+                            val newFav = !isFavorite
+                            isFavorite = newFav
+                            scope.launch(Dispatchers.IO) {
+                                historyDb.updateFavoriteByUri(uri.toString(), newFav)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        this@WallpaperLightboxActivity,
+                                        if (newFav) getString(R.string.lightbox_added_favorite) else getString(R.string.lightbox_removed_favorite),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
-                        )
-                    }
+                        },
+                        onOpenInGallery = {
+                            scope.launch {
+                                val result = WallpaperActionManager.openInGallery(this@WallpaperLightboxActivity, uri)
+                                if (result.isFailure) {
+                                    Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_cannot_open_gallery), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        onSaveToGallery = handleSaveClick,
+                        onShareWallpaper = {
+                            scope.launch {
+                                val result = WallpaperActionManager.shareWallpaper(this@WallpaperLightboxActivity, uri, initialTitle)
+                                if (result.isFailure) {
+                                    Toast.makeText(this@WallpaperLightboxActivity, getString(R.string.lightbox_share_failed), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        onOpenAdjustment = {
+                            val adjustIntent = WallpaperAdjustmentActivity.createIntent(
+                                context = this@WallpaperLightboxActivity,
+                                uri = uri,
+                                title = initialTitle,
+                                sourceType = prefs.lastWallpaperSourceType ?: WallpaperSourceType.LOCAL_FOLDER
+                            )
+                            startActivity(adjustIntent)
+                        }
+                    )
                 }
             }
         }

@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -63,8 +65,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import foo.barz.wallpaperpicker.R
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
@@ -90,7 +90,8 @@ fun WallpaperAdjustmentScreen(
         cropFocusY: Float?,
         flipHorizontal: Boolean,
         applyImmediately: Boolean
-    ) -> Unit
+    ) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     // State initialized from existing item preferences (or defaults)
     var selectedScrollMode by remember(item) { mutableStateOf(item.customScrollMode) }
@@ -104,24 +105,15 @@ fun WallpaperAdjustmentScreen(
     val screenHeightDp = configuration.screenHeightDp.toFloat()
     val deviceAspectRatio = (screenWidthDp / screenHeightDp).coerceIn(0.25f, 3.0f)
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        val dialogInsets = rememberEdgeToEdgeDialog(isLightBars = false)
-
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = dialogInsets.statusBarTop)
-            ) {
                 // 1. Top App Bar Header
                 Row(
                     modifier = Modifier
@@ -287,11 +279,12 @@ fun WallpaperAdjustmentScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .navigationBarsPadding()
                             .padding(
                                 top = 16.dp,
                                 start = 16.dp,
                                 end = 16.dp,
-                                bottom = dialogInsets.navBarBottom + 16.dp
+                                bottom = 16.dp
                             )
                     ) {
                         // Scrollable control parameters
@@ -568,7 +561,6 @@ fun WallpaperAdjustmentScreen(
                             }
                         }
                     }
-                }
             }
         }
     }

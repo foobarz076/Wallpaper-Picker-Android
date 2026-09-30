@@ -80,8 +80,8 @@ import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
+import foo.barz.wallpaperpicker.ui.WallpaperAdjustmentActivity
 import foo.barz.wallpaperpicker.ui.components.TopFloatingPillNotification
-import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentScreen
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -121,16 +121,16 @@ fun HistoryTab(
     onSheetActiveChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var subTab by rememberSaveable { mutableStateOf(HistorySubTab.HISTORY) }
     var selectedItemForDetail by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
-    var selectedItemForAdjustment by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
     var showHistoryActionMenu by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
     var showClearInvalidConfirmDialog by remember { mutableStateOf(false) }
     var showClearAllConfirmDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val isAnySheetOpen = selectedItemForDetail != null || selectedItemForAdjustment != null
+    val isAnySheetOpen = selectedItemForDetail != null
     LaunchedEffect(isAnySheetOpen) {
         onSheetActiveChanged(isAnySheetOpen)
     }
@@ -339,7 +339,15 @@ fun HistoryTab(
                 onOpenAdjustment = {
                     val target = item
                     selectedItemForDetail = null
-                    selectedItemForAdjustment = target
+                    context.startActivity(
+                        WallpaperAdjustmentActivity.createIntent(
+                            context = context,
+                            uri = target.displayUri,
+                            title = target.title,
+                            sourceType = target.sourceType,
+                            historyId = target.id
+                        )
+                    )
                 }
             )
 
@@ -349,25 +357,6 @@ fun HistoryTab(
                 onDismiss = onClearStatus
             )
         }
-    }
-
-    // Per-image personalized attribute adjustment screen
-    selectedItemForAdjustment?.let { item ->
-        WallpaperAdjustmentScreen(
-            item = item,
-            globalScrollMode = state.scrollMode,
-            onDismiss = { selectedItemForAdjustment = null },
-            onSave = { customScrollMode, cropFocusX, cropFocusY, flipHorizontal, applyImmediately ->
-                onUpdateWallpaperPreferences(
-                    item,
-                    customScrollMode,
-                    cropFocusX,
-                    cropFocusY,
-                    flipHorizontal,
-                    applyImmediately
-                )
-            }
-        )
     }
 
     // Confirmation dialog for single history item deletion

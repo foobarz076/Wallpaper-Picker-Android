@@ -69,8 +69,8 @@ import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
-import foo.barz.wallpaperpicker.ui.components.WallpaperAdjustmentScreen
-import foo.barz.wallpaperpicker.ui.components.WallpaperLightboxViewer
+import foo.barz.wallpaperpicker.ui.WallpaperAdjustmentActivity
+import foo.barz.wallpaperpicker.ui.WallpaperLightboxActivity
 
 /**
  * Dashboard tab displaying hero wallpaper pictorial card, quick secondary actions,
@@ -96,8 +96,6 @@ fun DashboardTab(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var showAdjustmentScreen by remember { mutableStateOf(false) }
-    var showLightbox by remember { mutableStateOf(false) }
 
     // Write external storage permission for legacy Android versions (API <= 28)
     val writeStorageLauncher = rememberLauncherForActivityResult(
@@ -154,7 +152,18 @@ fun DashboardTab(
         // 1. Hero Pictorial Wallpaper Card or Empty State
         if (state.lastWallpaperUri != null) {
             Card(
-                onClick = { showLightbox = true },
+                onClick = {
+                    state.lastWallpaperUri.let { uri ->
+                        context.startActivity(
+                            WallpaperLightboxActivity.createIntent(
+                                context = context,
+                                uri = uri,
+                                title = state.lastWallpaperTitle,
+                                sourceTitle = sourceBadge
+                            )
+                        )
+                    }
+                },
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -309,7 +318,18 @@ fun DashboardTab(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { showAdjustmentScreen = true },
+                    onClick = {
+                        state.lastWallpaperUri?.let { uri ->
+                            context.startActivity(
+                                WallpaperAdjustmentActivity.createIntent(
+                                    context = context,
+                                    uri = uri,
+                                    title = state.lastWallpaperTitle,
+                                    sourceType = state.currentWallpaperItem?.sourceType ?: WallpaperSourceType.LOCAL_FOLDER
+                                )
+                            )
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                 ) {
@@ -521,49 +541,5 @@ fun DashboardTab(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-    }
-
-    // Fullscreen gestures lightbox viewer
-    if (showLightbox && state.lastWallpaperUri != null) {
-        WallpaperLightboxViewer(
-            imageUri = state.lastWallpaperUri,
-            title = state.lastWallpaperTitle,
-            sourceBadge = sourceBadge,
-            isFavorite = state.isCurrentFavorite,
-            isSaving = state.isSavingWallpaper,
-            onDismiss = { showLightbox = false },
-            onToggleFavorite = onToggleFavoriteCurrent,
-            onOpenInGallery = onOpenInGallery,
-            onSaveToGallery = handleSaveClick,
-            onShareWallpaper = onShareWallpaper,
-            onOpenAdjustment = {
-                showLightbox = false
-                showAdjustmentScreen = true
-            }
-        )
-    }
-
-    // Composition and scroll tuning fullscreen screen
-    if (showAdjustmentScreen && state.lastWallpaperUri != null) {
-        val targetItem = state.currentWallpaperItem ?: WallpaperHistoryItem(
-            sourceUri = state.lastWallpaperUri.toString(),
-            title = state.lastWallpaperTitle,
-            sourceType = WallpaperSourceType.LOCAL_FOLDER,
-            appliedTimestamp = System.currentTimeMillis()
-        )
-        WallpaperAdjustmentScreen(
-            item = targetItem,
-            globalScrollMode = state.scrollMode,
-            onDismiss = { showAdjustmentScreen = false },
-            onSave = { customScrollMode, cropFocusX, cropFocusY, flipHorizontal, applyImmediately ->
-                onUpdateCurrentWallpaperPreferences(
-                    customScrollMode,
-                    cropFocusX,
-                    cropFocusY,
-                    flipHorizontal,
-                    applyImmediately
-                )
-            }
-        )
     }
 }

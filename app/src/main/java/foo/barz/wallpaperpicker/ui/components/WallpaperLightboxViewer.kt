@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,15 +50,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import foo.barz.wallpaperpicker.R
 
@@ -81,25 +77,17 @@ fun WallpaperLightboxViewer(
     onOpenInGallery: () -> Unit,
     onSaveToGallery: () -> Unit,
     onShareWallpaper: () -> Unit,
-    onOpenAdjustment: () -> Unit
+    onOpenAdjustment: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var showControls by remember { mutableStateOf(true) }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
-        val dialogInsets = rememberEdgeToEdgeDialog(isLightBars = false)
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = {
@@ -162,8 +150,9 @@ fun WallpaperLightboxViewer(
                                 colors = listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent)
                             )
                         )
+                        .statusBarsPadding()
                         .padding(
-                            top = dialogInsets.statusBarTop + 8.dp,
+                            top = 8.dp,
                             start = 12.dp,
                             end = 12.dp,
                             bottom = 8.dp
@@ -241,8 +230,9 @@ fun WallpaperLightboxViewer(
                                 colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
                             )
                         )
+                        .navigationBarsPadding()
                         .padding(
-                            bottom = dialogInsets.navBarBottom + 24.dp,
+                            bottom = 24.dp,
                             start = 16.dp,
                             end = 16.dp,
                             top = 20.dp
@@ -328,7 +318,6 @@ fun WallpaperLightboxViewer(
                         }
                     }
                 }
-            }
         }
     }
 }
