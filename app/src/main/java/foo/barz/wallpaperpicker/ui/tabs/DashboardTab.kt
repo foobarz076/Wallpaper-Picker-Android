@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -31,7 +32,9 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
@@ -40,12 +43,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,7 +99,10 @@ fun DashboardTab(
         applyImmediately: Boolean
     ) -> Unit = { _, _, _, _, _ -> },
     onChangeNow: () -> Unit,
+    onToggleSchedule: (Boolean) -> Unit = {},
+    onIntervalSelected: (Long) -> Unit = {},
     onNavigateToSources: () -> Unit = {},
+    onNavigateToScheduleSettings: () -> Unit = {},
     onRequestRestoreBackup: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -140,14 +151,15 @@ fun DashboardTab(
             else -> stringResource(R.string.dash_multiple_sources_badge)
         }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(4.dp))
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(4.dp))
 
         // 1. Hero Pictorial Wallpaper Card or Empty State
         if (state.lastWallpaperUri != null) {
@@ -476,70 +488,286 @@ fun DashboardTab(
             }
         }
 
-        // 2. Status Diagnostics Card
+        // 2. Wallpaper Sources Quick Card
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(stringResource(R.string.dash_status_title), style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.dash_sources_card_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        if (enabledSources.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.dash_sources_count_format, enabledSources.size),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    TextButton(
+                        onClick = onNavigateToSources,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(stringResource(R.string.dash_sources_manage_btn), style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = stringResource(R.string.dash_active_source, activeSourceLabel),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = stringResource(R.string.dash_last_changed, state.lastChangedText),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = if (state.isScheduled) {
-                        stringResource(R.string.dash_schedule_on_format, state.intervalMinutes)
-                    } else {
-                        stringResource(R.string.dash_schedule_off)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (state.isScheduled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                )
-                if (state.lastErrorMessage != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                if (enabledSources.isEmpty() && state.folderUri == null) {
                     Text(
-                        text = stringResource(R.string.dash_last_error, state.lastErrorMessage),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                } else if (state.lastExecutionStatus != null && state.lastExecutionStatus != "成功") {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.dash_last_status, state.lastExecutionStatus),
-                        style = MaterialTheme.typography.bodySmall,
+                        text = stringResource(R.string.dash_no_sources_enabled),
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline
                     )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = onNavigateToSources,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.dash_sources_add_btn))
+                    }
+                } else {
+                    Text(
+                        text = activeSourceLabel,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    if (enabledSources.size > 1) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            enabledSources.forEach { source ->
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.padding(vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = source.title,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        // 3. Primary Manual Change Action Button
-        Button(
-            onClick = onChangeNow,
-            enabled = canChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-        ) {
-            if (state.isChanging) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.dp
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(stringResource(R.string.dash_changing))
-            } else {
-                Icon(Icons.Default.Refresh, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.dash_change_now))
+        // 3. Auto Rotation Quick Card
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = stringResource(R.string.dash_schedule_card_title),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = if (state.isScheduled) {
+                                    if (state.ruleEngineEnabled && state.scheduleRules.any { it.isEnabled }) {
+                                        stringResource(
+                                            R.string.dash_schedule_managed_by_rules,
+                                            state.scheduleRules.count { it.isEnabled }
+                                        )
+                                    } else {
+                                        stringResource(R.string.dash_schedule_on_format, state.intervalMinutes)
+                                    }
+                                } else {
+                                    stringResource(R.string.dash_schedule_off)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (state.isScheduled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = state.isScheduled,
+                        onCheckedChange = onToggleSchedule
+                    )
+                }
+
+                if (state.isScheduled) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val activeRulesCount = state.scheduleRules.count { it.isEnabled }
+                    if (state.ruleEngineEnabled && activeRulesCount > 0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.dash_schedule_managed_by_rules, activeRulesCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(
+                                onClick = onNavigateToScheduleSettings,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(stringResource(R.string.dash_schedule_view_rules), style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = stringResource(R.string.dash_schedule_interval_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        val intervals = listOf(
+                            15L to stringResource(R.string.rule_interval_15m),
+                            30L to stringResource(R.string.rule_interval_30m),
+                            60L to stringResource(R.string.rule_interval_1h),
+                            360L to stringResource(R.string.rule_interval_6h),
+                            1440L to stringResource(R.string.sched_interval_every_day)
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            intervals.forEach { (minutes, label) ->
+                                FilterChip(
+                                    selected = state.intervalMinutes == minutes,
+                                    onClick = { onIntervalSelected(minutes) },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.dash_last_changed, state.lastChangedText),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    if (state.lastErrorMessage != null) {
+                        Text(
+                            text = stringResource(R.string.dash_last_error, state.lastErrorMessage),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } else if (state.lastExecutionStatus != null && state.lastExecutionStatus != "成功") {
+                        Text(
+                            text = stringResource(R.string.dash_last_status, state.lastExecutionStatus),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.dash_status_ok),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // Clearance spacer for ExtendedFloatingActionButton
+        Spacer(modifier = Modifier.height(88.dp))
     }
+
+    // 4. Primary Manual Change Action as Extended Floating Action Button
+    if (canChange || state.isChanging) {
+        ExtendedFloatingActionButton(
+            onClick = onChangeNow,
+            expanded = true,
+            icon = {
+                if (state.isChanging) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null
+                    )
+                }
+            },
+            text = {
+                Text(
+                    if (state.isChanging) {
+                        stringResource(R.string.dash_changing_short)
+                    } else {
+                        stringResource(R.string.dash_fab_change)
+                    }
+                )
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        )
+    }
+}
 }

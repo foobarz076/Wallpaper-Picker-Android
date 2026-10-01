@@ -582,6 +582,17 @@
     <string name="dash_onboarding_desc">Moving to a new phone? Restore your configuration and favorite wallpapers, or add your first source to get started.</string>
     <string name="dash_onboarding_btn_restore">Restore Backup</string>
     <string name="dash_onboarding_btn_add_source">Add Source</string>
+    <string name="dash_fab_change">Change Now</string>
+    <string name="dash_changing_short">Changing…</string>
+    <string name="dash_sources_card_title">Wallpaper Sources</string>
+    <string name="dash_sources_manage_btn">Manage</string>
+    <string name="dash_sources_add_btn">Add Source</string>
+    <string name="dash_sources_count_format">%d active</string>
+    <string name="dash_schedule_card_title">Auto Rotation</string>
+    <string name="dash_schedule_managed_by_rules">Managed by Schedule Rules (%d active)</string>
+    <string name="dash_schedule_view_rules">View Rules</string>
+    <string name="dash_schedule_interval_title">Rotation Interval</string>
+    <string name="dash_status_ok">Normal</string>
     <string name="settings_onboarding_restore_title">Moving to a new device?</string>
     <string name="settings_onboarding_restore_desc">One-tap restore your wallpaper sources, rules, and preferences from a backup file.</string>
 

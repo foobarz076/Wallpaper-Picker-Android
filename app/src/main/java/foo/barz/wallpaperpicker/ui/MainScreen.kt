@@ -345,9 +345,15 @@ fun MainScreen(
                         onToggleFavoriteCurrent = onToggleFavoriteCurrent,
                         onUpdateCurrentWallpaperPreferences = onUpdateCurrentWallpaperPreferences,
                         onChangeNow = onChangeNow,
+                        onToggleSchedule = onToggleSchedule,
+                        onIntervalSelected = onIntervalSelected,
                         onNavigateToSources = {
                             selectedTab = MainTab.SOURCES
                             settingsSubPage = null
+                        },
+                        onNavigateToScheduleSettings = {
+                            selectedTab = MainTab.SETTINGS
+                            settingsSubPage = SettingsSubPage.SCHEDULING
                         },
                         onRequestRestoreBackup = requestRestoreBackup
                     )

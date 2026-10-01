@@ -581,6 +581,17 @@
     <string name="dash_onboarding_desc">新设备换机？可直接导入旧手机的配置与收藏备份，或添加您的第一个壁纸源开始体验。</string>
     <string name="dash_onboarding_btn_restore">从备份还原</string>
     <string name="dash_onboarding_btn_add_source">添加图源</string>
+    <string name="dash_fab_change">换一张</string>
+    <string name="dash_changing_short">更换中…</string>
+    <string name="dash_sources_card_title">壁纸图源</string>
+    <string name="dash_sources_manage_btn">管理</string>
+    <string name="dash_sources_add_btn">添加图源</string>
+    <string name="dash_sources_count_format">%d 个已启用</string>
+    <string name="dash_schedule_card_title">自动轮换</string>
+    <string name="dash_schedule_managed_by_rules">由日程表规则接管（%d 条生效）</string>
+    <string name="dash_schedule_view_rules">查看规则</string>
+    <string name="dash_schedule_interval_title">轮换频率</string>
+    <string name="dash_status_ok">正常</string>
     <string name="settings_onboarding_restore_title">在新设备上使用？</string>
     <string name="settings_onboarding_restore_desc">可从已有备份文件一键恢复所有图源、轮播规则与收藏偏好。</string>
 
