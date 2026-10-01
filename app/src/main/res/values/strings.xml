@@ -593,6 +593,22 @@
     <string name="dash_schedule_view_rules">View Rules</string>
     <string name="dash_schedule_interval_title">Rotation Interval</string>
     <string name="dash_status_ok">Normal</string>
+    <string name="dash_checklist_title">Getting Started</string>
+    <string name="dash_checklist_desc">Complete these quick steps to enjoy automatic wallpapers:</string>
+    <string name="dash_checklist_step1_todo">Choose a wallpaper source</string>
+    <string name="dash_checklist_step1_done">Wallpaper source ready: %s</string>
+    <string name="dash_checklist_step1_btn">Choose</string>
+    <string name="dash_checklist_step2_todo">Enable automatic rotation</string>
+    <string name="dash_checklist_step2_done">Auto rotation enabled (%s)</string>
+    <string name="dash_checklist_step2_btn">Enable</string>
+    <string name="dash_checklist_step3_todo">Change your first wallpaper</string>
+    <string name="dash_checklist_step3_hint">Tap \"Change Now\" at bottom right</string>
+    <string name="dash_checklist_step3_need_source">Complete step 1 first</string>
+    <string name="dash_checklist_battery_warning">Recommended: Exclude from battery optimization to prevent background sleeping</string>
+    <string name="dash_checklist_battery_btn">Settings</string>
+    <string name="dash_checklist_restore_link">Moving from another phone? Restore backup</string>
+    <string name="dash_schedule_battery_warning">Battery optimization active: rotation may be delayed during device standby.</string>
+    <string name="dash_schedule_battery_btn">Fix</string>
     <string name="settings_onboarding_restore_title">Moving to a new device?</string>
     <string name="settings_onboarding_restore_desc">One-tap restore your wallpaper sources, rules, and preferences from a backup file.</string>
 

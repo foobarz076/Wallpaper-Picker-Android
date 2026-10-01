@@ -592,6 +592,22 @@
     <string name="dash_schedule_view_rules">查看规则</string>
     <string name="dash_schedule_interval_title">轮换频率</string>
     <string name="dash_status_ok">正常</string>
+    <string name="dash_checklist_title">新手快速上手</string>
+    <string name="dash_checklist_desc">只需完成以下简单几步，即可开启自动壁纸体验：</string>
+    <string name="dash_checklist_step1_todo">选择一个壁纸图源</string>
+    <string name="dash_checklist_step1_done">壁纸图源已就绪：%s</string>
+    <string name="dash_checklist_step1_btn">去挑选</string>
+    <string name="dash_checklist_step2_todo">开启定时自动轮换</string>
+    <string name="dash_checklist_step2_done">自动轮换已开启（%s）</string>
+    <string name="dash_checklist_step2_btn">开启</string>
+    <string name="dash_checklist_step3_todo">换上你的第一张壁纸</string>
+    <string name="dash_checklist_step3_hint">点击右下角「换一张」</string>
+    <string name="dash_checklist_step3_need_source">请先挑选图源</string>
+    <string name="dash_checklist_battery_warning">建议：移入电池优化白名单，防止系统休眠阻断自动更换</string>
+    <string name="dash_checklist_battery_btn">去设置</string>
+    <string name="dash_checklist_restore_link">旧手机换机？从备份还原</string>
+    <string name="dash_schedule_battery_warning">电池优化受限中：熄屏休眠时可能会延迟更换壁纸。</string>
+    <string name="dash_schedule_battery_btn">去解除</string>
     <string name="settings_onboarding_restore_title">在新设备上使用？</string>
     <string name="settings_onboarding_restore_desc">可从已有备份文件一键恢复所有图源、轮播规则与收藏偏好。</string>
 
