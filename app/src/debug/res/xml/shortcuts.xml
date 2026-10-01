@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="next_wallpaper"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_next"
+        android:shortcutShortLabel="@string/shortcut_next_short"
+        android:shortcutLongLabel="@string/shortcut_next_long">
+        <intent
+            android:action="foo.barz.wallpaperpicker.ACTION_NEXT_WALLPAPER"
+            android:targetPackage="foo.barz.wallpaperpicker.debug"
+            android:targetClass="foo.barz.wallpaperpicker.ui.ShortcutActionActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="view_current"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_view"
+        android:shortcutShortLabel="@string/shortcut_view_short"
+        android:shortcutLongLabel="@string/shortcut_view_long">
+        <intent
+            android:action="foo.barz.wallpaperpicker.ACTION_VIEW_CURRENT_WALLPAPER"
+            android:targetPackage="foo.barz.wallpaperpicker.debug"
+            android:targetClass="foo.barz.wallpaperpicker.ui.ShortcutActionActivity" />
+    </shortcut>
+</shortcuts>

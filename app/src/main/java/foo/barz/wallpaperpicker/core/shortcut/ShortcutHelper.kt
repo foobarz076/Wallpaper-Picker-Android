@@ -27,6 +27,7 @@ object ShortcutHelper {
             val nextIntent = Intent(context, ShortcutActionActivity::class.java).apply {
                 action = ACTION_NEXT_WALLPAPER
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                `package` = context.packageName
             }
             val nextShortcut = ShortcutInfoCompat.Builder(context, ID_NEXT_WALLPAPER)
                 .setShortLabel(context.getString(R.string.shortcut_next_short))
@@ -37,6 +38,7 @@ object ShortcutHelper {
 
             val viewIntent = Intent(context, WallpaperLightboxActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                `package` = context.packageName
             }
             val viewShortcut = ShortcutInfoCompat.Builder(context, ID_VIEW_CURRENT)
                 .setShortLabel(context.getString(R.string.shortcut_view_short))
@@ -45,7 +47,7 @@ object ShortcutHelper {
                 .setIntent(viewIntent)
                 .build()
 
-            ShortcutManagerCompat.addDynamicShortcuts(context, listOf(nextShortcut, viewShortcut))
+            ShortcutManagerCompat.setDynamicShortcuts(context, listOf(nextShortcut, viewShortcut))
         }
     }
 
@@ -64,6 +66,7 @@ object ShortcutHelper {
         val nextIntent = Intent(context, ShortcutActionActivity::class.java).apply {
             action = ACTION_NEXT_WALLPAPER
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            `package` = context.packageName
         }
         val shortcut = ShortcutInfoCompat.Builder(context, ID_NEXT_WALLPAPER)
             .setShortLabel(context.getString(R.string.shortcut_next_short))
@@ -81,6 +84,7 @@ object ShortcutHelper {
         if (!isPinShortcutSupported(context)) return false
         val viewIntent = Intent(context, WallpaperLightboxActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            `package` = context.packageName
         }
         val shortcut = ShortcutInfoCompat.Builder(context, ID_VIEW_CURRENT)
             .setShortLabel(context.getString(R.string.shortcut_view_short))
