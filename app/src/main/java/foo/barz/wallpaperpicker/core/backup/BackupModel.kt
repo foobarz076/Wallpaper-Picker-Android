@@ -28,7 +28,8 @@ data class BackupHistoryOverride(
     val lockCropFocusX: Float? = null,
     val lockCropFocusY: Float? = null,
     val flipHorizontal: Boolean = false,
-    val remoteUrl: String? = null
+    val remoteUrl: String? = null,
+    val appliedTimestamp: Long? = null
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("sourceUri", sourceUri)
@@ -45,6 +46,7 @@ data class BackupHistoryOverride(
         put("lockCropFocusY", lockCropFocusY?.let { it.toDouble() } ?: JSONObject.NULL)
         put("flipHorizontal", flipHorizontal)
         put("remoteUrl", remoteUrl ?: JSONObject.NULL)
+        put("appliedTimestamp", appliedTimestamp ?: JSONObject.NULL)
     }
 
     companion object {
@@ -65,7 +67,8 @@ data class BackupHistoryOverride(
                 lockCropFocusX = if (!json.isNull("lockCropFocusX")) json.optDouble("lockCropFocusX").toFloat() else null,
                 lockCropFocusY = if (!json.isNull("lockCropFocusY")) json.optDouble("lockCropFocusY").toFloat() else null,
                 flipHorizontal = json.optBoolean("flipHorizontal", false),
-                remoteUrl = if (!json.isNull("remoteUrl")) json.optString("remoteUrl") else null
+                remoteUrl = if (!json.isNull("remoteUrl")) json.optString("remoteUrl") else null,
+                appliedTimestamp = if (!json.isNull("appliedTimestamp")) json.optLong("appliedTimestamp") else null
             )
         }
     }

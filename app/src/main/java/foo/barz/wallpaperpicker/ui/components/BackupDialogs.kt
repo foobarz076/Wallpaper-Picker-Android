@@ -83,7 +83,7 @@ fun BackupExportSheet(
     favoritesCount: Int = 0,
     favoritesSizeBytes: Long = 0L,
     onDismissRequest: () -> Unit,
-    onConfirmExport: (mode: BackupExportMode, password: String?, sanitize: Boolean, sign: Boolean, includeFavorites: Boolean) -> Unit
+    onConfirmExport: (mode: BackupExportMode, password: String?, sanitize: Boolean, sign: Boolean, includeFavorites: Boolean, includeAllHistory: Boolean) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedMode by remember { mutableStateOf(BackupExportMode.NATIVE_AES_GCM) }
@@ -93,6 +93,7 @@ fun BackupExportSheet(
     var sanitize by remember { mutableStateOf(true) }
     var signOpenPgp by remember { mutableStateOf(false) }
     var includeFavorites by remember { mutableStateOf(favoritesCount > 0) }
+    var includeAllHistory by remember { mutableStateOf(false) }
     var validationError by remember { mutableStateOf<String?>(null) }
 
     val passwordEmptyError = stringResource(R.string.backup_export_password_empty)
@@ -212,6 +213,35 @@ fun BackupExportSheet(
                                         color = MaterialTheme.colorScheme.outline
                                     )
                                 }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { includeAllHistory = !includeAllHistory },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = includeAllHistory,
+                                onCheckedChange = { includeAllHistory = it }
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.backup_export_include_all_history_checkbox),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = stringResource(R.string.backup_export_include_all_history_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
                             }
                         }
                     }
@@ -493,13 +523,13 @@ fun BackupExportSheet(
                                     validationError = passwordMismatchError
                                     return@Button
                                 }
-                                onConfirmExport(BackupExportMode.NATIVE_AES_GCM, password, false, false, includeFavorites)
+                                onConfirmExport(BackupExportMode.NATIVE_AES_GCM, password, false, false, includeFavorites, includeAllHistory)
                             }
                             BackupExportMode.OPENPGP -> {
-                                onConfirmExport(BackupExportMode.OPENPGP, null, false, signOpenPgp, includeFavorites)
+                                onConfirmExport(BackupExportMode.OPENPGP, null, false, signOpenPgp, includeFavorites, includeAllHistory)
                             }
                             BackupExportMode.UNENCRYPTED -> {
-                                onConfirmExport(BackupExportMode.UNENCRYPTED, null, if (hasSensitiveData) sanitize else false, false, includeFavorites)
+                                onConfirmExport(BackupExportMode.UNENCRYPTED, null, if (hasSensitiveData) sanitize else false, false, includeFavorites, includeAllHistory)
                             }
                         }
                     },
@@ -522,7 +552,7 @@ fun BackupExportDialog(
     favoritesCount: Int = 0,
     favoritesSizeBytes: Long = 0L,
     onDismissRequest: () -> Unit,
-    onConfirmExport: (mode: BackupExportMode, password: String?, sanitize: Boolean, sign: Boolean, includeFavorites: Boolean) -> Unit
+    onConfirmExport: (mode: BackupExportMode, password: String?, sanitize: Boolean, sign: Boolean, includeFavorites: Boolean, includeAllHistory: Boolean) -> Unit
 ) {
     BackupExportSheet(
         hasSensitiveData = hasSensitiveData,

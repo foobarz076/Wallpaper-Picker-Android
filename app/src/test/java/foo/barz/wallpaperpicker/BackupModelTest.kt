@@ -432,4 +432,27 @@ class BackupModelTest {
         assertEquals(0, result.missingFavoritesCount)
         assertEquals(2, result.missingRemoteHistoryCount)
     }
+
+    @Test
+    fun testBackupHistoryOverrideAppliedTimestamp() {
+        val timestamp = 1712000000000L
+        val overrideWithTimestamp = BackupHistoryOverride(
+            sourceUri = "https://example.com/hist1.jpg",
+            title = "Historic Wallpaper",
+            sourceType = WallpaperSourceType.HTTP_API,
+            appliedTimestamp = timestamp
+        )
+        val json = overrideWithTimestamp.toJson()
+        val parsed = BackupHistoryOverride.fromJson(json)
+        assertEquals(timestamp, parsed.appliedTimestamp)
+        assertEquals("Historic Wallpaper", parsed.title)
+
+        // Verify backwards compatibility when appliedTimestamp is absent
+        val legacyJson = org.json.JSONObject().apply {
+            put("sourceUri", "content://media/legacy/123")
+            put("sourceType", "LOCAL_FOLDER")
+        }
+        val legacyParsed = BackupHistoryOverride.fromJson(legacyJson)
+        assertEquals(null, legacyParsed.appliedTimestamp)
+    }
 }

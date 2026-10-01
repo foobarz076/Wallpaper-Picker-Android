@@ -253,6 +253,18 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     /**
+     * Returns all history items ordered from most recent to oldest without any limit.
+     */
+    fun getAllHistoryItems(): List<WallpaperHistoryItem> {
+        val db = readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT * FROM $TABLE_NAME ORDER BY $COLUMN_APPLIED_TIMESTAMP DESC",
+            null
+        )
+        return cursor.use { extractItems(it) }
+    }
+
+    /**
      * Returns all user favorited wallpapers ordered by favorite timestamp.
      */
     fun getFavoritesList(): List<WallpaperHistoryItem> {
@@ -616,7 +628,8 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
         remoteUrl: String?,
         favoriteFilePath: String? = null,
         lockCropFocusX: Float? = null,
-        lockCropFocusY: Float? = null
+        lockCropFocusY: Float? = null,
+        appliedTimestamp: Long? = null
     ) {
         val db = writableDatabase
         val existing = getItemByUri(sourceUri)
@@ -638,11 +651,14 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
             put(COLUMN_LOCK_CROP_FOCUS_Y, lockCropFocusY)
             put(COLUMN_FLIP_HORIZONTAL, if (flipHorizontal) 1 else 0)
             if (remoteUrl != null) put(COLUMN_REMOTE_URL, remoteUrl)
+            if (appliedTimestamp != null) put(COLUMN_APPLIED_TIMESTAMP, appliedTimestamp)
         }
         if (existing != null) {
             db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(existing.id.toString()))
         } else {
-            values.put(COLUMN_APPLIED_TIMESTAMP, favoriteTimestamp ?: System.currentTimeMillis())
+            if (appliedTimestamp == null) {
+                values.put(COLUMN_APPLIED_TIMESTAMP, favoriteTimestamp ?: System.currentTimeMillis())
+            }
             db.insert(TABLE_NAME, null, values)
         }
     }

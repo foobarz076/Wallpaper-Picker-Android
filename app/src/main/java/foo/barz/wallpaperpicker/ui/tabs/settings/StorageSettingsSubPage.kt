@@ -70,8 +70,8 @@ fun StorageSettingsSubPage(
     onOpenManageSpace: () -> Unit,
     hasSensitiveData: Boolean = false,
     isOpenPgpAvailable: Boolean = false,
-    onExportBackup: (Uri, String?, Boolean, Boolean) -> Unit = { _, _, _, _ -> },
-    onExportBackupWithOpenPgp: (Uri, Boolean, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _, _ -> },
+    onExportBackup: (Uri, String?, Boolean, Boolean, Boolean) -> Unit = { _, _, _, _, _ -> },
+    onExportBackupWithOpenPgp: (Uri, Boolean, Boolean, Boolean, Boolean, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _, _, _, _, _ -> },
     onDetectBackupFormat: (Uri) -> BackupFormat = { BackupFormat.PLAINTEXT },
     onRestoreBackup: (Uri, String?) -> Unit = { _, _ -> },
     onRestoreBackupWithOpenPgp: (Uri, Intent?, ((PendingIntent) -> Unit)) -> Unit = { _, _, _ -> },
@@ -89,6 +89,7 @@ fun StorageSettingsSubPage(
     var pendingExportSanitize by remember { mutableStateOf(false) }
     var pendingExportSign by remember { mutableStateOf(false) }
     var pendingExportIncludeFavorites by remember { mutableStateOf(false) }
+    var pendingExportIncludeAllHistory by remember { mutableStateOf(false) }
 
     var pendingOpenPgpAction by remember { mutableStateOf<((Intent?) -> Unit)?>(null) }
 
@@ -101,10 +102,10 @@ fun StorageSettingsSubPage(
         pendingOpenPgpAction = null
     }
 
-    fun startOpenPgpExport(uri: Uri, sanitize: Boolean, sign: Boolean, includeFavorites: Boolean, resumeIntent: Intent? = null) {
-        onExportBackupWithOpenPgp(uri, sanitize, sign, includeFavorites, resumeIntent) { pendingIntent ->
+    fun startOpenPgpExport(uri: Uri, sanitize: Boolean, sign: Boolean, includeFavorites: Boolean, includeAllHistory: Boolean, resumeIntent: Intent? = null) {
+        onExportBackupWithOpenPgp(uri, sanitize, sign, includeFavorites, includeAllHistory, resumeIntent) { pendingIntent ->
             pendingOpenPgpAction = { returnedIntent ->
-                startOpenPgpExport(uri, sanitize, sign, includeFavorites, returnedIntent)
+                startOpenPgpExport(uri, sanitize, sign, includeFavorites, includeAllHistory, returnedIntent)
             }
             openPgpIntentSenderLauncher.launch(
                 IntentSenderRequest.Builder(pendingIntent.intentSender).build()
@@ -118,10 +119,10 @@ fun StorageSettingsSubPage(
         if (uri != null) {
             when (pendingExportMode) {
                 BackupExportMode.NATIVE_AES_GCM, BackupExportMode.UNENCRYPTED -> {
-                    onExportBackup(uri, pendingExportPassword, pendingExportSanitize, pendingExportIncludeFavorites)
+                    onExportBackup(uri, pendingExportPassword, pendingExportSanitize, pendingExportIncludeFavorites, pendingExportIncludeAllHistory)
                 }
                 BackupExportMode.OPENPGP -> {
-                    startOpenPgpExport(uri, pendingExportSanitize, pendingExportSign, pendingExportIncludeFavorites)
+                    startOpenPgpExport(uri, pendingExportSanitize, pendingExportSign, pendingExportIncludeFavorites, pendingExportIncludeAllHistory)
                 }
             }
         }
@@ -362,13 +363,14 @@ fun StorageSettingsSubPage(
             favoritesCount = state.favoritesList.size,
             favoritesSizeBytes = state.favoritesSizeBytes,
             onDismissRequest = { showExportDialog = false },
-            onConfirmExport = { mode, password, sanitize, sign, includeFavorites ->
+            onConfirmExport = { mode, password, sanitize, sign, includeFavorites, includeAllHistory ->
                 showExportDialog = false
                 pendingExportMode = mode
                 pendingExportPassword = password
                 pendingExportSanitize = sanitize
                 pendingExportSign = sign
                 pendingExportIncludeFavorites = includeFavorites
+                pendingExportIncludeAllHistory = includeAllHistory
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                 val filename = when (mode) {
                     BackupExportMode.NATIVE_AES_GCM -> "wallpaper_picker_$timestamp.wpbak"

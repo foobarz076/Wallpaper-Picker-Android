@@ -564,8 +564,10 @@
     <string name="storage_favorites_btn_redownload">一键补全缺失收藏原图</string>
     <string name="backup_export_sheet_subtitle">导出图源、轮播规则、偏好及可选离线媒体</string>
     <string name="backup_export_content_section">备份内容</string>
-    <string name="backup_export_content_base">应用设置、图源与轮播规则</string>
-    <string name="backup_export_content_base_desc">默认包含</string>
+    <string name="backup_export_content_base">基础配置与偏好记忆</string>
+    <string name="backup_export_content_base_desc">包含应用设置、图源、规则、所有收藏及微调参数；普通日常轮换历史默认不备份</string>
+    <string name="backup_export_include_all_history_checkbox">导出全部历史浏览记录（仅元数据）</string>
+    <string name="backup_export_include_all_history_desc">将所有历史切换足迹（时间、标题与来源）一并导出。不包含媒体原图，换机后未缓存的图片可能显示失效。</string>
     <string name="backup_restore_summary_title">配置还原成功</string>
     <string name="backup_restore_summary_metrics">已成功恢复 %1$d 个图源、%2$d 条规则和 %3$d 项偏好记忆。</string>
     <string name="backup_restore_action_title">待处理事项</string>

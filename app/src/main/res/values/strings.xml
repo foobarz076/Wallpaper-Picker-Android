@@ -565,8 +565,10 @@
     <string name="storage_favorites_btn_redownload">Redownload Missing Favorites</string>
     <string name="backup_export_sheet_subtitle">Export preferences, sources, rules, and optional offline media</string>
     <string name="backup_export_content_section">Backup Content</string>
-    <string name="backup_export_content_base">App preferences, sources &amp; rules</string>
-    <string name="backup_export_content_base_desc">Included by default</string>
+    <string name="backup_export_content_base">Settings, Sources &amp; Favorites</string>
+    <string name="backup_export_content_base_desc">Includes preferences, sources, rules, all favorites and custom framing; general rotation history excluded by default</string>
+    <string name="backup_export_include_all_history_checkbox">Include full rotation history (metadata only)</string>
+    <string name="backup_export_include_all_history_desc">Exports all historical wallpaper rotation logs (timestamp, title, source). Excludes media files; uncached images may appear invalid on other devices.</string>
     <string name="backup_restore_summary_title">Configuration Restored</string>
     <string name="backup_restore_summary_metrics">Successfully restored %1$d sources, %2$d rules, and %3$d preference records.</string>
     <string name="backup_restore_action_title">Recommended Actions</string>

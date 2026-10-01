@@ -103,11 +103,13 @@ object BackupManager {
      * @param context Application context.
      * @param sanitize If true, strips API keys and sensitive query tokens before export.
      * @param includeFavoriteImages If true, correlates local favorite image filenames for inclusion in the ZIP archive.
+     * @param includeAllHistory If true, exports all rotation history records instead of only favorites/custom framing overrides.
      */
     fun buildBackupPayload(
         context: Context,
         sanitize: Boolean = false,
-        includeFavoriteImages: Boolean = false
+        includeFavoriteImages: Boolean = false,
+        includeAllHistory: Boolean = false
     ): BackupPayload {
         val prefs = PreferencesManager(context)
         val sourcesDb = WallpaperSourcesDatabase(context)
@@ -117,7 +119,12 @@ object BackupManager {
         val sources = sourcesDb.getAllSources()
         val rules = rulesDb.getAllRules()
         val favDir = File(context.filesDir, "favorites")
-        val historyOverrides = historyDb.getFavoriteAndCustomOverrides().map { item ->
+        val historyItems = if (includeAllHistory) {
+            historyDb.getAllHistoryItems()
+        } else {
+            historyDb.getFavoriteAndCustomOverrides()
+        }
+        val historyOverrides = historyItems.map { item ->
             val favFileName = if (includeFavoriteImages && item.isFavorite && !item.favoriteFilePath.isNullOrBlank()) {
                 val file = File(item.favoriteFilePath)
                 if (file.exists()) file.name else null
@@ -137,7 +144,8 @@ object BackupManager {
                 lockCropFocusX = item.lockCropFocusX,
                 lockCropFocusY = item.lockCropFocusY,
                 flipHorizontal = item.flipHorizontal,
-                remoteUrl = item.remoteUrl
+                remoteUrl = item.remoteUrl,
+                appliedTimestamp = item.appliedTimestamp
             )
         }
 
@@ -196,16 +204,18 @@ object BackupManager {
      * @param password Optional password for AES-256-GCM encryption. If null or blank, exported unencrypted.
      * @param sanitize If true, strips API keys and sensitive query tokens before export.
      * @param includeFavoriteImages If true, packages offline favorited images into a ZIP container before encryption.
+     * @param includeAllHistory If true, exports all rotation history records (metadata only).
      */
     fun exportBackup(
         context: Context,
         outputStream: OutputStream,
         password: String? = null,
         sanitize: Boolean = false,
-        includeFavoriteImages: Boolean = false
+        includeFavoriteImages: Boolean = false,
+        includeAllHistory: Boolean = false
     ): BackupPayload {
-        AppLog.i(TAG, "Exporting backup (encrypted=${!password.isNullOrBlank()}, sanitize=$sanitize, includeFavorites=$includeFavoriteImages)")
-        val payload = buildBackupPayload(context, sanitize, includeFavoriteImages)
+        AppLog.i(TAG, "Exporting backup (encrypted=${!password.isNullOrBlank()}, sanitize=$sanitize, includeFavorites=$includeFavoriteImages, includeAllHistory=$includeAllHistory)")
+        val payload = buildBackupPayload(context, sanitize, includeFavoriteImages, includeAllHistory)
 
         val targetStream = if (!password.isNullOrBlank()) {
             BackupCryptoEngine.wrapEncryptStream(outputStream, password.toCharArray())
@@ -403,7 +413,8 @@ object BackupManager {
                 remoteUrl = override.remoteUrl,
                 favoriteFilePath = favPath,
                 lockCropFocusX = override.lockCropFocusX,
-                lockCropFocusY = override.lockCropFocusY
+                lockCropFocusY = override.lockCropFocusY,
+                appliedTimestamp = override.appliedTimestamp
             )
 
             // Detect whether this wallpaper comes from a remote source and lacks a local file

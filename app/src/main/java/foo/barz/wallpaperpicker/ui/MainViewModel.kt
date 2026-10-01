@@ -1847,7 +1847,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Exports configuration backup to the destination URI.
      */
-    fun exportBackup(uri: Uri, password: String?, sanitize: Boolean, includeFavoriteImages: Boolean = false) {
+    fun exportBackup(
+        uri: Uri,
+        password: String?,
+        sanitize: Boolean,
+        includeFavoriteImages: Boolean = false,
+        includeAllHistory: Boolean = false
+    ) {
         viewModelScope.launch {
             _uiState.update { it.copy(statusMessage = "正在打包导出配置备份…") }
             val result = withContext(Dispatchers.IO) {
@@ -1855,7 +1861,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val context = getApplication<Application>()
                     val outputStream = context.contentResolver.openOutputStream(uri)
                         ?: throw IOException("无法写入目标文件")
-                    BackupManager.exportBackup(context, outputStream, password, sanitize, includeFavoriteImages)
+                    BackupManager.exportBackup(context, outputStream, password, sanitize, includeFavoriteImages, includeAllHistory)
                 }
             }
             if (result.isSuccess) {
@@ -1991,6 +1997,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var pendingOpenPgpKeyId: Long? = null
     private var pendingOpenPgpSign: Boolean = false
     private var pendingOpenPgpIncludeFavoriteImages: Boolean = false
+    private var pendingOpenPgpIncludeAllHistory: Boolean = false
 
     /**
      * Guard flag to prevent concurrent bind attempts from overwriting each other's connection.
@@ -2056,12 +2063,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         sanitize: Boolean,
         sign: Boolean = false,
         includeFavoriteImages: Boolean = false,
+        includeAllHistory: Boolean = false,
         resumeIntent: Intent? = null,
         onInteractionRequired: (PendingIntent) -> Unit
     ) {
         if (resumeIntent == null) {
             pendingOpenPgpSign = sign
             pendingOpenPgpIncludeFavoriteImages = includeFavoriteImages
+            pendingOpenPgpIncludeAllHistory = includeAllHistory
         }
         viewModelScope.launch {
             _uiState.update { it.copy(statusMessage = "正在连接 OpenKeychain…") }
@@ -2071,6 +2080,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val resolvedKeyId = pendingOpenPgpKeyId
                         val shouldSign = pendingOpenPgpSign
                         val shouldIncludeFavs = pendingOpenPgpIncludeFavoriteImages
+                        val shouldIncludeAllHist = pendingOpenPgpIncludeAllHistory
                         if (resolvedKeyId == null) {
                             // Phase 1: resolve the signing key ID
                             val keyResult = withContext(Dispatchers.IO) {
@@ -2090,17 +2100,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     }
                                     pendingOpenPgpKeyId = keyId
                                     // Phase 1 succeeded — immediately proceed to Phase 2
-                                    doOpenPgpEncrypt(api, uri, sanitize, keyId, shouldSign, shouldIncludeFavs, null, onInteractionRequired)
+                                    doOpenPgpEncrypt(api, uri, sanitize, keyId, shouldSign, shouldIncludeFavs, shouldIncludeAllHist, null, onInteractionRequired)
                                 }
                                 is OpenPgpOperationResult.Error -> {
                                     pendingOpenPgpSign = false
                                     pendingOpenPgpIncludeFavoriteImages = false
+                                    pendingOpenPgpIncludeAllHistory = false
                                     _uiState.update { it.copy(statusMessage = "密钥获取失败: ${keyResult.message}") }
                                 }
                             }
                         } else {
                             // Phase 2: key already resolved, go straight to encryption
-                            doOpenPgpEncrypt(api, uri, sanitize, resolvedKeyId, shouldSign, shouldIncludeFavs, resumeIntent, onInteractionRequired)
+                            doOpenPgpEncrypt(api, uri, sanitize, resolvedKeyId, shouldSign, shouldIncludeFavs, shouldIncludeAllHist, resumeIntent, onInteractionRequired)
                         }
                     }
                 },
@@ -2118,6 +2129,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         keyId: Long,
         sign: Boolean,
         includeFavoriteImages: Boolean,
+        includeAllHistory: Boolean,
         resumeIntent: Intent?,
         onInteractionRequired: (PendingIntent) -> Unit
     ) {
@@ -2129,7 +2141,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val result = withContext(Dispatchers.IO) {
             runCatching {
                 val context = getApplication<Application>()
-                val payload = BackupManager.buildBackupPayload(context, sanitize, includeFavoriteImages)
+                val payload = BackupManager.buildBackupPayload(context, sanitize, includeFavoriteImages, includeAllHistory)
                 val outStream = context.contentResolver.openOutputStream(uri)
                     ?: throw IOException("无法写入目标文件")
                 outStream.use { targetOut ->
@@ -2177,6 +2189,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pendingOpenPgpKeyId = null
                 pendingOpenPgpSign = false
                 pendingOpenPgpIncludeFavoriteImages = false
+                pendingOpenPgpIncludeAllHistory = false
                 val msg = if (sign) "已通过 OpenKeychain 成功完成 OpenPGP 签名并加密导出！" else "已通过 OpenKeychain 成功完成 OpenPGP 加密导出！"
                 _uiState.update { it.copy(statusMessage = msg) }
             }
@@ -2188,6 +2201,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pendingOpenPgpKeyId = null
                 pendingOpenPgpSign = false
                 pendingOpenPgpIncludeFavoriteImages = false
+                pendingOpenPgpIncludeAllHistory = false
                 _uiState.update { it.copy(statusMessage = "OpenKeychain 加密失败: ${result.message}") }
             }
         }
@@ -2287,6 +2301,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pendingOpenPgpKeyId = null
         pendingOpenPgpSign = false
         pendingOpenPgpIncludeFavoriteImages = false
+        pendingOpenPgpIncludeAllHistory = false
         isBindingInProgress = false
         prefs.unregisterOnSharedPreferenceChangeListener(prefChangeListener)
     }
