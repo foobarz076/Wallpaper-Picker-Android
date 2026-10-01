@@ -651,8 +651,10 @@
     <string name="about_lib_view_license">查看许可证</string>
     <string name="about_dialog_license_title">许可证</string>
     <string name="about_log_dialog_title">运行与诊断日志</string>
+    <string name="about_log_dialog_full_report">完整报告</string>
     <string name="about_log_dialog_sanitize">脱敏保护</string>
     <string name="about_log_copied_snackbar">已复制日志至剪贴板</string>
+    <string name="about_log_copied_full_snackbar">已复制完整诊断报告至剪贴板</string>
     <string name="about_log_cleared_snackbar">日志已清空</string>
     <string name="about_log_warning_unsanitized">已关闭脱敏保护。当前日志包含 API Key、认证凭据或内网 IP 等私密信息，导出或分享时请小心使用，避免隐私泄露！</string>
     <string name="about_browser_open_failed">未能打开浏览器，已将链接复制到剪贴板</string>

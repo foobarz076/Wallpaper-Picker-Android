@@ -33,6 +33,16 @@ object DiagnosticReportHelper {
         val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
         val isBatteryExempt = pm?.isIgnoringBatteryOptimizations(context.packageName) == true
 
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager
+        val exactAlarmStatus = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (alarmManager?.canScheduleExactAlarms() == true) "已授权 (Granted)" else "未授权 (Denied)"
+        } else {
+            "系统默认支持 (Supported, < Android 12)"
+        }
+
+        val notificationsEnabled = androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
+        val notificationStatus = if (notificationsEnabled) "已允许 (Enabled)" else "已停用/未授权 (Disabled)"
+
         val lastChangedStr = if (prefs.lastChangedTimestamp > 0) {
             dateFormat.format(Date(prefs.lastChangedTimestamp))
         } else {
@@ -53,6 +63,21 @@ object DiagnosticReportHelper {
             "已关闭 (Disabled)"
         }
 
+        val networkConstraintStr = if (prefs.wifiOnly) "仅在 Wi-Fi 下下载 (Wi-Fi Only)" else "允许移动网络 (Any Network)"
+
+        val ruleEngineDetailsStr = if (prefs.ruleEngineEnabled) {
+            val rulesSummary = runCatching {
+                foo.barz.wallpaperpicker.core.database.ScheduleRulesDatabase(context).use { db ->
+                    val rules = db.getAllRules()
+                    val enabledCount = rules.count { it.isEnabled }
+                    "${rules.size} 条规则 (启用 $enabledCount 条)"
+                }
+            }.getOrDefault("已开启")
+            "已开启 ($rulesSummary)"
+        } else {
+            "已关闭 (Disabled)"
+        }
+
         val sb = StringBuilder()
         sb.appendLine("========================================")
         sb.appendLine("Wallpaper Picker 诊断报告 (Diagnostic Report)")
@@ -67,6 +92,8 @@ object DiagnosticReportHelper {
         sb.appendLine("系统版本: Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
         sb.appendLine("支持架构: ${Build.SUPPORTED_ABIS.joinToString(", ").ifEmpty { "通用" }}")
         sb.appendLine("电池优化白名单 (Doze豁免): ${if (isBatteryExempt) "已加入白名单 (Ignored)" else "未加入白名单 (Restricted)"}")
+        sb.appendLine("精确闹钟权限 (Exact Alarm): $exactAlarmStatus")
+        sb.appendLine("系统通知权限 (Notification): $notificationStatus")
         sb.appendLine()
 
         sb.appendLine("--- [2] 调度配置与状态 (Automation & Scheduling) ---")
@@ -75,10 +102,11 @@ object DiagnosticReportHelper {
         sb.appendLine("精细定时器 (AlarmManager): ${if (prefs.exactTimerEnabled) "已开启" else "已关闭"}")
         sb.appendLine("每日定点打卡: $anchorTimesStr")
         sb.appendLine("息屏自动触发: ${if (prefs.screenOffTriggerEnabled) "已开启 (${prefs.screenOffDelaySeconds}s 延迟)" else "已关闭"}")
-        sb.appendLine("独立日程规则引擎: ${if (prefs.ruleEngineEnabled) "已开启" else "已关闭"}")
+        sb.appendLine("独立日程规则引擎: $ruleEngineDetailsStr")
         sb.appendLine("夜间免打扰时段: $quietHoursStr")
         sb.appendLine("防密集冷却抑制: ${if (prefs.cooldownSuppressionEnabled) "开启 (${prefs.cooldownMinutes} 分钟)" else "已关闭"}")
         sb.appendLine("亮屏防打扰推迟: ${if (prefs.deferDuringInteraction) "已开启" else "已关闭"}")
+        sb.appendLine("网络下载约束: $networkConstraintStr")
         sb.appendLine("去重防连抽 (Fair Shuffle): ${if (prefs.fairShuffle) "开启 (容量 ${prefs.fairShuffleCapacity})" else "已关闭"}")
         sb.appendLine("缓存容量档位: ${prefs.cacheSizeTier.name}")
         sb.appendLine()

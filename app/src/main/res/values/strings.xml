@@ -652,8 +652,10 @@
     <string name="about_lib_view_license">View License</string>
     <string name="about_dialog_license_title">License</string>
     <string name="about_log_dialog_title">Runtime &amp; Diagnostic Logs</string>
+    <string name="about_log_dialog_full_report">Full Report</string>
     <string name="about_log_dialog_sanitize">Sanitize Info</string>
     <string name="about_log_copied_snackbar">Logs copied to clipboard</string>
+    <string name="about_log_copied_full_snackbar">Diagnostic report copied to clipboard</string>
     <string name="about_log_cleared_snackbar">Logs cleared</string>
     <string name="about_log_warning_unsanitized">Sanitization disabled. Current logs contain API keys, credentials, or private IPs. Exercise caution when exporting or sharing to avoid privacy leaks!</string>
     <string name="about_browser_open_failed">Could not open browser. Link copied to clipboard.</string>

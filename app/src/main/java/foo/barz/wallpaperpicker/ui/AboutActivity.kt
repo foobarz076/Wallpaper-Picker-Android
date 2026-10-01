@@ -46,6 +46,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -739,8 +740,13 @@ fun AboutScreen(
     }
 
     if (showLogDialog) {
-        val currentLogs = remember(sanitizeLogs, logCount, showLogDialog) {
-            AppLog.formatLogs(sanitizeLogs)
+        var exportFullReport by remember { mutableStateOf(true) }
+        val displayedContent = remember(exportFullReport, sanitizeLogs, logCount, showLogDialog) {
+            if (exportFullReport) {
+                DiagnosticReportHelper.buildReport(context, sanitize = sanitizeLogs)
+            } else {
+                AppLog.formatLogs(sanitizeLogs)
+            }
         }
 
         Dialog(
@@ -770,12 +776,23 @@ fun AboutScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            FilterChip(
+                                selected = exportFullReport,
+                                onClick = { exportFullReport = !exportFullReport },
+                                label = {
+                                    Text(
+                                        text = stringResource(R.string.about_log_dialog_full_report),
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = stringResource(R.string.about_log_dialog_sanitize),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Switch(
                                 checked = sanitizeLogs,
                                 onCheckedChange = { sanitizeLogs = it }
@@ -793,8 +810,13 @@ fun AboutScreen(
                     ) {
                         OutlinedButton(
                             onClick = {
-                                DiagnosticReportHelper.copyToClipboard(context, currentLogs)
-                                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.about_log_copied_snackbar)) }
+                                DiagnosticReportHelper.copyToClipboard(context, displayedContent)
+                                val snackbarMsg = if (exportFullReport) {
+                                    context.getString(R.string.about_log_copied_full_snackbar)
+                                } else {
+                                    context.getString(R.string.about_log_copied_snackbar)
+                                }
+                                scope.launch { snackbarHostState.showSnackbar(snackbarMsg) }
                             },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -809,7 +831,7 @@ fun AboutScreen(
 
                         OutlinedButton(
                             onClick = {
-                                DiagnosticReportHelper.shareReport(context, currentLogs)
+                                DiagnosticReportHelper.shareReport(context, displayedContent)
                             },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -888,7 +910,7 @@ fun AboutScreen(
                         ) {
                             SelectionContainer {
                                 Text(
-                                    text = currentLogs,
+                                    text = displayedContent,
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 11.sp,
