@@ -707,6 +707,7 @@ fun BackupRestoreSummaryDialog(
     onDismissRequest: () -> Unit,
     onNavigateToSources: () -> Unit,
     onBatchDownloadFavorites: () -> Unit,
+    onNavigateToHistory: () -> Unit = {},
     isDownloadingFavorites: Boolean = false
 ) {
     AlertDialog(
@@ -771,7 +772,9 @@ fun BackupRestoreSummaryDialog(
                     }
                 }
 
-                val hasActionableItems = summary.needsReauthorizationCount > 0 || summary.missingFavoritesCount > 0
+                val hasActionableItems = summary.needsReauthorizationCount > 0 ||
+                        summary.missingFavoritesCount > 0 ||
+                        summary.missingRemoteHistoryCount > 0
                 if (hasActionableItems) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                     Text(
@@ -884,6 +887,53 @@ fun BackupRestoreSummaryDialog(
                                             style = MaterialTheme.typography.labelMedium
                                         )
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Missing remote history images notice
+                    if (summary.missingRemoteHistoryCount > 0) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(verticalAlignment = Alignment.Top) {
+                                    Icon(
+                                        Icons.Default.CloudDownload,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = stringResource(R.string.backup_restore_remote_missing_title, summary.missingRemoteHistoryCount),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = stringResource(R.string.backup_restore_remote_missing_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Button(
+                                    onClick = onNavigateToHistory,
+                                    modifier = Modifier.align(Alignment.End),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.backup_restore_remote_btn_history),
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
                                 }
                             }
                         }

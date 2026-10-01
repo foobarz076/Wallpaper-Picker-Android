@@ -223,6 +223,17 @@ class HistoryAndFavoritesTest {
         )
         assertEquals("我的收藏", favItem.displaySourceBadge)
         assertEquals("我的收藏", favItem.displaySourceDetail)
+
+        // 7. Item with rule prefix (e.g., "Interval · Exports_jpg")
+        val prefixedItem = WallpaperHistoryItem(
+            id = 106L,
+            sourceUri = "content://com.android.externalstorage.documents/document/primary%3ADCIM%2FExports_jpg%2Fimg.jpg",
+            title = "Exports Image",
+            sourceType = WallpaperSourceType.LOCAL_FOLDER,
+            appliedTimestamp = 1700000000000L,
+            sourceTitle = "Interval · Exports_jpg"
+        )
+        assertEquals("Exports_jpg", prefixedItem.displaySourceBadge)
     }
 
     @Test

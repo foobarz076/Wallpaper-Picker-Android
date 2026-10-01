@@ -577,6 +577,9 @@
     <string name="backup_restore_fav_missing_desc">Original images are missing locally. You can batch redownload them from the network now to ensure full offline access.</string>
     <string name="backup_restore_fav_btn_batch_download">Redownload All</string>
     <string name="backup_restore_fav_btn_downloading">Downloading…</string>
+    <string name="backup_restore_remote_missing_title">%1$d remote wallpaper images not cached</string>
+    <string name="backup_restore_remote_missing_desc">Original images are missing locally, but crop and framing preferences were restored. You can redownload them anytime in History.</string>
+    <string name="backup_restore_remote_btn_history">View History</string>
     <string name="backup_restore_btn_done">Done</string>
     <string name="dash_onboarding_title">Welcome to Wallpaper Carousel</string>
     <string name="dash_onboarding_desc">Moving to a new phone? Restore your configuration and favorite wallpapers, or add your first source to get started.</string>

@@ -415,4 +415,21 @@ class BackupModelTest {
         }
         assertEquals(listOf("backup.json", "favorites/test_fav.jpg"), entryNames)
     }
+
+    @Test
+    fun testRestoreResultModelWithMissingRemoteHistory() {
+        val result = foo.barz.wallpaperpicker.core.backup.RestoreResult(
+            success = true,
+            restoredSourcesCount = 6,
+            restoredRulesCount = 5,
+            restoredFavoritesCount = 16,
+            needsReauthorizationCount = 1,
+            missingFavoritesCount = 0,
+            missingRemoteHistoryCount = 2
+        )
+        assertTrue(result.success)
+        assertEquals(1, result.needsReauthorizationCount)
+        assertEquals(0, result.missingFavoritesCount)
+        assertEquals(2, result.missingRemoteHistoryCount)
+    }
 }

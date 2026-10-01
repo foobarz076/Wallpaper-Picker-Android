@@ -488,6 +488,11 @@ fun MainScreen(
                 selectedTab = MainTab.SOURCES
                 settingsSubPage = null
             },
+            onNavigateToHistory = {
+                onDismissRestoreSummary()
+                selectedTab = MainTab.HISTORY
+                settingsSubPage = null
+            },
             onBatchDownloadFavorites = {
                 if (state.restoreSummary.needsReauthorizationCount > 0) {
                     onBatchRedownloadMissingFavorites()

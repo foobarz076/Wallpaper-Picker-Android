@@ -87,6 +87,7 @@ data class RestoreSummary(
     val restoredFavoritesCount: Int = 0,
     val needsReauthorizationCount: Int = 0,
     val missingFavoritesCount: Int = 0,
+    val missingRemoteHistoryCount: Int = 0,
     val sigNotice: String? = null
 )
 
@@ -1946,6 +1947,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         restoredFavoritesCount = result.restoredFavoritesCount,
                         needsReauthorizationCount = result.needsReauthorizationCount,
                         missingFavoritesCount = result.missingFavoritesCount,
+                        missingRemoteHistoryCount = result.missingRemoteHistoryCount,
                         sigNotice = extraNotice
                     ),
                     showMissingFavoritesPromptCount = null,

@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.PowerManager
 import foo.barz.wallpaperpicker.core.applier.WallpaperApplier
 import foo.barz.wallpaperpicker.core.database.WallpaperHistoryDatabase
+import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.processor.WallpaperProcessor
 import foo.barz.wallpaperpicker.core.source.WallpaperSourceFactory
 import foo.barz.wallpaperpicker.core.tile.TileUpdateHelper
@@ -213,12 +214,11 @@ object WallpaperChangeExecutor {
         }
 
         val concreteSourceType = wallpaperData.sourceType ?: prefs.sourceType
-        val baseSourceTitle = wallpaperData.sourceTitle
-        val concreteSourceTitle = if (matchingRule != null) {
-            if (baseSourceTitle.isNullOrBlank()) matchingRule.name else "${matchingRule.name} · $baseSourceTitle"
-        } else {
-            baseSourceTitle
-        }
+        val baseSourceTitle = wallpaperData.sourceTitle?.ifBlank { null }
+            ?: WallpaperHistoryItem.inferSourceTitleFromUri(
+                wallpaperData.sourceUri?.toString() ?: "",
+                concreteSourceType
+            )
         val appliedTime = System.currentTimeMillis()
 
         prefs.lastChangedTimestamp = appliedTime
@@ -226,10 +226,10 @@ object WallpaperChangeExecutor {
         prefs.lastWallpaperTitle = wallpaperData.title
         prefs.lastWallpaperUri = wallpaperData.sourceUri
         prefs.lastWallpaperSourceType = concreteSourceType
-        prefs.lastWallpaperSourceTitle = concreteSourceTitle
+        prefs.lastWallpaperSourceTitle = baseSourceTitle
         prefs.lastExecutionStatus = if (matchingRule != null) "成功 (规则: ${matchingRule.name})" else "成功"
         prefs.lastErrorMessage = null
-        AppLog.i("WallpaperChangeExecutor", "Successfully applied wallpaper: title='${wallpaperData.title}', target=$effectiveTarget, source='$concreteSourceTitle'")
+        AppLog.i("WallpaperChangeExecutor", "Successfully applied wallpaper: title='${wallpaperData.title}', target=$effectiveTarget, source='$baseSourceTitle'")
 
         // 11. Record wallpaper key into Fair Shuffle history
         val wallpaperKey = wallpaperData.sourceUri?.toString() ?: wallpaperData.title
@@ -245,7 +245,7 @@ object WallpaperChangeExecutor {
                     title = wallpaperData.title,
                     sourceType = concreteSourceType,
                     appliedTimestamp = appliedTime,
-                    sourceTitle = concreteSourceTitle,
+                    sourceTitle = baseSourceTitle,
                     remoteUrl = wallpaperData.remoteUrl
                 )
             }

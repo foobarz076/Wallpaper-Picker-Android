@@ -201,8 +201,13 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
     ): Long {
         val db = writableDatabase
         val uriString = sourceUri.toString()
-        val concreteSourceTitle = sourceTitle?.ifBlank { null }
+        val rawSourceTitle = sourceTitle?.ifBlank { null }
             ?: WallpaperHistoryItem.inferSourceTitleFromUri(uriString, sourceType)
+        val concreteSourceTitle = if (rawSourceTitle.contains(" · ")) {
+            rawSourceTitle.substringAfter(" · ").trim()
+        } else {
+            rawSourceTitle.trim()
+        }
 
         val existing = getItemByUri(uriString)
         return if (existing != null) {
@@ -615,11 +620,14 @@ class WallpaperHistoryDatabase(context: Context) : SQLiteOpenHelper(
     ) {
         val db = writableDatabase
         val existing = getItemByUri(sourceUri)
+        val sanitizedSourceTitle = sourceTitle?.let {
+            if (it.contains(" · ")) it.substringAfter(" · ").trim() else it.trim()
+        }
         val values = ContentValues().apply {
             put(COLUMN_SOURCE_URI, sourceUri)
             if (title != null) put(COLUMN_TITLE, title)
             put(COLUMN_SOURCE_TYPE, sourceType.name)
-            if (sourceTitle != null) put(COLUMN_SOURCE_TITLE, sourceTitle)
+            if (sanitizedSourceTitle != null) put(COLUMN_SOURCE_TITLE, sanitizedSourceTitle)
             put(COLUMN_IS_FAVORITE, if (isFavorite) 1 else 0)
             put(COLUMN_FAVORITE_TIMESTAMP, favoriteTimestamp)
             if (favoriteFilePath != null) put(COLUMN_FAVORITE_FILE_PATH, favoriteFilePath)

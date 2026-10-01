@@ -56,7 +56,12 @@ data class WallpaperHistoryItem(
     val displaySourceBadge: String
         get() {
             if (!sourceTitle.isNullOrBlank()) {
-                return sourceTitle
+                val cleaned = if (sourceTitle.contains(" · ")) {
+                    sourceTitle.substringAfter(" · ").trim()
+                } else {
+                    sourceTitle.trim()
+                }
+                if (cleaned.isNotEmpty()) return cleaned
             }
             return inferSourceTitleFromUri(sourceUri, sourceType)
         }

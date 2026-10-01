@@ -29,6 +29,7 @@ data class RestoreResult(
     val restoredFavoritesCount: Int = 0,
     val needsReauthorizationCount: Int = 0,
     val missingFavoritesCount: Int = 0,
+    val missingRemoteHistoryCount: Int = 0,
     val errorMessage: String? = null
 )
 
@@ -373,6 +374,7 @@ object BackupManager {
         // 4. Restore Favorite and Framing Overrides
         val favDir = File(context.filesDir, "favorites")
         var missingFavoritesCount = 0
+        var missingRemoteHistoryCount = 0
 
         payload.historyOverrides.forEach { override ->
             val localFile = if (override.favoriteFileName != null) {
@@ -404,10 +406,28 @@ object BackupManager {
                 lockCropFocusY = override.lockCropFocusY
             )
 
-            // Detect whether this favorite wallpaper lacks a local file but can be redownloaded
-            if (override.isFavorite && (favPath == null || !File(favPath).exists())) {
-                if (!override.remoteUrl.isNullOrBlank() || override.sourceUri.startsWith("http")) {
+            // Detect whether this wallpaper comes from a remote source and lacks a local file
+            val isRemote = !override.remoteUrl.isNullOrBlank() ||
+                    override.sourceUri.startsWith("http://") ||
+                    override.sourceUri.startsWith("https://") ||
+                    override.sourceType == WallpaperSourceType.IMMICH ||
+                    override.sourceType == WallpaperSourceType.HTTP_API
+
+            val localFileExists = when {
+                favPath != null && File(favPath).exists() -> true
+                override.sourceUri.startsWith("file://") -> {
+                    val path = android.net.Uri.parse(override.sourceUri).path
+                    path != null && File(path).exists()
+                }
+                override.sourceUri.startsWith("http://") || override.sourceUri.startsWith("https://") -> false
+                else -> true
+            }
+
+            if (isRemote && !localFileExists) {
+                if (override.isFavorite) {
                     missingFavoritesCount++
+                } else {
+                    missingRemoteHistoryCount++
                 }
             }
         }
@@ -426,7 +446,7 @@ object BackupManager {
 
         AppLog.i(
             TAG,
-            "Restore complete: ${payload.sources.size} sources, ${payload.rules.size} rules, $needsReauthorizationCount need re-auth, $missingFavoritesCount missing favorites"
+            "Restore complete: ${payload.sources.size} sources, ${payload.rules.size} rules, $needsReauthorizationCount need re-auth, $missingFavoritesCount missing favorites, $missingRemoteHistoryCount missing remote history"
         )
 
         return RestoreResult(
@@ -435,7 +455,8 @@ object BackupManager {
             restoredRulesCount = payload.rules.size,
             restoredFavoritesCount = payload.historyOverrides.size,
             needsReauthorizationCount = needsReauthorizationCount,
-            missingFavoritesCount = missingFavoritesCount
+            missingFavoritesCount = missingFavoritesCount,
+            missingRemoteHistoryCount = missingRemoteHistoryCount
         )
     }
 }
