@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon monochrome layer for Android 13+ Material You dynamic theming -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Scaled group to fit within circular launcher safe zone with comfortable padding -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.65"
+        android:scaleY="0.65">
+
+        <!-- Frame inner canvas backdrop -->
+        <path
+            android:pathData="M40,27 h28 a13,13 0 0 1 13,13 v28 a13,13 0 0 1 -13,13 h-28 a13,13 0 0 1 -13,-13 v-28 a13,13 0 0 1 13,-13 z"
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="0.15" />
+
+        <!-- Outer frame rounded stroke -->
+        <path
+            android:pathData="M40,25 h28 a15,15 0 0 1 15,15 v28 a15,15 0 0 1 -15,15 h-28 a15,15 0 0 1 -15,-15 v-28 a15,15 0 0 1 15,-15 z"
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="5.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:strokeAlpha="1.0" />
+
+        <!-- Sun / star accent in top-left -->
+        <path
+            android:pathData="M39,39m-3.5,0a3.5,3.5 0 1,1 7,0a3.5,3.5 0 1,1 -7,0"
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="0.9" />
+
+        <!-- Fluffy fox tail main body -->
+        <path
+            android:pathData="M76,60 C82,63 85,71 80,77 C76,82 69,84 62,84 C52,84 46,82 38,78 C30,73 27,63 31,53 C34,46 41,42 48,42 C56,42 60,47 57,53 C55,58 48,60 44,65 C41,68 44,73 50,74 C58,75 65,72 70,65 C72,61 74,58 76,60 Z"
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="0.6" />
+
+        <!-- Plump white tail tip resting in center -->
+        <path
+            android:pathData="M31,53 C34,46 41,42 48,42 C56,42 60,47 57,53 C55,56 52,56 49,53 C47,56 44,57 42,54 C40,58 36,58 33,55 C31,54 31,53 31,53 Z"
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="1.0" />
+
+        <!-- Sparkle above the tail tip -->
+        <path
+            android:pathData="M56,38m-2.2,0a2.2,2.2 0 1,1 4.4,0a2.2,2.2 0 1,1 -4.4,0"
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="0.9" />
+
+    </group>
+</vector>
