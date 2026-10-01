@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
                     onClearHistory = viewModel::clearUnfavoritedHistory,
                     onClearInvalidHistory = viewModel::clearInvalidHistory,
                     onRedownloadHistoryItem = viewModel::redownloadHistoryItem,
+                    onBatchRedownloadMissingHistory = viewModel::batchRedownloadMissingHistory,
                     onOpenCustomUriInGallery = viewModel::openUriInGallery,
                     onShareCustomWallpaper = viewModel::shareUri,
                     onSaveCustomWallpaper = viewModel::saveUriToGallery,

@@ -2,6 +2,7 @@ package foo.barz.wallpaperpicker.ui.tabs
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,6 +41,8 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -110,6 +113,7 @@ fun HistoryTab(
     onClearHistory: () -> Unit,
     onClearInvalidHistory: () -> Unit = {},
     onRedownloadHistoryItem: (WallpaperHistoryItem) -> Unit = {},
+    onBatchRedownloadMissingHistory: () -> Unit = {},
     onOpenInGallery: (Uri) -> Unit,
     onShareWallpaper: (Uri, String?) -> Unit,
     onSaveToGallery: (Uri, String?) -> Unit,
@@ -130,6 +134,7 @@ fun HistoryTab(
     var selectedItemForDetail by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
     var showHistoryActionMenu by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<WallpaperHistoryItem?>(null) }
+    var showBatchRedownloadConfirmDialog by remember { mutableStateOf(false) }
     var showClearInvalidConfirmDialog by remember { mutableStateOf(false) }
     var showClearAllConfirmDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -142,6 +147,12 @@ fun HistoryTab(
     val currentList = when (subTab) {
         HistorySubTab.HISTORY -> state.historyList
         HistorySubTab.FAVORITES -> state.favoritesList
+    }
+
+    val missingRedownloadableCount = remember(currentList) {
+        currentList.count { item ->
+            !isUriAccessible(context, item.displayUri) && item.canRedownload
+        }
     }
 
     Column(
@@ -170,74 +181,161 @@ fun HistoryTab(
                 )
             }
 
-            if (subTab == HistorySubTab.HISTORY && state.historyList.isNotEmpty()) {
-                Box {
+            if (state.historyList.isNotEmpty() || state.favoritesList.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Batch redownload missing original images button (adjacent to cleanup menu)
                     IconButton(
-                        onClick = { showHistoryActionMenu = true },
+                        onClick = {
+                            if (missingRedownloadableCount > 0) {
+                                showBatchRedownloadConfirmDialog = true
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.hist_status_no_redownloadable),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        },
+                        enabled = !state.isBatchDownloadingHistory && !state.isBatchDownloadingFavorites,
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(
-                            Icons.Default.DeleteSweep,
-                            contentDescription = stringResource(R.string.hist_clean_options),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
+                        if (state.isBatchDownloadingHistory || state.isBatchDownloadingFavorites) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            BadgedBox(
+                                badge = {
+                                    if (missingRedownloadableCount > 0) {
+                                        Badge {
+                                            Text(missingRedownloadableCount.toString())
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDownload,
+                                    contentDescription = stringResource(R.string.hist_action_batch_redownload),
+                                    tint = if (missingRedownloadableCount > 0) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.outline
+                                    }
+                                )
+                            }
+                        }
                     }
 
-                    DropdownMenu(
-                        expanded = showHistoryActionMenu,
-                        onDismissRequest = { showHistoryActionMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Text(stringResource(R.string.hist_menu_clean_invalid), style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        text = stringResource(R.string.hist_menu_clean_invalid_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline
+                    // History cleanup options menu
+                    Box {
+                        IconButton(
+                            onClick = { showHistoryActionMenu = true },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.DeleteSweep,
+                                contentDescription = stringResource(R.string.hist_clean_options),
+                                tint = MaterialTheme.colorScheme.outline
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showHistoryActionMenu,
+                            onDismissRequest = { showHistoryActionMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.hist_action_batch_redownload),
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.hist_action_batch_redownload_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudDownload,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
+                                },
+                                enabled = !state.isBatchDownloadingHistory && !state.isBatchDownloadingFavorites,
+                                onClick = {
+                                    showHistoryActionMenu = false
+                                    if (missingRedownloadableCount > 0) {
+                                        showBatchRedownloadConfirmDialog = true
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.hist_status_no_redownloadable),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 }
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.CleaningServices,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            onClick = {
-                                showHistoryActionMenu = false
-                                showClearInvalidConfirmDialog = true
-                            }
-                        )
-                        HorizontalDivider()
-                        DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.hist_menu_clear_all),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.error
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(stringResource(R.string.hist_menu_clean_invalid), style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            text = stringResource(R.string.hist_menu_clean_invalid_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.CleaningServices,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
-                                    Text(
-                                        text = stringResource(R.string.hist_menu_clear_all_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline
-                                    )
+                                },
+                                onClick = {
+                                    showHistoryActionMenu = false
+                                    showClearInvalidConfirmDialog = true
                                 }
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            },
-                            onClick = {
-                                showHistoryActionMenu = false
-                                showClearAllConfirmDialog = true
-                            }
-                        )
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.hist_menu_clear_all),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.hist_menu_clear_all_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = {
+                                    showHistoryActionMenu = false
+                                    showClearAllConfirmDialog = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -420,6 +518,44 @@ fun HistoryTab(
             },
             dismissButton = {
                 TextButton(onClick = { itemToDelete = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    // Confirmation dialog for batch redownloading missing original images
+    if (showBatchRedownloadConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showBatchRedownloadConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.CloudDownload,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = { Text(stringResource(R.string.hist_dialog_redownload_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.hist_dialog_redownload_msg,
+                        missingRedownloadableCount
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBatchRedownloadConfirmDialog = false
+                        onBatchRedownloadMissingHistory()
+                    }
+                ) {
+                    Text(stringResource(R.string.hist_dialog_redownload_btn))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatchRedownloadConfirmDialog = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }

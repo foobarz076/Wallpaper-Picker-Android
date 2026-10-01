@@ -144,6 +144,7 @@ data class MainUiState(
     val favoritesSizeBytes: Long = 0L,
     val missingFavoritesCount: Int = 0,
     val isBatchDownloadingFavorites: Boolean = false,
+    val isBatchDownloadingHistory: Boolean = false,
     val showMissingFavoritesPromptCount: Int? = null,
     val restoreSummary: RestoreSummary? = null,
     val isExportingFavorites: Boolean = false,
@@ -1450,6 +1451,86 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     restoreSummary = it.restoreSummary?.copy(missingFavoritesCount = failCount),
                     statusMessage = buildString {
                         append("收藏壁纸恢复完成：成功下载 $successCount 张")
+                        if (failCount > 0) append("，失败 $failCount 张")
+                    }
+                )
+            }
+        }
+    }
+
+    /**
+     * Sequentially redownloads all historical wallpapers (both standard and favorited)
+     * whose local media files are currently inaccessible but have a remote network source.
+     */
+    @OptIn(coil.annotation.ExperimentalCoilApi::class)
+    fun batchRedownloadMissingHistory() {
+        if (_uiState.value.isBatchDownloadingHistory || _uiState.value.isBatchDownloadingFavorites) return
+        viewModelScope.launch {
+            val itemsToDownload = withContext(Dispatchers.IO) {
+                val context = getApplication<android.app.Application>()
+                historyDb.getAllHistoryItems().filter { item ->
+                    val localMissing = !foo.barz.wallpaperpicker.core.action.WallpaperActionManager.isUriAccessible(context, Uri.parse(item.sourceUri))
+                    localMissing && item.canRedownload
+                }
+            }
+            if (itemsToDownload.isEmpty()) {
+                _uiState.update { it.copy(statusMessage = "没有需要重新下载的失效原图") }
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    isBatchDownloadingHistory = true,
+                    statusMessage = "准备下载 ${itemsToDownload.size} 张失效原图…"
+                )
+            }
+
+            var successCount = 0
+            var failCount = 0
+            itemsToDownload.forEachIndexed { index, item ->
+                _uiState.update {
+                    it.copy(
+                        statusMessage = "正在恢复失效原图 (${index + 1}/${itemsToDownload.size})「${item.title ?: "壁纸"}」…"
+                    )
+                }
+                val res = withContext(Dispatchers.IO) {
+                    runCatching {
+                        executeRedownload(item)
+                    }
+                }
+                res.onSuccess { restoredFile ->
+                    val newUri = Uri.fromFile(restoredFile).toString()
+                    val newFavPath = if (item.isFavorite) {
+                        promoteToPermanentFavorite(Uri.fromFile(restoredFile))
+                    } else null
+                    val now = System.currentTimeMillis()
+                    historyDb.updateSourceUri(
+                        id = item.id,
+                        sourceUri = newUri,
+                        remoteUrl = item.remoteUrl ?: if (item.sourceUri.startsWith("http")) item.sourceUri else null,
+                        favoriteFilePath = newFavPath,
+                        downloadTimestamp = now
+                    )
+                    runCatching {
+                        val loader = coil.Coil.imageLoader(getApplication())
+                        loader.diskCache?.remove(newUri)
+                        loader.memoryCache?.remove(coil.memory.MemoryCache.Key(newUri))
+                    }
+                    successCount++
+                }.onFailure {
+                    failCount++
+                }
+            }
+
+            refreshHistoryAndFavorites()
+            _uiState.update {
+                it.copy(
+                    isBatchDownloadingHistory = false,
+                    missingFavoritesCount = if (it.missingFavoritesCount > 0) {
+                        (it.missingFavoritesCount - successCount).coerceAtLeast(0)
+                    } else 0,
+                    statusMessage = buildString {
+                        append("失效原图下载完成：成功恢复 $successCount 张")
                         if (failCount > 0) append("，失败 $failCount 张")
                     }
                 )

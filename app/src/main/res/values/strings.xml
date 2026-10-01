@@ -134,6 +134,12 @@
     <string name="hist_subtab_all_format">All History (%d)</string>
     <string name="hist_subtab_favorites_format">Favorites (%d)</string>
     <string name="hist_clean_options">History cleanup options</string>
+    <string name="hist_action_batch_redownload">Redownload Missing Originals</string>
+    <string name="hist_action_batch_redownload_desc">Batch redownload missing images from network sources</string>
+    <string name="hist_dialog_redownload_title">Batch Redownload Missing Images</string>
+    <string name="hist_dialog_redownload_msg">Found %d wallpapers with missing images that can be redownloaded from the network. Would you like to start downloading now?</string>
+    <string name="hist_dialog_redownload_btn">Start Download</string>
+    <string name="hist_status_no_redownloadable">No missing wallpapers available to redownload</string>
     <string name="hist_menu_clean_invalid">Clean broken entries</string>
     <string name="hist_menu_clean_invalid_desc">Remove only non-favorited entries with missing images</string>
     <string name="hist_menu_clear_all">Clear all non-favorited history</string>

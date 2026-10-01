@@ -133,6 +133,12 @@
     <string name="hist_subtab_all_format">全部历史 (%d)</string>
     <string name="hist_subtab_favorites_format">我的收藏 (%d)</string>
     <string name="hist_clean_options">历史清理选项</string>
+    <string name="hist_action_batch_redownload">批量下载失效原图</string>
+    <string name="hist_action_batch_redownload_desc">从网络重新下载所有包含远端地址的失效原图</string>
+    <string name="hist_dialog_redownload_title">批量下载失效原图</string>
+    <string name="hist_dialog_redownload_msg">检测到 %d 张失效壁纸可从网络重新下载恢复原图。是否立即开始批量下载？</string>
+    <string name="hist_dialog_redownload_btn">开始下载</string>
+    <string name="hist_status_no_redownloadable">当前没有需要重新下载的失效原图</string>
     <string name="hist_menu_clean_invalid">一键清理失效记录</string>
     <string name="hist_menu_clean_invalid_desc">仅移除原图已丢失的非收藏条目</string>
     <string name="hist_menu_clear_all">清空全部非收藏历史</string>
