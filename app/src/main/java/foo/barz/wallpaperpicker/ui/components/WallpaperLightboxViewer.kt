@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,6 +92,7 @@ fun WallpaperLightboxViewer(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var showControls by remember { mutableStateOf(true) }
+    var isImageError by remember { mutableStateOf(!isApplyEnabled) }
 
     Box(
         modifier = modifier
@@ -133,6 +135,8 @@ fun WallpaperLightboxViewer(
                 model = imageUri,
                 contentDescription = title ?: stringResource(R.string.lightbox_full_image),
                 contentScale = ContentScale.Fit,
+                onSuccess = { isImageError = false },
+                onError = { isImageError = true },
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer(
@@ -142,6 +146,34 @@ fun WallpaperLightboxViewer(
                         translationY = offset.y
                     )
             )
+
+            if (isImageError) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.6f),
+                        modifier = Modifier.size(56.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.hist_detail_missing_title),
+                        color = Color.White.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.hist_detail_missing_desc),
+                        color = Color.White.copy(alpha = 0.6f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
 
             // 2. Top Navigation Bar (Close, Title, Open in External Gallery)
             AnimatedVisibility(

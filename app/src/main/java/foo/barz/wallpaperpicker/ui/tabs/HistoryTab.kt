@@ -303,18 +303,22 @@ fun HistoryTab(
                     WallpaperGridCard(
                         item = item,
                         onClick = {
-                            context.startActivity(
-                                WallpaperLightboxActivity.createIntent(
-                                    context = context,
-                                    uri = item.displayUri,
-                                    title = item.title,
-                                    sourceTitle = item.displaySourceBadge,
-                                    historyId = item.id,
-                                    sourceType = item.sourceType,
-                                    canApplyWallpaper = true,
-                                    canDeleteRecord = true
+                            if (isUriAccessible(context, item.displayUri)) {
+                                context.startActivity(
+                                    WallpaperLightboxActivity.createIntent(
+                                        context = context,
+                                        uri = item.displayUri,
+                                        title = item.title,
+                                        sourceTitle = item.displaySourceBadge,
+                                        historyId = item.id,
+                                        sourceType = item.sourceType,
+                                        canApplyWallpaper = true,
+                                        canDeleteRecord = true
+                                    )
                                 )
-                            )
+                            } else {
+                                selectedItemForDetail = item
+                            }
                         },
                         onLongClick = { selectedItemForDetail = item },
                         onToggleFavorite = { onToggleFavorite(item) }
@@ -511,7 +515,13 @@ private fun WallpaperGridCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
-                onClick = onClick,
+                onClick = {
+                    if (isAccessible) {
+                        onClick()
+                    } else {
+                        onLongClick()
+                    }
+                },
                 onLongClick = onLongClick
             ),
         shape = RoundedCornerShape(12.dp),
