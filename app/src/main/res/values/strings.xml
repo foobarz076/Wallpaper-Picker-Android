@@ -167,6 +167,8 @@
     <string name="hist_action_applying">Applying wallpaper…</string>
     <string name="hist_action_cannot_apply">Cannot apply missing image</string>
     <string name="hist_action_set_current">Set as Current Wallpaper</string>
+    <string name="hist_action_applied">Applied as Wallpaper</string>
+    <string name="hist_action_already_applied">Already applied as current wallpaper</string>
     <string name="hist_action_gallery">Gallery</string>
     <string name="hist_action_save">Save</string>
     <string name="hist_action_tune">Tune Framing &amp; Scroll</string>

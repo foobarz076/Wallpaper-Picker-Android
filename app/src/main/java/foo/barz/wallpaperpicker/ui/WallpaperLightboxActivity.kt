@@ -106,6 +106,9 @@ class WallpaperLightboxActivity : ComponentActivity() {
                 }
                 var isSaving by remember { mutableStateOf(false) }
                 var isApplying by remember { mutableStateOf(false) }
+                var isApplied by remember {
+                    mutableStateOf(prefs.lastWallpaperUri != null && prefs.lastWallpaperUri == uri)
+                }
                 var showDeleteDialog by remember { mutableStateOf(false) }
 
                 val writeStorageLauncher = rememberLauncherForActivityResult(
@@ -169,7 +172,13 @@ class WallpaperLightboxActivity : ComponentActivity() {
                 }
 
                 val handleApplyWallpaper: () -> Unit = {
-                    if (!isApplying && isAccessible) {
+                    if (isApplied) {
+                        Toast.makeText(
+                            this@WallpaperLightboxActivity,
+                            getString(R.string.hist_action_already_applied),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else if (!isApplying && isAccessible) {
                         isApplying = true
                         scope.launch {
                             val result = withContext(Dispatchers.IO) {
@@ -236,12 +245,12 @@ class WallpaperLightboxActivity : ComponentActivity() {
                             isApplying = false
                             withContext(Dispatchers.Main) {
                                 if (result.isSuccess) {
+                                    isApplied = true
                                     Toast.makeText(
                                         this@WallpaperLightboxActivity,
                                         getString(R.string.status_success),
                                         Toast.LENGTH_SHORT
                                     ).show()
-                                    finish()
                                 } else {
                                     val err = result.exceptionOrNull()?.localizedMessage ?: getString(R.string.status_failed)
                                     Toast.makeText(
@@ -293,6 +302,7 @@ class WallpaperLightboxActivity : ComponentActivity() {
                         canApplyWallpaper = canApplyWallpaper,
                         isApplyingWallpaper = isApplying,
                         isApplyEnabled = isAccessible,
+                        isApplied = isApplied,
                         canDeleteRecord = canDeleteRecord,
                         onDismiss = { finish() },
                         onToggleFavorite = {

@@ -166,6 +166,8 @@
     <string name="hist_action_applying">正在应用壁纸…</string>
     <string name="hist_action_cannot_apply">原图已失效无法应用</string>
     <string name="hist_action_set_current">设为当前壁纸</string>
+    <string name="hist_action_applied">已设为当前壁纸</string>
+    <string name="hist_action_already_applied">当前已是此壁纸</string>
     <string name="hist_action_gallery">图库打开</string>
     <string name="hist_action_save">保存相册</string>
     <string name="hist_action_tune">微调构图与滚动</string>

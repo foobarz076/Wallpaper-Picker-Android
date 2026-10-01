@@ -2,6 +2,7 @@ package foo.barz.wallpaperpicker.ui.components
 
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -24,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
@@ -78,6 +80,7 @@ fun WallpaperLightboxViewer(
     canApplyWallpaper: Boolean = false,
     isApplyingWallpaper: Boolean = false,
     isApplyEnabled: Boolean = true,
+    isApplied: Boolean = false,
     canDeleteRecord: Boolean = false,
     onDismiss: () -> Unit,
     onToggleFavorite: () -> Unit,
@@ -312,12 +315,26 @@ fun WallpaperLightboxViewer(
                                             color = Color.White
                                         )
                                     } else {
-                                        Icon(
-                                            imageVector = Icons.Default.Wallpaper,
-                                            contentDescription = stringResource(R.string.hist_action_set_current),
-                                            tint = if (isApplyEnabled) Color.White else Color.White.copy(alpha = 0.4f),
-                                            modifier = Modifier.size(24.dp)
-                                        )
+                                        Crossfade(
+                                            targetState = isApplied,
+                                            label = "ApplyIconCrossfade"
+                                        ) { applied ->
+                                            if (applied) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = stringResource(R.string.hist_action_applied),
+                                                    tint = Color(0xFF81C784),
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.Wallpaper,
+                                                    contentDescription = stringResource(R.string.hist_action_set_current),
+                                                    tint = if (isApplyEnabled) Color.White else Color.White.copy(alpha = 0.4f),
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
