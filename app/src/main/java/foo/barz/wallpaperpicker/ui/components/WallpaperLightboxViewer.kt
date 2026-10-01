@@ -25,11 +25,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,12 +74,18 @@ fun WallpaperLightboxViewer(
     sourceBadge: String? = null,
     isFavorite: Boolean,
     isSaving: Boolean = false,
+    canApplyWallpaper: Boolean = false,
+    isApplyingWallpaper: Boolean = false,
+    isApplyEnabled: Boolean = true,
+    canDeleteRecord: Boolean = false,
     onDismiss: () -> Unit,
     onToggleFavorite: () -> Unit,
     onOpenInGallery: () -> Unit,
     onSaveToGallery: () -> Unit,
     onShareWallpaper: () -> Unit,
     onOpenAdjustment: () -> Unit,
+    onApplyWallpaper: () -> Unit = {},
+    onDeleteRecord: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
@@ -246,15 +254,46 @@ fun WallpaperLightboxViewer(
                         tonalElevation = 6.dp,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     ) {
+                        val hasExtraActions = canApplyWallpaper || canDeleteRecord
+                        val buttonSpacing = if (hasExtraActions) 10.dp else 16.dp
+                        val buttonSize = if (hasExtraActions) 40.dp else 42.dp
+
                         Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(
+                                horizontal = if (hasExtraActions) 10.dp else 14.dp,
+                                vertical = 6.dp
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(buttonSpacing),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Favorite toggle
+                            // 1. Set as wallpaper (Apply) - Available in History mode
+                            if (canApplyWallpaper) {
+                                IconButton(
+                                    onClick = onApplyWallpaper,
+                                    enabled = !isApplyingWallpaper && isApplyEnabled,
+                                    modifier = Modifier.size(buttonSize)
+                                ) {
+                                    if (isApplyingWallpaper) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            strokeWidth = 2.dp,
+                                            color = Color.White
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.Wallpaper,
+                                            contentDescription = stringResource(R.string.hist_action_set_current),
+                                            tint = if (isApplyEnabled) Color.White else Color.White.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // 2. Favorite toggle
                             IconButton(
                                 onClick = onToggleFavorite,
-                                modifier = Modifier.size(42.dp)
+                                modifier = Modifier.size(buttonSize)
                             ) {
                                 Icon(
                                     imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -268,10 +307,10 @@ fun WallpaperLightboxViewer(
                                 )
                             }
 
-                            // Tune Composition & Scroll
+                            // 3. Tune Composition & Scroll
                             IconButton(
                                 onClick = onOpenAdjustment,
-                                modifier = Modifier.size(42.dp)
+                                modifier = Modifier.size(buttonSize)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Tune,
@@ -281,11 +320,11 @@ fun WallpaperLightboxViewer(
                                 )
                             }
 
-                            // Save to public gallery
+                            // 4. Save to public gallery
                             IconButton(
                                 onClick = onSaveToGallery,
                                 enabled = !isSaving,
-                                modifier = Modifier.size(42.dp)
+                                modifier = Modifier.size(buttonSize)
                             ) {
                                 if (isSaving) {
                                     CircularProgressIndicator(
@@ -303,10 +342,10 @@ fun WallpaperLightboxViewer(
                                 }
                             }
 
-                            // System Share sheet
+                            // 5. System Share sheet
                             IconButton(
                                 onClick = onShareWallpaper,
-                                modifier = Modifier.size(42.dp)
+                                modifier = Modifier.size(buttonSize)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
@@ -314,6 +353,21 @@ fun WallpaperLightboxViewer(
                                     tint = Color.White,
                                     modifier = Modifier.size(24.dp)
                                 )
+                            }
+
+                            // 6. Delete history record - Available in History mode
+                            if (canDeleteRecord) {
+                                IconButton(
+                                    onClick = onDeleteRecord,
+                                    modifier = Modifier.size(buttonSize)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.hist_action_delete_record),
+                                        tint = Color(0xFFFF6B6B),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }

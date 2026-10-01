@@ -2,8 +2,10 @@ package foo.barz.wallpaperpicker.ui.tabs
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,11 +78,13 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import foo.barz.wallpaperpicker.R
+import foo.barz.wallpaperpicker.core.action.WallpaperActionManager
 import foo.barz.wallpaperpicker.core.model.WallpaperHistoryItem
 import foo.barz.wallpaperpicker.core.model.WallpaperScrollMode
 import foo.barz.wallpaperpicker.core.model.WallpaperSourceType
 import foo.barz.wallpaperpicker.ui.MainUiState
 import foo.barz.wallpaperpicker.ui.WallpaperAdjustmentActivity
+import foo.barz.wallpaperpicker.ui.WallpaperLightboxActivity
 import foo.barz.wallpaperpicker.ui.components.TopFloatingPillNotification
 import java.io.File
 import java.text.SimpleDateFormat
@@ -298,7 +302,21 @@ fun HistoryTab(
                 ) { item ->
                     WallpaperGridCard(
                         item = item,
-                        onClick = { selectedItemForDetail = item },
+                        onClick = {
+                            context.startActivity(
+                                WallpaperLightboxActivity.createIntent(
+                                    context = context,
+                                    uri = item.displayUri,
+                                    title = item.title,
+                                    sourceTitle = item.displaySourceBadge,
+                                    historyId = item.id,
+                                    sourceType = item.sourceType,
+                                    canApplyWallpaper = true,
+                                    canDeleteRecord = true
+                                )
+                            )
+                        },
+                        onLongClick = { selectedItemForDetail = item },
                         onToggleFavorite = { onToggleFavorite(item) }
                     )
                 }
@@ -475,22 +493,27 @@ fun HistoryTab(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WallpaperGridCard(
     item: WallpaperHistoryItem,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     onToggleFavorite: () -> Unit
 ) {
     val context = LocalContext.current
     val isAccessible = remember(item.displayUri, item.downloadTimestamp) {
-        isUriAccessible(context, item.displayUri)
+        WallpaperActionManager.isUriAccessible(context, item.displayUri)
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
@@ -912,19 +935,7 @@ private fun formatTimeAgo(timestamp: Long): String {
     }
 }
 
-/**
- * Checks if the target URI is currently accessible and readable.
- * Handles file paths and content resolver queries safely.
- */
 private fun isUriAccessible(context: Context, uri: Uri): Boolean {
-    return runCatching {
-        if (uri.scheme == "file") {
-            val path = uri.path ?: return false
-            val file = File(path)
-            file.exists() && file.canRead() && file.length() > 0
-        } else {
-            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { true } ?: false
-        }
-    }.getOrDefault(false)
+    return WallpaperActionManager.isUriAccessible(context, uri)
 }
 

@@ -1258,20 +1258,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun promoteToPermanentFavorite(sourceUri: Uri): String? {
-        val context = getApplication<Application>()
-        val favDir = File(context.filesDir, "favorites").apply { if (!exists()) mkdirs() }
-        val targetFile = File(favDir, "fav_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}.jpg")
-        return try {
-            val inputStream = context.contentResolver.openInputStream(sourceUri) ?: return null
-            inputStream.use { input ->
-                FileOutputStream(targetFile).use { output ->
-                    input.copyTo(output)
-                }
-            }
-            targetFile.absolutePath
-        } catch (_: Exception) {
-            null
-        }
+        return WallpaperActionManager.promoteToPermanentFavorite(getApplication(), sourceUri)
     }
 
     fun deleteHistoryItem(item: WallpaperHistoryItem) {

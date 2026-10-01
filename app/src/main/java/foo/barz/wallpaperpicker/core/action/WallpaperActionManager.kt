@@ -12,7 +12,9 @@ import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.UUID
 
 /**
  * Handles interactions with the current active wallpaper:
@@ -159,4 +161,45 @@ object WallpaperActionManager {
                 }
             }
         }
+
+    /**
+     * Checks if the target URI is currently accessible and readable.
+     * Handles file paths and content resolver queries safely.
+     */
+    fun isUriAccessible(context: Context, uri: Uri): Boolean {
+        return runCatching {
+            if (uri.scheme == "file") {
+                val path = uri.path ?: return false
+                val file = File(path)
+                file.exists() && file.canRead() && file.length() > 0
+            } else {
+                context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { true } ?: false
+            }
+        }.getOrDefault(false)
+    }
+
+    /**
+     * Promotes an ephemeral/network cached image into permanent offline favorites storage.
+     * Prevents automated LRU cache eviction from deleting favorited pictures.
+     */
+    fun promoteToPermanentFavorite(context: Context, sourceUri: Uri): String? {
+        return runCatching {
+            val favoritesDir = File(context.filesDir, "favorites").apply { if (!exists()) mkdirs() }
+            val ext = "jpg"
+            val targetFile = File(favoritesDir, "fav_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}.$ext")
+            val stream = if (sourceUri.scheme == "file") {
+                FileInputStream(File(sourceUri.path ?: throw IllegalArgumentException("Invalid file path")))
+            } else {
+                context.contentResolver.openInputStream(sourceUri)
+                    ?: throw IllegalStateException("Cannot open input stream: $sourceUri")
+            }
+            stream.use { input ->
+                FileOutputStream(targetFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            targetFile.absolutePath
+        }.getOrNull()
+    }
 }
+

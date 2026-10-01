@@ -172,6 +172,7 @@
     <string name="hist_action_tune">Tune Framing &amp; Scroll</string>
     <string name="hist_badge_customized"> (Customized)</string>
     <string name="hist_action_delete_record">Delete this record</string>
+    <string name="hist_record_deleted">History record deleted</string>
 
     <!-- Manage Space Activity -->
     <string name="manage_space_cleanable_cache">Cleanable Image Cache</string>

@@ -171,6 +171,7 @@
     <string name="hist_action_tune">微调构图与滚动</string>
     <string name="hist_badge_customized"> (已个性化)</string>
     <string name="hist_action_delete_record">删除此记录</string>
+    <string name="hist_record_deleted">已删除历史记录</string>
 
     <!-- Manage Space Activity -->
     <string name="manage_space_cleanable_cache">可清理图片缓存</string>
